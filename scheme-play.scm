@@ -29,7 +29,6 @@
 ;; want beginners to ever have to type 'lambda'. So we have macros
 ;; that transform more 'english' looking expressions into lambdas.
 ;; ------------------------------------------------------------
-
 ;; Defines a function, and also generates an overload that returns
 ;; a unary lambda. Call the overload by omitting the first argument -
 ;; this becomes the argument to the lambda. Example:
@@ -49,25 +48,34 @@
     ((define-unary ...)
      (syntax-error "define-unary should look like a function definition with 1+ arguments."))))
 
-;; Mini-DSL letting users write something like this:
+;; Mini-DSL which lets users write in this style:
 ;;
-;; (with: [amp 0.6] [freq (* current 2)] [pan (random -0.3 0.3)])
+;; (with: [amp 0.6]
+;;        [pan (random -0.3 0.3)]
+;;        [freq (* input 2) 440]) ; 440 is the default
 ;;
 ;; Returns a lambda which, when passed a note, updates it with the
-;; key-values supplied. TODO: let user reference `current` value for
-;; each key. Need to break hygene with syntax-case I think...
+;; supplied key-values. Within a value form, the user can use the
+;; special keyword `input` to get the current value. They can also
+;; supply a default in case there is no existing value.
 (define-syntax with:
-  (syntax-rules ()
-    
-    ((with: (key value) . rest)
-     (lambda (n)
-       (note-set! n 'key value)
-       ((with: . rest) n)))
+  (lambda (x)
+    (syntax-case x ()
+      
+      ((_ (key value default) rest ...)
+       (with-syntax ([input (datum->syntax (syntax key) 'input)])
+	 (syntax (lambda (note)
+		   (let ([input (note-get note 'key default)])
+		     (note-set! note 'key value))
+		   ((with: rest ...) note)))))
 
-    ((with:) (lambda (n) n)) ; base case
-    
-    ((with: ...)
-     (syntax-error "note-update: must contain a series of key/value pairs."))))
+      ((_ (key value) rest ...)
+       (syntax (with: (key value 0) rest ...))) ; default of 0
+      
+      ((_) (syntax (lambda (note) note))) ; base case
+
+      ((_ ...)
+       (syntax-error "with: should contain a series of key/value pairs.")))))
 
 ;;-------------------------------------------------------------
 ;; Rudimentary note for testing
@@ -79,9 +87,10 @@
     (hashtable-set! ht key value)
     ht))
 
+(define (note-has note key) (hashtable-contains? note key))
 (define (note-get note key default) (hashtable-ref note key default))
 (define (note-set! note key value) (hashtable-set! note key value))
-(define (note-update! note key change-fn default) (hashtable-update! key change-fn default))
+(define (note-update! note key change-fn default) (hashtable-update! note key change-fn default))
 
 (define (print-note note)
   (begin
@@ -101,8 +110,12 @@
 (define (make-notes-with-times times-list)
   (map (lambda (t) (make-note 'beat t)) times-list))
 
-(define-unary (notes-set notes pred update-note-fn!)
-  (for-each (lambda (n) (when (pred n) (update-note-fn! n))) notes))
+;; TODO: we're mutating and returning the mutated list.
+;; Should we be functional instead?
+(define-unary (update notes matching updater-fn!)
+  (begin
+    (for-each (lambda (n) (when (matching n) (updater-fn! n))) notes)
+    notes))
 
 ;;----------------------------------------------------------
 ;; Time helper functions
@@ -152,11 +165,15 @@
 (define (valid-window? w) (< (window-start w) (window-end w)))
 (define (with-window-start w new-start) (make-window new-start (window-end w)))
 
-;; parameters for a euclidean rhythm
+;;-----------------------------------------------------------------
+;; Euclidean patterns
+;;-----------------------------------------------------------------
+;; Parameters for a euclidean rhythm
 (define-record euclid (num-steps num-hits offset))
 
-;; this version would always result in a hit on the last step,
+;; This version would always result in a hit on the last step,
 ;; but the usual expectation is that it's on the first step
+;; TODO: is this necessary? Wouldn't just (add1 offset) work?
 (define (euclid-normalise-offset e)
   (let ([new-offset (% (add1 (euclid-offset e)) (euclid-num-steps e))])
     (make-euclid (euclid-num-steps e) (euclid-num-hits e) new-offset)))
