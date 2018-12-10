@@ -23,6 +23,20 @@
   (call-with-values (lambda () (hashtable-entries hashtable))
     (lambda (keys values) (vector-map fn keys values))))
 
+(define sys-rand random)
+
+(define random
+  (case-lambda
+    [() (sys-rand 1.0)]
+    [(max) (sys-rand max)]
+    [(min max) (+ min (sys-rand (- max min)))]))
+
+;; TODO: mutates and returns the mutated list. Functional instead?
+(define-unary (update-when list matching updater-fn!)
+  (begin
+    (for-each (lambda (n) (when (matching n) (updater-fn! n))) list)
+    list))
+
 ;; ------------------------------------------------------------
 ;; Macros that make it easier to share code between magic/beginner
 ;; mode lens definitions and full/scheme mode. For example, we don't
@@ -109,13 +123,6 @@
 
 (define (make-notes-with-times times-list)
   (map (lambda (t) (make-note 'beat t)) times-list))
-
-;; TODO: we're mutating and returning the mutated list.
-;; Should we be functional instead?
-(define-unary (update notes matching updater-fn!)
-  (begin
-    (for-each (lambda (n) (when (matching n) (updater-fn! n))) notes)
-    notes))
 
 ;;----------------------------------------------------------
 ;; Time helper functions
