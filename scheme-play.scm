@@ -32,15 +32,41 @@
     [(max) (sys-rand max)]
     [(min max) (+ min (sys-rand (- max min)))]))
 
+;; Some 'english sounding' math operators. These are intended to
+;; be intuitive for non-programmers, so aren't always 'precise'.
+(define (nearly-divisible a b error)
+   (let* ([remain (/ a b)]
+	  [truncated (truncate remain)])
+     (< (- remain truncated) error)))
+
+(define (divisible a b)
+  (nearly-divisible a b 0.0001))
+
+(define (above a b)
+  (>= a b))
+
+(define (below a b)
+  (<= a b))
+
+(define (nearly-equals a b error)
+  (< (abs (- a b)) error))
+
+(define (equals a b)
+  (= a b))
+
+(define (within x lower upper)
+  (and (>= x lower) (<= x upper)))
+
 ;; ------------------------------------------------------------
 ;; Macros/functions that implement a DSL for specifying/transforming
 ;; musical patterns. We don't want beginners to ever have to type
 ;; 'lambda' or scary words like that. We'd prefer that they don't
 ;; know they're programming at all.
 ;; ------------------------------------------------------------
+
 ;; Defines a function, and also generates an overload that returns
-;; a unary lambda. Call the overload by omitting the first argument -
-;; this becomes the argument to the lambda. Example:
+;; a partially-applied unary lambda. Call the overload by omitting
+;; the first argument - it becomes the argument to the lambda. Example:
 ;;
 ;; (define-unary (my-add a b c) (+ a b c)) 
 ;; (my-add 4 3 2) ; 9
@@ -48,26 +74,27 @@
 (define-syntax define-unary
   (syntax-rules ()
     
-    ((define-unary (name arg1 . args) body)
+    ((_ (name arg1 . args) body)
      (define name
        (case-lambda
 	 [(arg1 . args) body]
-	 [args (lambda (x) (name x . args))])))
+	 [args (lambda (x) (name x . args))]))) ; partially-applied
     
-    ((define-unary ...)
+    ((_ ...)
      (syntax-error "define-unary should look like a function definition with 1+ arguments."))))
 
-;; Mini-DSL which lets users write in this style:
+;; Mini-DSL which lets users modify note hashmaps in this style:
 ;;
-;; (with: [amp 0.6]
-;;        [pan (random -0.3 0.3)]
-;;        [freq (* input 2) 440]) ; 440 is the default
+;; (to note
+;;  [amp 0.6]
+;;  [pan (random -0.3 0.3)]
+;;  [freq (* input 2) 440]) ; 440 is the default for `input`
 ;;
 ;; Returns a lambda which, when passed a note, updates it with the
 ;; supplied key-values. Within a value form, the user can use the
 ;; special keyword `input` to get the current value. They can also
 ;; supply a default in case there is no existing value.
-(define-syntax with:
+(define-syntax to
   (lambda (x)
     (syntax-case x ()
       
@@ -76,25 +103,48 @@
 	 (syntax (lambda (note)
 		   (let ([input (note-get note 'key default)])
 		     (note-set! note 'key value))
-		   ((with: rest ...) note)))))
+		   ((to rest ...) note)))))
 
       ((_ (key value) rest ...)
-       (syntax (with: (key value 0) rest ...))) ; default of 0
+       (syntax (to (key value 0) rest ...))) ; default of 0
       
       ((_) (syntax (lambda (note) note))) ; base case
 
-      ((_ ...)
-       (syntax-error "with: should contain a series of key/value pairs.")))))
+      ((_ note rest ...) (syntax ((to rest ...) note))) ; direct call version
 
-;; Logical lambda operators with friendly names. Take a series of lambdas
-;; and returns a lambda that does a logical operator on them all. 
+      ((_ ...)
+       (syntax-error "'to' should contain a series of key/value pairs.")))))
+
+(define-syntax with ; alias for 'to'. perhaps this should return a new note...
+  (syntax-rules () ((_ rest ...) (to rest ...))))
+
+;; Logical note operators. Take a note and a list of [key pred arg]
+;; lists. Checks if all/any values at the keys match the predicates.
+;; Similar to define-unary, these have partially applied overloads.
 (define-syntax has
   (syntax-rules ()
-    ((_ first rest ...) (lambda (x) (and (first x) (rest x) ...)))))
+    
+    ((_ [key pred pred-arg] rest ...)
+     (lambda (n) (and
+		     (note-has n 'key)
+		     (pred (note-get n 'key #f) pred-arg)
+		     ((has rest ...) n))))
+
+    ((_) (lambda (x) #t)) ; base case
+    ((_ note pairs ...) ((has pairs ...) note)))) ; direct call version
 
 (define-syntax any
   (syntax-rules ()
-    ((_ first rest ...) (lambda (x) (or (first x) (rest x) ...)))))
+    
+    ((_ [key pred pred-arg] rest ...)
+     (lambda (n) (or
+		  (and (note-has n 'key)
+		       (pred (note-get n 'key #f) pred-arg))
+		  ((any rest ...) n))))
+
+    ((_) (lambda (x) #f)) ; base case
+    ((_ note pairs ...) ((any pairs ...) note)))) ; direct call version
+
 
 ;;-------------------------------------------------------------
 ;; Rudimentary note based on hashtable
@@ -105,10 +155,6 @@
   (let ([ht (make-eq-hashtable note-table-start-size)])
     (hashtable-set! ht key value)
     ht))
-
-(define-syntax make-note
-  (syntax-rules ()
-    (())))
 
 (define (note-has note key) (hashtable-contains? note key))
 (define (note-get note key default) (hashtable-ref note key default))
@@ -133,13 +179,28 @@
 (define (make-notes-with-times times-list)
   (map (lambda (t) (make-note 'beat t)) times-list))
 
+(define (make-regular-notes num interval)
+  (define (impl lst num interval t)
+    (if (= num 0)
+	lst
+	(let ([new-note (make-note 'beat t)])
+	  (impl new-note (sub1 num) interval (+ t interval)))))
+  (impl (list) num interval 0))
+
 ;; TODO: mutates and returns the mutated list. Functional instead?
 (define-unary (change-if note-list matching updater-fn!)
   (begin
     (for-each (lambda (n) (when (matching n) (updater-fn! n))) note-list)
-    list))
+    note-list))
 
-(define-unary ())
+(define-unary (copy-if note-list matching mutate-fn)
+  (begin
+    (for-each (lambda (n)
+		(when (matching n)
+		  (let ([new-note (hashtable-copy n #t)])
+		    (cons note-list (mutate-fn new-note)))))
+	      note-list)
+    note-list))
 
 ;;----------------------------------------------------------
 ;; Time helper functions
@@ -220,8 +281,8 @@
     (not (eqv? (quotient bucket steps)
 	       (quotient (+ bucket hits) steps)))))
 
-;; Get the notes inside a window w given a euclidean pattern e
-(define (fill-euclidean e w stretch)
+;; Make the notes inside a window w given a euclidean pattern e
+(define (euclidean-rhythm w e stretch)
   (check-type euclid? e "Parameter 'e' must be a euclid record")
   (check-type window? w "Parameter 'w' must be a window record")
 
