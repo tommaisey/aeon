@@ -23,6 +23,7 @@
   (call-with-values (lambda () (hashtable-entries hashtable))
     (lambda (keys values) (vector-map fn keys values))))
 
+;; Extend the simple random function that comes with Chez.
 (define sys-rand random)
 
 (define random
@@ -31,17 +32,11 @@
     [(max) (sys-rand max)]
     [(min max) (+ min (sys-rand (- max min)))]))
 
-;; TODO: mutates and returns the mutated list. Functional instead?
-(define-unary (update-when list matching updater-fn!)
-  (begin
-    (for-each (lambda (n) (when (matching n) (updater-fn! n))) list)
-    list))
-
 ;; ------------------------------------------------------------
-;; Macros that make it easier to share code between magic/beginner
-;; mode lens definitions and full/scheme mode. For example, we don't
-;; want beginners to ever have to type 'lambda'. So we have macros
-;; that transform more 'english' looking expressions into lambdas.
+;; Macros/functions that implement a DSL for specifying/transforming
+;; musical patterns. We don't want beginners to ever have to type
+;; 'lambda' or scary words like that. We'd prefer that they don't
+;; know they're programming at all.
 ;; ------------------------------------------------------------
 ;; Defines a function, and also generates an overload that returns
 ;; a unary lambda. Call the overload by omitting the first argument -
@@ -91,8 +86,18 @@
       ((_ ...)
        (syntax-error "with: should contain a series of key/value pairs.")))))
 
+;; Logical lambda operators with friendly names. Take a series of lambdas
+;; and returns a lambda that does a logical operator on them all. 
+(define-syntax has
+  (syntax-rules ()
+    ((_ first rest ...) (lambda (x) (and (first x) (rest x) ...)))))
+
+(define-syntax any
+  (syntax-rules ()
+    ((_ first rest ...) (lambda (x) (or (first x) (rest x) ...)))))
+
 ;;-------------------------------------------------------------
-;; Rudimentary note for testing
+;; Rudimentary note based on hashtable
 ;; ------------------------------------------------------------
 (define note-table-start-size 16)
 
@@ -100,6 +105,10 @@
   (let ([ht (make-eq-hashtable note-table-start-size)])
     (hashtable-set! ht key value)
     ht))
+
+(define-syntax make-note
+  (syntax-rules ()
+    (())))
 
 (define (note-has note key) (hashtable-contains? note key))
 (define (note-get note key default) (hashtable-ref note key default))
@@ -123,6 +132,14 @@
 
 (define (make-notes-with-times times-list)
   (map (lambda (t) (make-note 'beat t)) times-list))
+
+;; TODO: mutates and returns the mutated list. Functional instead?
+(define-unary (change-if note-list matching updater-fn!)
+  (begin
+    (for-each (lambda (n) (when (matching n) (updater-fn! n))) note-list)
+    list))
+
+(define-unary ())
 
 ;;----------------------------------------------------------
 ;; Time helper functions
@@ -160,10 +177,10 @@
 (define (note-time-mod note divisor)
   (fmod (note-get note 'beat #f) divisor))
 
-(define-unary (at? note divisor)
+(define-unary (is-on note divisor)
   (= 0 (note-time-mod note divisor)))
 
-(define-unary (near? note divisor nearness)
+(define-unary (is-near note divisor nearness)
   (<= (note-time-mod note divisor) nearness))
 
 ;; represents a window of time in beats
