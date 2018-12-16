@@ -196,7 +196,7 @@
   (impl '() num start))
 
 ;;-----------------------------------------------------------------
-;; Context
+;; Context - passed through the pipeline
 ;;-----------------------------------------------------------------
 ;; A window of time (in beats)
 (define-record window ((immutable start) (immutable end)))
@@ -220,22 +220,24 @@
        record))))
 
 (define-unary (change-if context match-fn update-fn!)
-  (rec-set (notes context context-notes set-context-notes!)
-	   (for-each
-	    (lambda (n)
-	      (when (match-fn n)
-		(update-fn! n)))
-	    notes)
-	   notes))
+  (rec-set
+   (notes context context-notes set-context-notes!)
+   (for-each
+    (lambda (n)
+      (when (match-fn n)
+	(update-fn! n)))
+    notes)
+   notes))
 
 (define-unary (copy-if context match-fn mutate-fn)
-  (rec-set (notes context context-notes set-context-notes!)
-	   (define (impl in out)
-	     (if (null? in) out
-		 (if (match-fn next)
-		     (impl (cdr in) (cons (mutate-fn (hashtable-copy (car in) #t)) out))
-		     (impl (cdr in) out))))
-	   (append (impl notes '()) notes)))
+  (rec-set
+   (notes context context-notes set-context-notes!)
+   (define (impl in out)
+     (if (null? in) out
+	 (impl (cdr in)
+	       (if (not (match-fn (car in))) out		     
+		   (cons (mutate-fn (hashtable-copy (car in) #t)) out)))))
+   (append (impl notes '()) notes)))
 
 (define-unary (change-all context mutate-fn)
   (change-if context (lambda (x) #t) mutate-fn))
