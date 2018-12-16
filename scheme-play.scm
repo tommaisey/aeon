@@ -71,17 +71,20 @@
 ;; (define-unary (my-add a b c) (+ a b c)) 
 ;; (my-add 4 3 2) ; 9
 ;; (map (my-add 3 2) '(4 0 1)) ; (9 5 6)
+;;
+;; TODO: get rid in favour of SRFI 26's cut?
 (define-syntax define-unary
   (syntax-rules ()
     
-    ((_ (name arg1 . args) body)
+    ((_ (name arg0 args ...) body ...)
      (define name
        (case-lambda
-	 [(arg1 . args) body]
-	 [args (lambda (x) (name x . args))]))) ; partially-applied
+	 [(arg0 args ...) body ...]
+	 [(args ...) (lambda (a) (name a args ...))]))) ; partially-applied
     
     ((_ ...)
-     (syntax-error "define-unary should look like a function definition with 1+ arguments."))))
+     (syntax-error
+      "define-unary should look like a function definition with 1+ arguments."))))
 
 ;; Mini-DSL which lets users modify note hashmaps in this style:
 ;;
@@ -105,61 +108,68 @@
 		     (note-set! note 'key value))
 		   ((to rest ...) note)))))
 
-      ((_ (key value) rest ...)
-       (syntax (to (key value 0) rest ...))) ; default of 0
+      ((default-0 (key value) rest ...)
+       (syntax (to (key value 0) rest ...)))
       
-      ((_) (syntax (lambda (note) note))) ; base case
+      ((base-case)
+       (syntax (lambda (note) note)))
 
-      ((_ note rest ...) (syntax ((to rest ...) note))) ; direct call version
+      ((direct-call note rest ...)
+       (syntax ((to rest ...) note)))
 
       ((_ ...)
-       (syntax-error "'to' should contain a series of key/value pairs.")))))
+       (syntax-error
+	"'to' should contain a series of key/value pairs.")))))
 
-(define-syntax with ; alias for 'to'. perhaps this should return a new note...
+; with is an alias for 'to'. TODO: should return a new note?
+(define-syntax with
   (syntax-rules () ((_ rest ...) (to rest ...))))
 
-;; Logical note operators. Take a note and a list of [key pred arg]
-;; lists. Checks if all/any values at the keys match the predicates.
-;; Similar to define-unary, these have partially applied overloads.
+;; Logical note operators. Take a note and N [key pred arg] lists.
+;; Checks if all/any values at the keys match the predicates.
+;; Optionally partially applied.
 (define-syntax has
   (syntax-rules ()
     
-    ((_ [key pred pred-arg] rest ...)
+    ((_ [key pred args ...] rest ...)
      (lambda (n) (and
 		     (note-has n 'key)
-		     (pred (note-get n 'key #f) pred-arg)
+		     (pred (note-get n 'key #f) args ...)
 		     ((has rest ...) n))))
 
-    ((_) (lambda (x) #t)) ; base case
-    ((_ note pairs ...) ((has pairs ...) note)))) ; direct call version
+    ((base-case) (lambda (x) #t))
+    ((direct-call note pairs ...) ((has pairs ...) note))))
 
 (define-syntax any
   (syntax-rules ()
     
-    ((_ [key pred pred-arg] rest ...)
+    ((_ [key pred args ...] rest ...)
      (lambda (n) (or
 		  (and (note-has n 'key)
-		       (pred (note-get n 'key #f) pred-arg))
+		       (pred (note-get n 'key #f) args ...))
 		  ((any rest ...) n))))
 
-    ((_) (lambda (x) #f)) ; base case
-    ((_ note pairs ...) ((any pairs ...) note)))) ; direct call version
-
+    ((base-case) (lambda (x) #f))
+    ((direct-call note pairs ...) ((any pairs ...) note))))
 
 ;;-------------------------------------------------------------
 ;; Rudimentary note based on hashtable
 ;; ------------------------------------------------------------
 (define note-table-start-size 16)
 
-(define (make-note key value)
-  (let ([ht (make-eq-hashtable note-table-start-size)])
-    (hashtable-set! ht key value)
-    ht))
+(define (make-note start-beat)
+  (let ([table (make-eq-hashtable note-table-start-size)])
+    (hashtable-set! table 'beat start-beat)
+    table))
 
-(define (note-has note key) (hashtable-contains? note key))
-(define (note-get note key default) (hashtable-ref note key default))
-(define (note-set! note key value) (hashtable-set! note key value))
-(define (note-update! note key change-fn default) (hashtable-update! note key change-fn default))
+(define (note-has note key)
+  (hashtable-contains? note key))
+(define (note-get note key default)
+  (hashtable-ref note key default))
+(define (note-set! note key value)
+  (hashtable-set! note key value))
+(define (note-update! note key change-fn default)
+  (hashtable-update! note key change-fn default))
 
 (define (print-note note)
   (begin
@@ -177,30 +187,55 @@
   (for-each print-note note-list))
 
 (define (make-notes-with-times times-list)
-  (map (lambda (t) (make-note 'beat t)) times-list))
+  (map make-note times-list))
 
-(define (make-regular-notes num interval)
-  (define (impl lst num interval t)
-    (if (= num 0)
-	lst
-	(let ([new-note (make-note 'beat t)])
-	  (impl new-note (sub1 num) interval (+ t interval)))))
-  (impl (list) num interval 0))
+(define (make-regular-notes num interval start)
+  (define (impl lst num t)
+    (if (= num 0) lst
+	(impl (cons (make-note t) lst) (sub1 num) (+ t interval))))
+  (impl '() num start))
 
-;; TODO: mutates and returns the mutated list. Functional instead?
-(define-unary (change-if note-list matching updater-fn!)
-  (begin
-    (for-each (lambda (n) (when (matching n) (updater-fn! n))) note-list)
-    note-list))
+;;-----------------------------------------------------------------
+;; Context
+;;-----------------------------------------------------------------
+;; A window of time (in beats)
+(define-record window ((immutable start) (immutable end)))
 
-(define-unary (copy-if note-list matching mutate-fn)
-  (begin
-    (for-each (lambda (n)
-		(when (matching n)
-		  (let ([new-note (hashtable-copy n #t)])
-		    (cons note-list (mutate-fn new-note)))))
-	      note-list)
-    note-list))
+(define (valid-window? w) (< (window-start w) (window-end w)))
+(define (with-window-start w new-start) (make-window new-start (window-end w)))
+
+(define (in-window? w t) (within t ))
+
+;; A context to be passed to a notes pipeline function - the
+;; pipeline must add to/transform the notes list.
+(define-record context (notes window))
+
+;; TODO: These mutate the input context. Functional instead?
+(define-unary (change-if context match-fn update-fn!)
+  (let ([notes (context-notes context)])
+    (for-each
+     (lambda (n)
+       (when (match-fn n)
+	 (update-fn! n)))
+     notes))
+  context)
+
+(define-unary (copy-if context match-fn mutate-fn)
+  (let ([notes (context-notes context)])
+    (for-each
+     (lambda (n)
+       (when (match-fn n)
+	 (let ([new-note (hashtable-copy n #t)])
+	   (cons notes (mutate-fn new-note)))))
+     notes))
+  context)
+
+(define-unary (change-all context mutate-fn)
+  (for-each mutate-fn (context-notes context)))
+
+(define-unary (copy-all context mutate-fn)
+  (let ([notes (context-notes context)])
+    (for-each (lambda (n) (cons n notes)) notes)))
 
 ;;----------------------------------------------------------
 ;; Time helper functions
@@ -243,12 +278,6 @@
 
 (define-unary (is-near note divisor nearness)
   (<= (note-time-mod note divisor) nearness))
-
-;; represents a window of time in beats
-(define-record window ((immutable start) (immutable end)))
-
-(define (valid-window? w) (< (window-start w) (window-end w)))
-(define (with-window-start w new-start) (make-window new-start (window-end w)))
 
 ;;-----------------------------------------------------------------
 ;; Euclidean patterns
@@ -297,7 +326,7 @@
 	       [next  (snap-next beat step-size)]
 	       [step  (% (round (/ beat step-size)) num-steps)]
 	       [notes (if (euclidean-hit? step e)
-			  (cons (make-note 'beat beat) notes)
+			  (cons (make-note beat) notes)
 			  notes)])
 	    (next-step notes e (with-window-start w next)))
 	  notes))
