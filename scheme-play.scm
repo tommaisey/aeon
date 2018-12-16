@@ -211,31 +211,45 @@
 (define-record context (notes window))
 
 ;; TODO: These mutate the input context. Functional instead?
+(define-syntax rec-set
+  (syntax-rules ()
+
+    ((_ (name record get-fn set-fn) body ...)
+     (begin
+       (set-fn record ((lambda (name) body ...) (get-fn record)))
+       record))))
+
 (define-unary (change-if context match-fn update-fn!)
-  (let ([notes (context-notes context)])
-    (for-each
-     (lambda (n)
-       (when (match-fn n)
-	 (update-fn! n)))
-     notes))
-  context)
+  (rec-set (notes context context-notes set-context-notes!)
+	   (for-each
+	    (lambda (n)
+	      (when (match-fn n)
+		(update-fn! n)))
+	    notes)
+	   notes))
 
 (define-unary (copy-if context match-fn mutate-fn)
-  (let ([notes (context-notes context)])
-    (for-each
-     (lambda (n)
-       (when (match-fn n)
-	 (let ([new-note (hashtable-copy n #t)])
-	   (cons notes (mutate-fn new-note)))))
-     notes))
-  context)
+  (rec-set (notes context context-notes set-context-notes!)
+	   (define (impl in out)
+	     (if (null? in) out
+		 (if (match-fn next)
+		     (impl (cdr in) (cons (mutate-fn (hashtable-copy (car in) #t)) out))
+		     (impl (cdr in) out))))
+	   (append (impl notes '()) notes)))
 
 (define-unary (change-all context mutate-fn)
-  (for-each mutate-fn (context-notes context)))
+  (change-if context (lambda (x) #t) mutate-fn))
 
 (define-unary (copy-all context mutate-fn)
-  (let ([notes (context-notes context)])
-    (for-each (lambda (n) (cons n notes)) notes)))
+  (copy-if context (lambda (x) #t) mutate-fn))
+
+(define (print-context c)
+  (display "start: ")
+  (display (window-start (context-window c)))
+  (display ", end: ")
+  (display (window-end (context-window c)))
+  (newline)
+  (print-notes (context-notes c)))
 
 ;;----------------------------------------------------------
 ;; Time helper functions
