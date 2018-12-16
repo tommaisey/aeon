@@ -8,6 +8,22 @@
 (define (check-type pred val string)
   (unless (pred val) (raise string)))
 
+;; Mutate a record by getting, doing your work, and setting.
+;; You must supply a name to bind the value to, the record,
+;; and a getter and setter method. Your body must return the
+;; new value.
+(define-syntax rec-set
+  (syntax-rules ()
+
+    ((_ (name record get-fn set-fn) body ...)
+     (begin
+       (set-fn record ((lambda (name) body ...) (get-fn record)))
+       record))
+
+    ((_ ...)
+     (syntax-error
+      "rec-set should have a list of 4 items before the body"))))
+
 ;; A negative-aware modulo that works with floats or fracs
 ;; Warning! breaks sometimes due to floating point error.
 ;; e.g. (fmod 4.666666666666666 (/ 4.0 12))
@@ -34,13 +50,17 @@
 
 ;; Some 'english sounding' math operators. These are intended to
 ;; be intuitive for non-programmers, so aren't always 'precise'.
-(define (nearly-divisible a b error)
-   (let* ([remain (/ a b)]
+(define (nearly-divisible val div error)
+   (let* ([remain (/ val div)]
 	  [truncated (truncate remain)])
      (< (- remain truncated) error)))
 
-(define (divisible a b)
-  (nearly-divisible a b 0.0001))
+(define (divisible val div)
+  (nearly-divisible val div 0.0001))
+
+(define (on-each val on each)
+  (let ([m (fmod val each)])
+    (= m on)))
 
 (define (above a b)
   (>= a b))
@@ -170,6 +190,8 @@
   (hashtable-set! note key value))
 (define (note-update! note key change-fn default)
   (hashtable-update! note key change-fn default))
+(define (note-copy note)
+  (hashtable-copy note #t)) ; mutable
 
 (define (print-note note)
   (begin
@@ -210,18 +232,9 @@
 ;; pipeline must add to/transform the notes list.
 (define-record context (notes window))
 
-;; TODO: These mutate the input context. Functional instead?
-(define-syntax rec-set
-  (syntax-rules ()
-
-    ((_ (name record get-fn set-fn) body ...)
-     (begin
-       (set-fn record ((lambda (name) body ...) (get-fn record)))
-       record))))
-
 (define-unary (change-if context match-fn update-fn!)
   (rec-set
-   (notes context context-notes set-context-notes!)
+   [notes context context-notes set-context-notes!]
    (for-each
     (lambda (n)
       (when (match-fn n)
@@ -231,12 +244,12 @@
 
 (define-unary (copy-if context match-fn mutate-fn)
   (rec-set
-   (notes context context-notes set-context-notes!)
+   [notes context context-notes set-context-notes!]
    (define (impl in out)
      (if (null? in) out
 	 (impl (cdr in)
 	       (if (not (match-fn (car in))) out		     
-		   (cons (mutate-fn (hashtable-copy (car in) #t)) out)))))
+		   (cons (mutate-fn (note-copy (car in))) out)))))
    (append (impl notes '()) notes)))
 
 (define-unary (change-all context mutate-fn)
