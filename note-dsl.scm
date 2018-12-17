@@ -6,13 +6,11 @@
 ;; know they're programming at all.
 ;; ------------------------------------------------------------
 
-(module note-dsl
-    (to
-     with
-     has
-     any)
+(library (note-dsl)
+  (export to with has any)
 
-  (import note)
+  (import (chezscheme))
+  (import (note))
 
   ;; Returns unary lambda or allows a direct call with a note.
   ;; Gives this syntax for setting properties of a note:
@@ -55,37 +53,37 @@
 
   ;; Logical note operators. Take a note and N [key pred arg] lists.
   ;; Checks if all/any values at the keys match the predicates.
-  ;; Optionally partially applied.
+  ;; Can be called directly with a note as first argument, or
+  ;; without that it will return a lambda that takes a note.
+  ;;
+  ;; At present these don't allow nesting - need to think harder
+  ;; about that and possibly figure out better use of fenders.
   (define-syntax has
     (syntax-rules ()
       
       ((_ [key pred args ...] rest ...)
+       (and (identifier? (syntax key))
+	    (identifier? (syntax pred)))
        (lambda (n) (and
 		    (note-has n 'key)
 		    (pred (note-get n 'key #f) args ...)
 		    ((has rest ...) n))))
 
-      ;; assume any other form is a lambda. allows nesting
-      ((_ pred rest ...)
-       (lambda (n) (and (pred n) ((has rest ...) n))))
-
-      ((base-case) (lambda (x) #t))
-      ((direct-call note pairs ...) ((has pairs ...) note))))
+      ((direct-call note pairs ...) ((has pairs ...) note))
+      ((base-case) (lambda (x) #t))))
 
   (define-syntax any
     (syntax-rules ()
       
       ((_ [key pred args ...] rest ...)
+       (and (identifier? (syntax key))
+	    (identifier? (syntax pred)))
        (lambda (n) (or
 		    (and (note-has n 'key)
 			 (pred (note-get n 'key #f) args ...))
 		    ((any rest ...) n))))
 
-      ;; assume any other form is a lambda. allows nesting
-      ((_ pred rest ...)
-       (lambda (n) (or (pred n) ((any rest ...) n))))
-
-      ((base-case) (lambda (x) #f))
-      ((direct-call note pairs ...) ((any pairs ...) note))))
+      ((direct-call note pairs ...) ((any pairs ...) note))
+      ((base-case) (lambda (x) #f))))
 
   ) ; end module 'note dsl'

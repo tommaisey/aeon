@@ -2,24 +2,26 @@
 ;;-----------------------------------------------------------------
 ;; Building pipelines of note transformations.
 ;;-----------------------------------------------------------------
-(module note-pipeline
-    (context?
-     make-context
-     context-notes
-     context-window
-     print-context
+(library (note-pipeline)
+  (export
+   make-context
+   context?
+   context-notes
+   context-window
+   print-context
 
-     change-if
-     copy-if
-     change-all
-     copy-all)
+   change-if
+   copy-if
+   change-all
+   copy-all)
 
-  (import utilities)
-  (import note)
+  (import (chezscheme) (utilities) (note))
 
   ;; A context to be passed to a notes pipeline function - the
   ;; pipeline must add to/transform the notes list.
-  (define-record context (notes window))
+  (define-record-type context
+    (fields (mutable notes)
+	    (mutable window)))
 
   (define (print-context c)
     (display "start: ")
@@ -31,7 +33,7 @@
 
   (define-unary (change-if context match-fn update-fn!)
     (rec-set
-     [notes context context-notes set-context-notes!]
+     [notes context context-notes context-notes-set!]
      (for-each
       (lambda (n)
 	(when (match-fn n)
@@ -41,7 +43,7 @@
 
   (define-unary (copy-if context match-fn mutate-fn)
     (rec-set
-     [notes context context-notes set-context-notes!]
+     [notes context context-notes context-notes-set!]
      (define (impl in out)
        (if (null? in) out
 	   (impl (cdr in)

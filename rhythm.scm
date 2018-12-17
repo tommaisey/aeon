@@ -2,21 +2,21 @@
 ;;----------------------------------------------------------
 ;; Rhythm helper functions
 ;; ---------------------------------------------------------
-(module rhythm
-    (snap-next
-     snap-next-if
-     snap-prev
-     snap-prev-if
-     snap-nearest
+(library (rhythm)
+  (export
+   snap-next
+   snap-next-if
+   snap-prev
+   snap-prev-if
+   snap-nearest
      
-     make-euclid
-     euclid-num-steps
-     euclid-num-hits
-     euclid-offset
-     euclidean-rhythm)
+   make-euclid
+   euclid-num-steps
+   euclid-num-hits
+   euclid-offset
+   euclidean-rhythm)
 
-  (import utilities)
-  (import note)
+  (import (chezscheme) (utilities) (note))
 
   ;; Snap a value to the next number divisible by divisor.
   (define (snap-next beat divisor)

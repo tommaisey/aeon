@@ -2,29 +2,24 @@
 ;;----------------------------------------------------------
 ;; Fundamental utilities
 ;; ---------------------------------------------------------
-(module utilities
-    
-    (fmod
-     %
-     random
-     nearly-divisible
-     divisible
-     on-each
-     above
-     below
-     nearly-equals
-     equals
-     within
-     
-     window
-     make-window
-     valid-window?
-     with-window-start
-     in-window?
+(library (utilities)
+  (export fmod % random
+	  nearly-divisible divisible on-each
+	  above below within
+	  equals nearly-equals
 
-     check-type
-     rec-set
-     define-unary)
+	  window
+	  window?
+	  make-window
+	  with-window-start
+	  window-start
+	  window-end
+	  valid-window?
+	  in-window?
+
+	  check-type
+	  rec-set
+	  define-unary)
 
   (import (chezscheme))
 
@@ -78,12 +73,16 @@
     (and (>= x lower) (<= x upper)))
 
   ;; A window of time (in beats)
-  (define-record window ((immutable start) (immutable end)))
+  (define-record-type window
+    (fields (immutable start)
+	    (immutable end)))
 
-  (define (valid-window? w) (< (window-start w) (window-end w)))
-  (define (with-window-start w new-start) (make-window new-start (window-end w)))
-
-  (define (in-window? w t) (within t))
+  (define (with-window-start w new-start)
+    (make-window new-start (window-end w)))
+  (define (valid-window? w)
+    (< (window-start w) (window-end w)))
+  (define (in-window? w t)
+    (within t (window-start w) (window-end w)))
 
   ;; Throw an error if the wrong type is used
   (define (check-type pred val string)

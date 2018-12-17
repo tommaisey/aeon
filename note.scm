@@ -2,17 +2,20 @@
 ;;-------------------------------------------------------------
 ;; A rudimentary note event, which is really just a hashtable.
 ;; ------------------------------------------------------------
-(module note
-    (make-note
-     note-has
-     note-get
-     note-set!
-     note-update!
-     note-copy
-     print-note
-     print-notes
-     make-notes-with-times
-     make-notes-regular)
+(library (note)
+  (export
+   make-note
+   note-has
+   note-get
+   note-set!
+   note-update!
+   note-copy
+   print-note
+   print-notes
+   make-notes-with-times
+   make-notes-regular)
+
+  (import (chezscheme))
 
   (define note-table-start-size 16)
   (define note-start-beat-key 'beat)
