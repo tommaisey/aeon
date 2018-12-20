@@ -10,6 +10,7 @@
    note-set!
    note-update!
    note-copy
+   note-check
    print-note
    print-notes
    make-notes-with-times
@@ -35,6 +36,9 @@
     (hashtable-update! note key change-fn default))
   (define (note-copy note)
     (hashtable-copy note #t)) ; mutable
+  (define (note-check note key pred . args)
+    (let ([v (note-get note key #f)])
+      (and v (apply pred (cons v args)))))
 
   ;; Takes a lambda that takes a key and a value,
   ;; applies to each hashtable entry.

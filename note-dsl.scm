@@ -9,8 +9,7 @@
 (library (note-dsl)
   (export to with has any)
 
-  (import (chezscheme))
-  (import (note))
+  (import (chezscheme) (note))
 
   ;; Returns unary lambda or allows a direct call with a note.
   ;; Gives this syntax for setting properties of a note:
@@ -51,39 +50,53 @@
   (define-syntax with
     (syntax-rules () ((_ rest ...) (to rest ...))))
 
-  ;; Logical note operators. Take a note and N [key pred arg] lists.
+  ;; Logical note filters. Take a note list and N [key pred arg] lists.
   ;; Checks if all/any values at the keys match the predicates.
-  ;; Can be called directly with a note as first argument, or
-  ;; without that it will return a lambda that takes a note.
+  ;; When called with a single note they return #t/f# like a normal
+  ;; predicate. When called without that they return a lambda that
+  ;; filters a list of notes.
   ;;
-  ;; At present these don't allow nesting - need to think harder
-  ;; about that and possibly figure out better use of fenders.
+  ;; Problems:
+  ;; - Brittle, no nice errors
+  ;; - Don't allow nesting
+  ;; - Related: don't allow injecting custom predicates
+  (define-syntax has-test
+    (syntax-rules ()
+      
+      ((_ [key pred args ...] rest ...)
+       (lambda (n)
+	 (and
+	  (note-check n 'key pred args ...)
+	  ((has-test rest ...) n))))
+
+      ((direct-call note exprs ...) ((has-test exprs ...) note))
+      ((base-case) (lambda (x) #t))))
+
+  (define-syntax any-test
+    (syntax-rules ()
+      
+      ((_ [key pred args ...] rest ...)
+       (lambda (n)
+	 (or
+	  (note-check n 'key pred args ...)
+	  ((any-test rest ...) n))))
+
+      ((direct-call note exprs ...) ((any-test exprs ...) note))
+      ((base-case) (lambda (x) #f))))
+
+  ;; Main versions return functions to filter a note list.
   (define-syntax has
     (syntax-rules ()
       
       ((_ [key pred args ...] rest ...)
-       (and (identifier? (syntax key))
-	    (identifier? (syntax pred)))
-       (lambda (n) (and
-		    (note-has n 'key)
-		    (pred (note-get n 'key #f) args ...)
-		    ((has rest ...) n))))
-
-      ((direct-call note pairs ...) ((has pairs ...) note))
-      ((base-case) (lambda (x) #t))))
+       (lambda (note-list)
+	 (filter (has-test [key pred args ...] rest ...) note-list)))))
 
   (define-syntax any
     (syntax-rules ()
       
       ((_ [key pred args ...] rest ...)
-       (and (identifier? (syntax key))
-	    (identifier? (syntax pred)))
-       (lambda (n) (or
-		    (and (note-has n 'key)
-			 (pred (note-get n 'key #f) args ...))
-		    ((any rest ...) n))))
-
-      ((direct-call note pairs ...) ((any pairs ...) note))
-      ((base-case) (lambda (x) #f))))
+       (lambda (note-list)
+	 (filter (any-test [key pred args ...] rest ...) note-list)))))
 
   ) ; end module 'note dsl'

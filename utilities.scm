@@ -3,10 +3,11 @@
 ;; Fundamental utilities
 ;; ---------------------------------------------------------
 (library (utilities)
-  (export fmod % random
+  (export fmod % rand
 	  nearly-divisible divisible on-each
 	  above below within
 	  equals nearly-equals
+	  merge-in-order
 
 	  window
 	  window?
@@ -72,6 +73,14 @@
   (define (within x lower upper)
     (and (>= x lower) (<= x upper)))
 
+  ;; ((1 2 3) (x y) (a b c)) -> (1 x a 2 y b)
+  (define (merge-in-order ll)
+    (define (impl l result)
+      (if (null? (filter null? l))
+	  (impl (map cdr l) (append result (map car l)))
+	  result))
+    (impl ll '()))
+
   ;; A window of time (in beats)
   (define-record-type window
     (fields (immutable start)
@@ -97,7 +106,7 @@
 
       ((_ (name record get-fn set-fn) body ...)
        (begin
-	 (set-fn record ((lambda (name) body ...) (get-fn record)))
+	 (set-fn record ((lambda (name) body ... name) (get-fn record)))
 	 record))
 
       ((_ ...)
