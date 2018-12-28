@@ -7,7 +7,11 @@
 	  nearly-divisible divisible on-each
 	  above below within
 	  equals nearly-equals
-	  merge-in-order
+	  column-process
+	  merge-columns
+	  columns-to-rows
+	  merge-inner
+	  sorted?
 
 	  window
 	  window?
@@ -22,7 +26,7 @@
 	  rec-set
 	  define-unary)
 
-  (import (chezscheme))
+  (import (chezscheme) (srfi s26 cut))
 
   ;; A negative-aware modulo that works with floats or fracs
   ;; Warning! breaks sometimes due to floating point error.
@@ -73,13 +77,38 @@
   (define (within x lower upper)
     (and (>= x lower) (<= x upper)))
 
-  ;; ((1 2 3) (x y) (a b c)) -> (1 x a 2 y b)
-  (define (merge-in-order ll)
-    (define (impl l result)
-      (if (null? (filter null? l))
-	  (impl (map cdr l) (append result (map car l)))
+  ;; Takes the head off each inner list until one of
+  ;; them runs out. The heads of each column are offered
+  ;; to a joiner func, along with an accumulated result.
+  (define (column-process ll joiner)
+    (define (impl ll result)
+      (if (null? (filter null? ll))
+	  (impl (map cdr ll) (joiner (map car ll) result))
 	  result))
     (impl ll '()))
+  
+  ;; ((1 2 3) (x y) (a b c)) -> (1 x a 2 y b)
+  (define (merge-columns ll)
+    (column-process ll (lambda (a b) (append b a))))
+
+  ;; ((1 2 3) (x y) (a b c)) -> ((1 x a) (2 y b))
+  (define (columns-to-rows ll)
+    (column-process ll (lambda (a b) (cons a b))))
+
+  ;;  ((1 2 3) (x y) (a b c)) -> (1 2 3 x y a b c)
+  (define (merge-inner ll)
+    (fold-left append '() ll))
+
+  ;; Check if a list is sorted or not.
+  (define (sorted? less? l)
+    (define (impl l prev)
+      (cond
+       ((null? l) #t)
+       ((or (less? prev (car l))
+	    (not (less? (car l) prev)))
+	(impl (cdr l) (car l)))
+       (else #f)))
+    (impl (cdr l) (car l)))
 
   ;; A window of time (in beats)
   (define-record-type window
@@ -130,7 +159,7 @@
        (define name
 	 (case-lambda
 	   [(arg0 args ...) body ...]
-	   [(args ...) (lambda (a) (name a args ...))]))) ; partially-applied
+	   [(args ...) (cut name <> args ...)]))) ; partially-applied
       
       ((_ ...)
        (syntax-error

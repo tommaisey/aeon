@@ -7,9 +7,11 @@
 ;; ------------------------------------------------------------
 
 (library (note-dsl)
-  (export to with has any)
+  (export to with has any pattern
+	  change-all copy-all
+	  change-if copy-if)
 
-  (import (chezscheme) (note))
+  (import (chezscheme) (note) (utilities) (srfi s26 cut))
 
   ;; Returns unary lambda or allows a direct call with a note.
   ;; Gives this syntax for setting properties of a note:
@@ -25,12 +27,11 @@
   (define-syntax to
     (lambda (x)
       (syntax-case x ()
-	
+
 	((_ (key value default) rest ...)
 	 (with-syntax ([input (datum->syntax (syntax key) 'input)])
 	   (syntax (lambda (note)
-		     (let ([input (note-get note 'key default)])
-		       (note-set! note 'key value))
+		     (note-update! note 'key (lambda (input) value) default)
 		     ((to rest ...) note)))))
 
 	((default-0 (key value) rest ...)
@@ -98,5 +99,37 @@
       ((_ [key pred args ...] rest ...)
        (lambda (note-list)
 	 (filter (any-test [key pred args ...] rest ...) note-list)))))
+
+  ;; 'pattern' is used to recognise sequences by chaining
+  ;; together the above filter functions. I'm pretty sure
+  ;; it's not super robust, but it seems to sorta work.
+  (define (pattern . filters)
+    (define (merge-results ll)
+      (define (cmp n1 n2)
+	(< (note-get n1 'beat 0)
+	   (note-get n2 'beat 0)))
+      (let* ([columns  (map (cut sort! cmp <>) ll)]
+	     [patterns (columns-to-rows columns)])
+	(merge-inner (filter (cut sorted? cmp <>) patterns))))
+    (lambda (note-list)
+      (let ([matches (map (cut <> note-list) filters)])
+	(if (< (length matches) (length filters))
+	    (list)
+	    (merge-results matches)))))
+
+  ;; The main transformation statements. 
+  (define-unary (change-if note-list filter-fn update-fn!)
+    (map update-fn! (filter-fn note-list)))
+
+  (define-unary (copy-if note-list filter-fn mutate-fn)
+    (append note-list
+     (map (lambda (n) (mutate-fn (note-copy n)))
+	  (filter-fn note-list))))
+
+  (define-unary (change-all note-list mutate-fn)
+    (change-if note-list (lambda (x) #t) mutate-fn))
+
+  (define-unary (copy-all note-list mutate-fn)
+    (copy-if note-list (lambda (x) #t) mutate-fn))
 
   ) ; end module 'note dsl'

@@ -32,30 +32,29 @@
     (hashtable-ref note key default))
   (define (note-set! note key value)
     (hashtable-set! note key value))
-  (define (note-update! note key change-fn default)
-    (hashtable-update! note key change-fn default))
+  (define (note-update! note key update-fn default)
+    (hashtable-update! note key update-fn default))
   (define (note-copy note)
     (hashtable-copy note #t)) ; mutable
   (define (note-check note key pred . args)
     (let ([v (note-get note key #f)])
       (and v (apply pred (cons v args)))))
 
-  ;; Takes a lambda that takes a key and a value,
-  ;; applies to each hashtable entry.
-  (define (hashtable-for-each hashtable fn)
-    (call-with-values (lambda () (hashtable-entries hashtable))
-      (lambda (keys values) (vector-map fn keys values))))
+  (define (hashtable-walk table fn)
+    (call-with-values
+      (cut hashtable-entries table)
+      (cut vector-map fn <> <>)))
 
   (define (print-note note)
     (begin
-      (display "{")
-      (hashtable-for-each note (lambda (key value)
-				 (display " ")
-				 (display key)
-				 (display ": ")
-				 (display value)
-				 (display ", ")))
-      (display "}")
+      (display "[")
+      (hashtable-walk note (lambda (key value)
+			     (display " ")
+			     (display key)
+			     (display ": ")
+			     (display value)
+			     (display ", ")))
+      (display "]")
       (newline)))
 
   (define (print-notes note-list)
