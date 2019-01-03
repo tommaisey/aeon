@@ -30,8 +30,7 @@
     (syntax-rules ()
       ((has key pred args ...)
        (pipeline-node [notes]
-	 (filter (lambda (n) (note-check n 'key pred args ...))
-		 notes)))))
+	 (filter (cut note-check <> 'key pred args ...) notes)))))
 
   ;; Find the intersection of the inner filters
   (define (all . filters)
@@ -98,11 +97,18 @@
 	 (with-syntax ([input (datum->syntax (syntax key) 'input)])
 	   (syntax
 	    (lambda (note)
-	      (note-update! note 'key (lambda (input) value) default)
-	      ((to rest ...) note)))))
+	      ((to rest ...)
+	       (note-update note 'key
+		(lambda (input) value) default))))))
 
+	;; Because we're using alists, this version is much
+	;; faster because it doesn't require a lookup to get
+	;; the special 'input' value.
 	((default-0 (key value) rest ...)
-	 (syntax (to (key value 0) rest ...)))
+	 (with-syntax ([input (datum->syntax (syntax key) 'input)])
+	   (syntax
+	    (lambda (note)
+	      ((to rest ...) (note-set note 'key value))))))
 	
 	((base-case)
 	 (syntax (lambda (note) note)))
@@ -120,28 +126,27 @@
 
   ;;------------------------------------------------------
   ;; Top level transformation statements.
-  (define (change-impl notes update-fn!)
-    (map update-fn! notes))
+  (define (change-impl notes update-fn)
+    (map update-fn notes))
 
-  (define (change-all update-fn!)
+  (define (change-all update-fn)
     (pipeline-node [notes]
-      change-impl notes update-fn!))
+      change-impl notes update-fn))
 
-  (define (change-if filter-fn update-fn!)
+  (define (change-if filter-fn update-fn)
     (pipeline-node [notes]
-      (change-impl (filter-fn notes) update-fn!)))
+      (change-impl (filter-fn notes) update-fn)))
 
-  (define (copy-impl notes notes-to-copy mutate-fn)
-    (append notes (map (lambda (n) (mutate-fn (note-copy n)))
-		       notes-to-copy)))
+  (define (copy-impl notes notes-to-copy update-fn)
+    (append notes (map update-fn notes-to-copy)))
 
-  (define (copy-all mutate-fn)
+  (define (copy-all update-fn)
     (pipeline-node [notes]
-      (copy-impl notes notes mutate-fn)))
+      (copy-impl notes notes update-fn)))
 
-  (define (copy-if filter-fn mutate-fn)
+  (define (copy-if filter-fn update-fn)
     (pipeline-node [notes]
-      (copy-impl notes (filter-fn notes) mutate-fn)))
+      (copy-impl notes (filter-fn notes) update-fn)))
 
   ;; Adding statements
   (define (add to-add)

@@ -9,9 +9,8 @@
   (export make-note
 	  note-has
 	  note-get
-	  note-set!
-	  note-update!
-	  note-copy
+	  note-set
+	  note-update
 	  note-check
 	  note-beat
 	  note-before?
@@ -37,33 +36,29 @@
 	  context-print
 	  pipeline-node)
 
-  (import (chezscheme) (utilities) (srfi s26 cut))
+  (import (chezscheme) (utilities) (srfi s26 cut)
+	  (only (srfi s1 lists) delete-duplicates))
 
   ;; A note event. It's really just an associative dictionary,
   ;; mapping keys to values. The most important key is 'beat'
   ;; which describes its position in time.
-  ;; It's implemented as a hashtable for now, but maybe an
-  ;; alist would be better because it encourages immutable
-  ;; style. But I don't know what the performance implications
-  ;; would be.
-  (define note-table-start-size 16)
+  ;; It's implemented as an immutable alist - every operation
+  ;; returns a new list that must be captured.
   (define note-start-beat-key 'beat)
+  (define priority-keys '(beat length freq))
 
   (define (make-note start-beat)
-    (let ([table (make-eq-hashtable note-table-start-size)])
-      (hashtable-set! table note-start-beat-key start-beat)
-      table))
+    (list (cons note-start-beat-key start-beat)))
 
   (define (note-has note key)
     (hashtable-contains? note key))
   (define (note-get note key default)
-    (hashtable-ref note key default))
-  (define (note-set! note key value)
-    (hashtable-set! note key value))
-  (define (note-update! note key update-fn default)
-    (hashtable-update! note key update-fn default))
-  (define (note-copy note)
-    (hashtable-copy note #t)) ; mutable
+    (let ([result (assq key note)])
+      (if result (cdr result) default)))
+  (define (note-set note key value)
+    (cons (cons key value) note))
+  (define (note-update note key update-fn default)
+    (note-set note key (update-fn (note-get note key default))))
   (define (note-beat n)
     (note-get n note-start-beat-key 0))
   (define (note-before? n1 n2)
@@ -72,21 +67,31 @@
   ;; satisfies the predicate (which may have extra args)
   (define (note-check note key pred . args)
     (let ([v (note-get note key #f)])
-      (and v (apply pred (cons v args)))))
+      (when v (apply pred (cons v args)))))
 
-  (define (hashtable-walk table fn)
-    (call-with-values
-      (cut hashtable-entries table)
-      (cut vector-map fn <> <>)))
+  ;; note-optimise returns an identical-looking note that's
+  ;; been cleaned of old mappings and had certain key/value
+  ;; pairs moved to the front to ensure they'll 
+  (define (note-prioritise note key)
+    (let ([result (note-get note key #f)])
+      (if (not result) note
+	  (note-set note key result))))
+  
+  (define (note-optimise note)
+    (let ([n (fold-left (cut note-prioritise note <>) note priority-keys)])
+      (delete-duplicates n (lambda (x y) (eq? (car x) (car y))))))
 
+  ;; Some note convenience functions
   (define (print-note note)
     (display "[")
-    (hashtable-walk note (lambda (key value)
-			   (display " ")
-			   (display key)
-			   (display ": ")
-			   (display value)
-			   (display ", ")))
+    (for-each
+     (lambda (p)
+       (display " ")
+       (display (car p))
+       (display ": ")
+       (display (cdr p))
+       (display ", "))
+     note)
     (display "]")
     (newline))
 
@@ -180,5 +185,5 @@
 
       ((_ ...)
        (syntax-error "pipeline-node syntax error."))))
-  
+
   ) ; end module 'note'
