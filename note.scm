@@ -6,12 +6,15 @@
 ;; mind working directly in scheme.
 ;; ------------------------------------------------------------
 (library (note)
-  (export make-note
-	  note-has
+  (export priority-keys
+          make-note
 	  note-get
 	  note-set
 	  note-update
 	  note-check
+	  note-optimise
+	  note-prioritise
+	  
 	  note-beat
 	  note-before?
 	  print-note
@@ -43,15 +46,17 @@
   ;; mapping keys to values. The most important key is 'beat'
   ;; which describes its position in time.
   ;; It's implemented as an immutable alist - every operation
-  ;; returns a new list that must be captured.
+  ;; returns a new list, the old one remains untouched.
   (define note-start-beat-key 'beat)
   (define priority-keys '(beat length freq))
 
-  (define (make-note start-beat)
-    (list (cons note-start-beat-key start-beat)))
+  (define-syntax make-note
+    (syntax-rules ()
+      ((_ start-beat (key value) ...)
+       (list (cons 'beat start-beat) (cons 'key value) ...))
+      
+      ((_ ...) (syntax-error "make-note should look like: (make-note 1/16 [freq 100]"))))
 
-  (define (note-has note key)
-    (hashtable-contains? note key))
   (define (note-get note key default)
     (let ([result (assq key note)])
       (if result (cdr result) default)))
@@ -70,15 +75,15 @@
       (when v (apply pred (cons v args)))))
 
   ;; note-optimise returns an identical-looking note that's
-  ;; been cleaned of old mappings and had certain key/value
-  ;; pairs moved to the front to ensure they'll 
+  ;; been cleaned of obsolete mappings and had certain key/value
+  ;; pairs moved to the front to accelerate finding common entries.
   (define (note-prioritise note key)
     (let ([result (note-get note key #f)])
       (if (not result) note
 	  (note-set note key result))))
   
   (define (note-optimise note)
-    (let ([n (fold-left (cut note-prioritise note <>) note priority-keys)])
+    (let ([n (fold-left (cut note-prioritise <> <>) note priority-keys)])
       (delete-duplicates n (lambda (x y) (eq? (car x) (car y))))))
 
   ;; Some note convenience functions
@@ -91,7 +96,7 @@
        (display ": ")
        (display (cdr p))
        (display ", "))
-     note)
+     (note-optimise note))
     (display "]")
     (newline))
 
@@ -99,7 +104,7 @@
     (for-each print-note note-list))
 
   (define (make-notes-with-times times-list)
-    (map make-note times-list))
+    (map (lambda (t) (make-note t)) times-list))
 
   (define (make-notes-regular num interval start)
     (define (impl lst num t)
