@@ -5,26 +5,16 @@
 (library (utilities)
   (export fmod % rand
 	  nearly-divisible divisible on-each
-	  above below within
+	  above below between
 	  equals nearly-equals
 	  column-process
 	  merge-columns
 	  columns-to-rows
 	  merge-inner
 	  sorted?
-
-	  window
-	  window?
-	  make-window
-	  with-window-start
-	  window-start
-	  window-end
-	  valid-window?
-	  in-window?
-
-	  check-type
-	  rec-set
-	  define-unary)
+	  list-last
+	  remove-list
+	  check-type)
 
   (import (chezscheme) (srfi s26 cut))
 
@@ -74,95 +64,51 @@
   (define (equals a b)
     (= a b))
 
-  (define (within x lower upper)
+  (define (between x lower upper)
     (and (>= x lower) (<= x upper)))
 
   ;; Takes the head off each inner list until one of
   ;; them runs out. The heads of each column are offered
   ;; to a joiner func, along with an accumulated result.
-  (define (column-process ll joiner)
-    (define (impl ll result)
-      (if (null? (filter null? ll))
-	  (impl (map cdr ll) (joiner (map car ll) result))
-	  result))
-    (impl ll '()))
+  (define (column-process col-list joiner)
+    (let impl ([l col-list] [result '()])
+      (if (member '() l) result
+	  (impl (map cdr l) (joiner (map car l) result)))))
   
   ;; ((1 2 3) (x y) (a b c)) -> (1 x a 2 y b)
-  (define (merge-columns ll)
-    (column-process ll (lambda (a b) (append b a))))
+  (define (merge-columns col-list)
+    (column-process col-list (lambda (a b) (append b a))))
 
   ;; ((1 2 3) (x y) (a b c)) -> ((1 x a) (2 y b))
-  (define (columns-to-rows ll)
-    (column-process ll (lambda (a b) (cons a b))))
+  (define (columns-to-rows col-list)
+    (column-process col-list (lambda (a b) (cons a b))))
 
   ;;  ((1 2 3) (x y) (a b c)) -> (1 2 3 x y a b c)
-  (define (merge-inner ll)
-    (fold-left append '() ll))
+  (define (merge-inner col-list)
+    (fold-left append '() col-list))
 
   ;; Check if a list is sorted or not.
   (define (sorted? less? l)
-    (define (impl l prev)
+    (let impl ([l (cdr l)] [prev (car l)])
       (cond
        ((null? l) #t)
        ((or (less? prev (car l))
 	    (not (less? (car l) prev)))
 	(impl (cdr l) (car l)))
-       (else #f)))
-    (impl (cdr l) (car l)))
+       (else #f))))
 
-  ;; A window of time (in beats)
-  (define-record-type window
-    (fields (immutable start)
-	    (immutable end)))
+  ;; Get the last element of a list. Slow operation.
+  (define (list-last l)
+    (if (null? (cdr l))
+	(car l)
+        (list-last (cdr l))))
 
-  (define (with-window-start w new-start)
-    (make-window new-start (window-end w)))
-  (define (valid-window? w)
-    (< (window-start w) (window-end w)))
-  (define (in-window? w t)
-    (within t (window-start w) (window-end w)))
+  ;; Remove matching items in b from a
+  (define (remove-list a b)
+    (filter (lambda (n) (not (member n b))) a))
 
-  ;; Throw an error if the wrong type is used
+   ;; Throw an error if the wrong type is used
   (define (check-type pred val string)
     (unless (pred val) (raise string)))
-
-  ;; Mutate a record by getting, doing your work, and setting.
-  ;; You must supply a name to bind the value to, the record,
-  ;; and a getter and setter method. Your body must return the
-  ;; new value.
-  (define-syntax rec-set
-    (syntax-rules ()
-
-      ((_ (name record get-fn set-fn) body ...)
-       (begin
-	 (set-fn record ((lambda (name) body ... name) (get-fn record)))
-	 record))
-
-      ((_ ...)
-       (syntax-error
-	"rec-set should have a list of 4 items before the body"))))
-
-  ;; Defines a function, and also generates an overload with one
-  ;; fewer arguments. The overload returns a unary lambda, which
-  ;; can have the missing (first) argument applied to get the result.
-  ;;
-  ;; (define-unary (my-add a b c) (+ a b c)) 
-  ;; (my-add 4 3 2)   ; 9
-  ;; ((my-add 3 2) 4) ; 9
-  ;; (map (my-add 3 2) '(4 0 1)) ; (9 5 6)
-  ;;
-  ;; TODO: get rid in favour of SRFI 26's cut?
-  (define-syntax define-unary
-    (syntax-rules ()
-      
-      ((_ (name arg0 args ...) body ...)
-       (define name
-	 (case-lambda
-	   [(arg0 args ...) body ...]
-	   [(args ...) (cut name <> args ...)]))) ; partially-applied
-      
-      ((_ ...)
-       (syntax-error
-	"define-unary should look like a function definition with 1+ arguments."))))
   
   ) ; end module 'utilities'

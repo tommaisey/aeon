@@ -4,15 +4,78 @@
 ;; musical patterns. We don't want beginners to ever have to type
 ;; 'lambda' or scary words like that. We'd prefer that they don't
 ;; know they're programming at all.
+;;
+;; DSL basically consists of two parts: filters and transformers.
+;;
+;; Filters return lambdas taking a context (or, for repl convenience,
+;; a raw note list - see pipeline-node) and returning a new one
+;; with a filtered note list. While it would be simpler if it returned
+;; a lambda taking an individual note, we want filters to be able to
+;; recognise sequential patterns of notes.
+;;
+;; Transformers also take a context/note-list, and do something to
+;; each of the notes, returning a new list.
 ;; ------------------------------------------------------------
 
 (library (note-dsl)
-  (export to with has any pattern
+  (export to with has any phrase
 	  change-all copy-all
 	  change-if copy-if)
 
   (import (chezscheme) (note) (utilities) (srfi s26 cut))
 
+  ;; Macro for checking that the properties of a note
+  ;; match a certain (partially applied) predicate.
+  (define-syntax has
+    (syntax-rules ()
+      ((has key pred args ...)
+       (pipeline-node [notes]
+	 (filter (lambda (n) (note-check n 'key pred args ...))
+		 notes)))))
+
+  ;; Find the intersection of the inner filters
+  (define (all . filters)
+    (pipeline-node [notes]
+      (let impl ([fns filters] [nts notes])
+	(cond
+	 ((or (null? nts) (null? fns)) nts)
+	 (else (impl (cdr fns) ((car fns) nts)))))))
+
+  ;; Find the union of the inner filters.
+  (define (any . filters)
+    (pipeline-node [notes]
+      (let impl ([fns filters] [nts notes] [out '()])
+	(cond
+	 ((or (null? nts) (null? fns)) out)
+	 (else (let ([found ((car fns) nts)])
+		 (impl (cdr fns)
+		       (remove-list nts found)
+		       (append found out))))))))
+
+  ;; Subtract the output of each filter successively from
+  ;; the result of the first filter.
+  (define (but-not . filters)
+    (pipeline-node [notes]
+      (if (null? filters) notes
+	  (let impl ([fns (cdr filters)] [nts ((car filters) notes)])
+	    (cond
+	     ((or (null? nts) (null? fns)) nts)
+	     (else (let ([found ((car fns) nts)])
+		     (impl (cdr fns)
+			   (remove-list nts found)))))))))
+
+  ;; Takes: a list of N filters (e.g. has, any)
+  ;; Returns: a filter finding sequences matching the inputs.
+  ;; Not super robust, but seems to sorta work for now.
+  (define (phrase . filters)
+    (define (merge-results ll)
+      (let* ([columns  (map (cut sort! note-before? <>) ll)]
+	     [patterns (columns-to-rows columns)])
+	(merge-inner (filter (cut sorted? note-before? <>) patterns))))
+    (pipeline-node [notes]
+      (merge-results (map (cut <> notes) filters))))
+
+  ;;-----------------------------------------------
   ;; Returns unary lambda or allows a direct call with a note.
   ;; Gives this syntax for setting properties of a note:
   ;;
@@ -24,15 +87,19 @@
   ;; Within a setting form, the special keyword `input` gets the
   ;; current value. A third form supplies a default for `input` if
   ;; the property doesn't exist - it'll be 0 if there's no default.
+  ;;
+  ;; TODO: it's likely people will want to refer to the value of
+  ;; other keys, e.g. [amp (* cutoff 0.01)]. How to do that?
   (define-syntax to
     (lambda (x)
       (syntax-case x ()
 
 	((_ (key value default) rest ...)
 	 (with-syntax ([input (datum->syntax (syntax key) 'input)])
-	   (syntax (lambda (note)
-		     (note-update! note 'key (lambda (input) value) default)
-		     ((to rest ...) note)))))
+	   (syntax
+	    (lambda (note)
+	      (note-update! note 'key (lambda (input) value) default)
+	      ((to rest ...) note)))))
 
 	((default-0 (key value) rest ...)
 	 (syntax (to (key value 0) rest ...)))
@@ -47,89 +114,42 @@
 	 (syntax-error
 	  "'to' should contain a series of key/value pairs.")))))
 
-  ;; with is an alias for 'to'. TODO: should return a new note?
+  ;; 'with' is an alias for 'to'. TODO: should return a new note?
   (define-syntax with
     (syntax-rules () ((_ rest ...) (to rest ...))))
 
-  ;; Logical note filters. Take a note list and N [key pred arg] lists.
-  ;; Checks if all/any values at the keys match the predicates.
-  ;; When called with a single note they return #t/f# like a normal
-  ;; predicate. When called without that they return a lambda that
-  ;; filters a list of notes.
-  ;;
-  ;; Problems:
-  ;; - Brittle, no nice errors
-  ;; - Don't allow nesting
-  ;; - Related: don't allow injecting custom predicates
-  (define-syntax has-test
-    (syntax-rules ()
-      
-      ((_ [key pred args ...] rest ...)
-       (lambda (n)
-	 (and
-	  (note-check n 'key pred args ...)
-	  ((has-test rest ...) n))))
+  ;;------------------------------------------------------
+  ;; Top level transformation statements.
+  (define (change-impl notes update-fn!)
+    (map update-fn! notes))
 
-      ((direct-call note exprs ...) ((has-test exprs ...) note))
-      ((base-case) (lambda (x) #t))))
+  (define (change-all update-fn!)
+    (pipeline-node [notes]
+      change-impl notes update-fn!))
 
-  (define-syntax any-test
-    (syntax-rules ()
-      
-      ((_ [key pred args ...] rest ...)
-       (lambda (n)
-	 (or
-	  (note-check n 'key pred args ...)
-	  ((any-test rest ...) n))))
+  (define (change-if filter-fn update-fn!)
+    (pipeline-node [notes]
+      (change-impl (filter-fn notes) update-fn!)))
 
-      ((direct-call note exprs ...) ((any-test exprs ...) note))
-      ((base-case) (lambda (x) #f))))
+  (define (copy-impl notes notes-to-copy mutate-fn)
+    (append notes (map (lambda (n) (mutate-fn (note-copy n)))
+		       notes-to-copy)))
 
-  ;; Main versions return functions to filter a note list.
-  (define-syntax has
-    (syntax-rules ()
-      
-      ((_ [key pred args ...] rest ...)
-       (lambda (note-list)
-	 (filter (has-test [key pred args ...] rest ...) note-list)))))
+  (define (copy-all mutate-fn)
+    (pipeline-node [notes]
+      (copy-impl notes notes mutate-fn)))
 
-  (define-syntax any
-    (syntax-rules ()
-      
-      ((_ [key pred args ...] rest ...)
-       (lambda (note-list)
-	 (filter (any-test [key pred args ...] rest ...) note-list)))))
+  (define (copy-if filter-fn mutate-fn)
+    (pipeline-node [notes]
+      (copy-impl notes (filter-fn notes) mutate-fn)))
 
-  ;; 'pattern' is used to recognise sequences by chaining
-  ;; together the above filter functions. I'm pretty sure
-  ;; it's not super robust, but it seems to sorta work.
-  (define (pattern . filters)
-    (define (merge-results ll)
-      (define (cmp n1 n2)
-	(< (note-get n1 'beat 0)
-	   (note-get n2 'beat 0)))
-      (let* ([columns  (map (cut sort! cmp <>) ll)]
-	     [patterns (columns-to-rows columns)])
-	(merge-inner (filter (cut sorted? cmp <>) patterns))))
-    (lambda (note-list)
-      (let ([matches (map (cut <> note-list) filters)])
-	(if (< (length matches) (length filters))
-	    (list)
-	    (merge-results matches)))))
+  ;; Adding statements
+  (define (add to-add)
+    (pipeline-node [notes]
+      (append to-add notes)))
 
-  ;; The main transformation statements. 
-  (define-unary (change-if note-list filter-fn update-fn!)
-    (map update-fn! (filter-fn note-list)))
-
-  (define-unary (copy-if note-list filter-fn mutate-fn)
-    (append note-list
-     (map (lambda (n) (mutate-fn (note-copy n)))
-	  (filter-fn note-list))))
-
-  (define-unary (change-all note-list mutate-fn)
-    (change-if note-list (lambda (x) #t) mutate-fn))
-
-  (define-unary (copy-all note-list mutate-fn)
-    (copy-if note-list (lambda (x) #t) mutate-fn))
+  (define (add-looped loop-window to-add)
+    (pipeline-node [notes window]
+      (make-context notes window))) ; TODO: stub
 
   ) ; end module 'note dsl'

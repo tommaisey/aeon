@@ -88,7 +88,7 @@
 	 [step-size  (/ stretch num-steps)]
 	 [start-beat (snap-next-if (window-start w) step-size)])
       (define (next-step notes e w)
-	(if (valid-window? w)
+	(if (window-valid? w)
 	    (let*
 		([beat  (window-start w)]
 		 [next  (snap-next beat step-size)]
@@ -96,8 +96,8 @@
 		 [notes (if (euclidean-hit? step e)
 			    (cons (make-note beat) notes)
 			    notes)])
-	      (next-step notes e (with-window-start w next)))
+	      (next-step notes e (window-with-start w next)))
 	    notes))
-      (next-step '() e (with-window-start w start-beat))))
+      (next-step '() e (window-with-start w start-beat))))
 
   ); end module 'rhythm'
