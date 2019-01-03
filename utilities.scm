@@ -73,15 +73,15 @@
   (define (column-process col-list joiner)
     (let impl ([l col-list] [result '()])
       (if (member '() l) result
-	  (impl (map cdr l) (joiner (map car l) result)))))
+	  (impl (map cdr l) (joiner result (map car l))))))
   
   ;; ((1 2 3) (x y) (a b c)) -> (1 x a 2 y b)
   (define (merge-columns col-list)
-    (column-process col-list (lambda (a b) (append b a))))
+    (column-process col-list (lambda (a b) (append a b))))
 
   ;; ((1 2 3) (x y) (a b c)) -> ((1 x a) (2 y b))
   (define (columns-to-rows col-list)
-    (column-process col-list (lambda (a b) (cons a b))))
+    (reverse (column-process col-list (lambda (a b) (cons b a)))))
 
   ;;  ((1 2 3) (x y) (a b c)) -> (1 2 3 x y a b c)
   (define (merge-inner col-list)
@@ -105,7 +105,7 @@
 
   ;; Remove matching items in b from a
   (define (remove-list a b)
-    (filter (lambda (n) (not (member n b))) a))
+    (filter (lambda (x) (not (member x b))) a))
 
    ;; Throw an error if the wrong type is used
   (define (check-type pred val string)

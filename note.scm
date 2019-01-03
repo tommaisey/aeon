@@ -55,7 +55,8 @@
       ((_ start-beat (key value) ...)
        (list (cons 'beat start-beat) (cons 'key value) ...))
       
-      ((_ ...) (syntax-error "make-note should look like: (make-note 1/16 [freq 100]"))))
+      ((_ ...)
+       (syntax-error "make-note syntax: (_ 1/16 [freq 100]"))))
 
   (define (note-get note key default)
     (let ([result (assq key note)])
@@ -72,7 +73,7 @@
   ;; satisfies the predicate (which may have extra args)
   (define (note-check note key pred . args)
     (let ([v (note-get note key #f)])
-      (when v (apply pred (cons v args)))))
+      (if v (apply pred (cons v args)) #f)))
 
   ;; note-optimise returns an identical-looking note that's
   ;; been cleaned of obsolete mappings and had certain key/value
@@ -170,7 +171,7 @@
       ;; Binds a context's notes to the supplied symbol,
       ;; or accepts and rebinds a bare list of notes.
       ;; `body` should return a notes list, but the lambda
-      ;; will return a context.
+      ;; converts it to a context if that's the received type.
       ((_ [notes-id] body rest ...)
        (lambda (ctx/notes)
 	 (cond

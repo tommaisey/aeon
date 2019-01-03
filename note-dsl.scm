@@ -18,7 +18,7 @@
 ;; ------------------------------------------------------------
 
 (library (note-dsl)
-  (export to with has any phrase
+  (export to with has any none phrase
 	  change-all copy-all
 	  change-if copy-if)
 
@@ -51,28 +51,26 @@
 		       (remove-list nts found)
 		       (append found out))))))))
 
-  ;; Subtract the output of each filter successively from
-  ;; the result of the first filter.
-  (define (but-not . filters)
+  ;; Subtract the notes matched by each filter from the input.
+  (define (none . filters)
     (pipeline-node [notes]
-      (if (null? filters) notes
-	  (let impl ([fns (cdr filters)] [nts ((car filters) notes)])
-	    (cond
-	     ((or (null? nts) (null? fns)) nts)
-	     (else (let ([found ((car fns) nts)])
-		     (impl (cdr fns)
-			   (remove-list nts found)))))))))
+      (let impl ([fns filters] [nts notes])
+	(cond
+	 ((or (null? nts) (null? fns)) nts)
+	 (else (let ([found ((car fns) nts)])
+		 (impl (cdr fns) (remove-list nts found))))))))
 
   ;; Takes: a list of N filters (e.g. has, any)
   ;; Returns: a filter finding sequences matching the inputs.
-  ;; Not super robust, but seems to sorta work for now.
+  ;; This doesn't work very well currently. Will need thorough
+  ;; unit tests.
   (define (phrase . filters)
     (define (merge-results ll)
-      (let* ([columns  (map (cut sort! note-before? <>) ll)]
+      (let* ([columns  (map (cut sort note-before? <>) ll)]
 	     [patterns (columns-to-rows columns)])
 	(merge-inner (filter (cut sorted? note-before? <>) patterns))))
     (pipeline-node [notes]
-      (merge-results (map (cut <> notes) filters))))
+      (merge-inner (map (cut <> notes) filters))))
 
   ;;-----------------------------------------------
   ;; Returns unary lambda or allows a direct call with a note.
