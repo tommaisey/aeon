@@ -11,7 +11,11 @@
 	  merge-columns
 	  columns-to-rows
 	  merge-inner
+	  merge-sorted
 	  sorted?
+	  for-any
+	  for-none
+	  combine-preds
 	  list-last
 	  remove-list
 	  check-type)
@@ -89,13 +93,49 @@
 
   ;; Check if a list is sorted or not.
   (define (sorted? less? l)
-    (let impl ([l (cdr l)] [prev (car l)])
+    (let recur ([l (cdr l)] [prev (car l)])
       (cond
        ((null? l) #t)
        ((or (less? prev (car l))
 	    (not (less? (car l) prev)))
-	(impl (cdr l) (car l)))
+	(recur (cdr l) (car l)))
        (else #f))))
+
+  ;; Stable merges to lists according to less?. Lifted from
+  ;; SRFI95 ref implementation, with tweaks.
+  (define (merge-sorted a b less? . opt-key)
+    (define key (if (null? opt-key) values (car opt-key)))
+    (cond ((null? a) b)
+	  ((null? b) a)
+	  (else
+	   (let loop ((x (car a)) (kx (key (car a))) (a (cdr a))
+		      (y (car b)) (ky (key (car b))) (b (cdr b)))
+	     ;; The loop handles the merging of non-empty lists.  It has
+	     ;; been written this way to save testing and car/cdring.
+	     (if (less? ky kx)
+		 (if (null? b)
+		     (cons y (cons x a))
+		     (cons y (loop x kx a (car b) (key (car b)) (cdr b))))
+		 ;; x <= y
+		 (if (null? a)
+		     (cons x (cons y b))
+		     (cons x (loop (car a) (key (car a)) (cdr a) y ky b))))))))
+
+  ;; Chez provides for-all, which checks all items in a
+  ;; list return true for pred. Here's the 'none' and
+  ;; 'any' versions.
+  (define (for-any pred lst)
+    (not (for-all (lambda (x) (not (pred x))) lst)))
+
+  (define (for-none pred lst)
+    (not (for-any pred lst)))
+
+  ;; Get a lambda that combines all of the predicates in the
+  ;; list. e.g. Supplying for-all/any will check
+  ;; all/any of the predicates return true for x.
+  (define (combine-preds preds for-all/any/none)
+    (lambda (x)
+      (for-all/any/none (lambda (p) (p x)) preds)))
 
   ;; Get the last element of a list. Slow operation.
   (define (list-last l)

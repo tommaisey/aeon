@@ -34,10 +34,15 @@
 
 	  context
 	  make-context
-	  context-notes
+	  context-note
+	  context-notes-next
+	  context-notes-prev
 	  context-window
 	  context-print
-	  pipeline-node)
+	  context-move
+	  context-to-closest-note
+	  context-complete?
+	  context-rewind)
 
   (import (chezscheme) (utilities) (srfi s26 cut)
 	  (only (srfi s1 lists) delete-duplicates))
@@ -47,8 +52,8 @@
   ;; which describes its position in time.
   ;; It's implemented as an immutable alist - every operation
   ;; returns a new list, the old one remains untouched.
-  (define note-start-beat-key 'beat)
-  (define priority-keys '(beat length freq))
+  (define time-key 'beat)
+  (define priority-keys '(length freq beat))
 
   (define-syntax make-note
     (syntax-rules ()
@@ -56,7 +61,7 @@
        (list (cons 'beat start-beat) (cons 'key value) ...))
       
       ((_ ...)
-       (syntax-error "make-note syntax: (_ 1/16 [freq 100]"))))
+       (syntax-error "make-note syntax: (_ 1/16 [:freq 100]"))))
 
   (define (note-get note key default)
     (let ([result (assq key note)])
@@ -66,7 +71,7 @@
   (define (note-update note key update-fn default)
     (note-set note key (update-fn (note-get note key default))))
   (define (note-beat n)
-    (note-get n note-start-beat-key 0))
+    (note-get n time-key 0))
   (define (note-before? n1 n2)
     (< (note-beat n1) (note-beat n2)))
   ;; Checks there is an item at the key and that it
@@ -136,11 +141,18 @@
 	 (list (note-beat (car notes))
 	       (note-beat (list-last notes))))))
 
-  ;; A context containing a note list and a window of time
-  ;; that transformations should care about.
+  ;; ---------------------------------------------
+  ;; A context for a note in a series. notes-next contains the
+  ;; remaining notes (starting with 'this' note) and prev-notes
+  ;; contains the previous notes in reverse, starting with the one
+  ;; preceding 'this'.
   (define-record-type context
-    (fields (immutable notes)
+    (fields (immutable notes-next)
+	    (immutable notes-prev)
 	    (immutable window)))
+
+  (define (context-note c)
+    (car (context-notes-next c)))
 
   (define (context-print c)
     (let ([win (context-window c)])
@@ -149,47 +161,66 @@
       (display ", ")
       (display (window-end win))
       (newline)
-      (print-notes (context-notes c))))
+      (print-notes (context-notes-next c))))
 
-  ;; Produces a lambda that takes and returns a context.
-  ;; The context is destructured and bound to the symbols
-  ;; provided for its notes and/or window. Use:
-  ;;
-  ;; (pipeline-node [notes win] (body returning context))
-  ;; (pipeline-node [notes] (body returning notes)
-  (define-syntax pipeline-node
-    (syntax-rules ()
+  ;; pass a context and notes-next & notes-prev.
+  ;; swap their order to move one item forward or back.
+  ;; moves the head of list returned by (get-next c)
+  (define (context-move1 c get-next get-prev)
+    (let ([next (get-next c)]
+	  [prev (get-prev c)])
+      (make-context (if (pair? next) (cdr next) '())
+		    (if (pair? prev) (cons (car next) prev) '())
+		    (context-window c))))
 
-      ;; Binds context's notes and window to supplied symbols.
-      ;; Should return a transformed context.
-      ((_ [notes-id window-id] body rest ...)
-       (lambda (context)
-	 (let ([notes-id (context-notes context)]
-	       [window-id (context-window context)])
-	   body rest ...)))
+  (define (context-it c direction-fn)
+    (let ([n context-notes-next]
+	  [p context-notes-prev]
+	  [direction (direction-fn c)])
+      (if (zero? direction) c
+	  (context-it (apply context-move1
+			     (if (positive? direction)
+				 (list c n p)
+				 (list c p n)))
+		      direction-fn))))
 
-      ;; Binds a context's notes to the supplied symbol,
-      ;; or accepts and rebinds a bare list of notes.
-      ;; `body` should return a notes list, but the lambda
-      ;; converts it to a context if that's the received type.
-      ((_ [notes-id] body rest ...)
-       (lambda (ctx/notes)
-	 (cond
-	  ((context? ctx/notes)
-	   (let ([notes-id (context-notes ctx/notes)]
-		 [window (context-window ctx/notes)])
-	     (make-context (begin body rest ...) window)))
+  ;; direction-fn that drives context iteration forward/back n times,
+  ;; depending on whether n is positive or negative, or until the next/prev
+  ;; list runs out.
+  (define (until-zero-or-end n)
+    (lambda (context)
+      (let ([x n]
+	    [getter (if (positive? n)
+			context-notes-next
+			context-notes-prev)])
+	(cond
+	 ((or (zero? x) (null? (getter context))) 0)
+	 ((positive? x) (set! n (sub1 n)) x)
+	 ((negative? x) (set! n (add1 n)) x)))))
 
-	  ((list? ctx/notes)
-	   (let ([notes-id ctx/notes])
-	     (begin body rest ...)))
+  ;; direction-fn that moves a context iterator to the note
+  ;; in the context that starts closest to the requested time. 
+  (define (to-closest time)
+    (lambda (context)
+      (define (delta note) (- time (note-get note time-key +inf.0)))
+      (define (car-delta l) (if (null? l) +inf.0 (delta (car l))))
+      (define (cdr-delta l) (if (null? l) +inf.0 (car-delta (cdr l))))
+      (let* ([cur (delta (context-note context))]
+	     [prv (car-delta (context-notes-prev context))]
+	     [nxt (cdr-delta (context-notes-next context))])
+	(if (<= (abs cur) (abs nxt))
+	    (if (< (abs prv) (abs cur)) -1 0) 1))))
 
-	  (else
-	   (begin
-	     (display ctx/notes)
-	     (raise "pipeline-node only binds to contexts or note lists"))))))
+  (define (context-move c n)
+    (context-it c (until-zero-or-end n)))
 
-      ((_ ...)
-       (syntax-error "pipeline-node syntax error."))))
+  (define (context-to-closest-note c time)
+    (context-it c (to-closest time)))
+
+  (define (context-complete? c)
+    (eqv? '() (cdr (context-notes-next c))))
+  
+  (define (context-rewind c)
+    (context-move c -9999999)) ;; Lazy
 
   ) ; end module 'note'
