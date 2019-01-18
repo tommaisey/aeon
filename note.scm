@@ -6,43 +6,33 @@
 ;; mind working directly in scheme.
 ;; ------------------------------------------------------------
 (library (note)
-  (export priority-keys
-          make-note
-	  note-get
-	  note-set
-	  note-update
-	  note-check
-	  note-optimise
-	  note-prioritise
-	  
-	  note-beat
-	  note-before?
-	  print-note
-	  print-notes
-	  make-notes-with-times
-	  make-notes-regular
-
-	  window
-	  window?
-	  make-window
-	  window-with-start
-	  window-with-end
-	  window-start
-	  window-end
-	  window-valid?
-	  within-window?
-
-	  context
-	  make-context
-	  context-note
-	  context-notes-next
-	  context-notes-prev
-	  context-window
-	  context-print
-	  context-move
-	  context-to-closest-note
-	  context-complete?
-	  context-rewind)
+  (export
+   time-key
+   priority-keys
+   make-note
+   note-get
+   note-set
+   note-update
+   note-check
+   note-optimise
+   note-prioritise
+   
+   note-beat
+   note-before?
+   print-note
+   print-notes
+   make-notes-with-times
+   make-notes-regular
+   
+   window
+   window?
+   make-window
+   window-with-start
+   window-with-end
+   window-start
+   window-end
+   window-valid?
+   within-window?)
 
   (import (chezscheme) (utilities) (srfi s26 cut)
 	  (only (srfi s1 lists) delete-duplicates))
@@ -112,11 +102,16 @@
   (define (make-notes-with-times times-list)
     (map (lambda (t) (make-note t)) times-list))
 
-  (define (make-notes-regular num interval start)
-    (define (impl lst num t)
-      (if (= num 0) lst
-	  (impl (cons t lst) (sub1 num) (+ t interval))))
-    (make-notes-with-times (impl '() num start)))
+  (define make-notes-regular
+    (case-lambda
+      ((num interval start)
+       (define (impl lst num t)
+	 (if (= num 0) lst
+	     (impl (cons t lst) (sub1 num) (+ t interval))))
+       (make-notes-with-times (reverse (impl '() num start))))
+      
+      ((num interval) ; start is optional
+       (make-notes-regular num interval 0))))
 
   ;; A window of time (in beats)
   (define-record-type window
@@ -140,87 +135,4 @@
 	 (list 0 0)
 	 (list (note-beat (car notes))
 	       (note-beat (list-last notes))))))
-
-  ;; ---------------------------------------------
-  ;; A context for a note in a series. notes-next contains the
-  ;; remaining notes (starting with 'this' note) and prev-notes
-  ;; contains the previous notes in reverse, starting with the one
-  ;; preceding 'this'.
-  (define-record-type context
-    (fields (immutable notes-next)
-	    (immutable notes-prev)
-	    (immutable window)))
-
-  (define (context-note c)
-    (car (context-notes-next c)))
-
-  (define (context-print c)
-    (let ([win (context-window c)])
-      (display "Window: ")
-      (display (window-start win))
-      (display ", ")
-      (display (window-end win))
-      (newline)
-      (print-notes (context-notes-next c))))
-
-  ;; pass a context and notes-next & notes-prev.
-  ;; swap their order to move one item forward or back.
-  ;; moves the head of list returned by (get-next c)
-  (define (context-move1 c get-next get-prev)
-    (let ([next (get-next c)]
-	  [prev (get-prev c)])
-      (make-context (if (pair? next) (cdr next) '())
-		    (if (pair? prev) (cons (car next) prev) '())
-		    (context-window c))))
-
-  (define (context-it c direction-fn)
-    (let ([n context-notes-next]
-	  [p context-notes-prev]
-	  [direction (direction-fn c)])
-      (if (zero? direction) c
-	  (context-it (apply context-move1
-			     (if (positive? direction)
-				 (list c n p)
-				 (list c p n)))
-		      direction-fn))))
-
-  ;; direction-fn that drives context iteration forward/back n times,
-  ;; depending on whether n is positive or negative, or until the next/prev
-  ;; list runs out.
-  (define (until-zero-or-end n)
-    (lambda (context)
-      (let ([x n]
-	    [getter (if (positive? n)
-			context-notes-next
-			context-notes-prev)])
-	(cond
-	 ((or (zero? x) (null? (getter context))) 0)
-	 ((positive? x) (set! n (sub1 n)) x)
-	 ((negative? x) (set! n (add1 n)) x)))))
-
-  ;; direction-fn that moves a context iterator to the note
-  ;; in the context that starts closest to the requested time. 
-  (define (to-closest time)
-    (lambda (context)
-      (define (delta note) (- time (note-get note time-key +inf.0)))
-      (define (car-delta l) (if (null? l) +inf.0 (delta (car l))))
-      (define (cdr-delta l) (if (null? l) +inf.0 (car-delta (cdr l))))
-      (let* ([cur (delta (context-note context))]
-	     [prv (car-delta (context-notes-prev context))]
-	     [nxt (cdr-delta (context-notes-next context))])
-	(if (<= (abs cur) (abs nxt))
-	    (if (< (abs prv) (abs cur)) -1 0) 1))))
-
-  (define (context-move c n)
-    (context-it c (until-zero-or-end n)))
-
-  (define (context-to-closest-note c time)
-    (context-it c (to-closest time)))
-
-  (define (context-complete? c)
-    (eqv? '() (cdr (context-notes-next c))))
-  
-  (define (context-rewind c)
-    (context-move c -9999999)) ;; Lazy
-
   ) ; end module 'note'

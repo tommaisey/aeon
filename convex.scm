@@ -9,3 +9,7 @@
 (import (note))
 (import (rhythm))
 (import (note-dsl))
+(import (pattern-node))
+
+;; Imports for repl testing - shouldn't be public
+(import (context))

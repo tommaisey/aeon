@@ -19,10 +19,9 @@
 
 (library (note-dsl)
   (export to is any-of all-of none-of phrase
-	  change-all copy-all
-	  change-if copy-if)
+	  change morph-all shadow-all morph-if shadow-if)
 
-  (import (chezscheme) (note) (utilities) (srfi s26 cut))
+  (import (chezscheme) (utilities) (note) (context) (srfi s26 cut))
 
   ;;--------------------------------------------------------
   ;; Abstracts away the concept of a 'context' from the user.
@@ -62,7 +61,7 @@
        (context-node [context]
 	 (let ([v (if (procedure? key/getter)
 		      (key/getter context)
-		      ((this key/getter #f) context))])
+		      (this key/getter #f))])
 	   (and v (pred v args ...)))))))
   
   ;; Find the intersection of the inner filters
@@ -94,7 +93,7 @@
       (merge-inner (map (cut <> notes) filters))))
 
   ;;-----------------------------------------------
-  ;; Returns the alist cell to update a note. Able to
+  ;; Returns the alist cell to update a note. 
   (define-syntax to
     (syntax-rules ()
       ((_ key value)
@@ -112,32 +111,25 @@
   ;;------------------------------------------------------
   ;; Top level transformation statements. Typically pred would
   ;; be 'is', 'all-of', 'phrase' etc. change-fn would be 'change'.
-  (define (change-if pred change-fn)
+  (define (morph-all change-fn)
     (lambda (context)
-      (let recur ([c context] [result '()])
-	(if (context-complete? c)
-	    (make-context (reverse result) '()
-			  (context-window c))
-	    (let ([f (if (pred c) change-fn context-note)])
-	      (recur (context-move c 1) (cons (f c) result)))))))
-
-  (define (change-all change-fn)
-    (change-if (lambda (_) #t) change-fn))
-
-  (define (copy-if pred change-fn)
+      (context-map change-fn context)))
+  
+  (define (morph-if pred change-fn)
     (lambda (context)
-      (let ([original (context-notes-next context)])
-	(let recur ([c context] [result '()])
-	  (if (context-complete? c)
-	      (make-context (merge-sorted result original note-before?) '()
-			    (context-window c))
-	      (recur (context-move c 1)
-		     (if (pred c)
-			 (cons (change-fn c) result)
-			 result)))))))
-
-  (define (copy-all change-fn)
-    (copy-if (lambda (_) #t) change-fn))
+      (define (update c)
+	(if (pred c) (change-fn c) (context-note c)))
+      (context-map update context)))
+  
+  (define (shadow-all change-fn)
+    (lambda (context)
+      (contexts-merge context ((morph-all change-fn) context))))
+  
+  (define (shadow-if pred change-fn)
+    (lambda (context)
+      (let* ([copied (context-filter pred context)]
+	     [changed (context-map change-fn copied)])
+	(contexts-merge context changed))))
 
   ;; Adding statements
   (define (add to-add)

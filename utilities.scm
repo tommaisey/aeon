@@ -20,7 +20,7 @@
 	  remove-list
 	  check-type)
 
-  (import (chezscheme) (srfi s26 cut))
+  (import (chezscheme))
 
   ;; A negative-aware modulo that works with floats or fracs
   ;; Warning! breaks sometimes due to floating point error.
