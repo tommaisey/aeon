@@ -21,7 +21,8 @@
   (export to is any-of all-of none-of phrase
 	  change morph-all shadow-all morph-if shadow-if)
 
-  (import (chezscheme) (utilities) (note) (context) (srfi s26 cut))
+  (import (chezscheme) (utilities) (note) (context)
+	  (srfi s26 cut))
 
   ;;--------------------------------------------------------
   ;; Abstracts away the concept of a 'context' from the user.

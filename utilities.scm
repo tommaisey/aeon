@@ -6,7 +6,7 @@
   (export fmod % rand
 	  nearly-divisible divisible on-each
 	  above below between
-	  equals nearly-equals
+	  equal nearly-equal
 	  column-process
 	  merge-columns
 	  columns-to-rows
@@ -62,11 +62,14 @@
   (define (below a b)
     (<= a b))
 
-  (define (nearly-equals a b error)
+  (define (nearly-equal a b error)
     (< (abs (- a b)) error))
 
-  (define (equals a b)
+  (define (equal a b)
     (= a b))
+
+  (define (not-equal a b)
+    (not (equal)))
 
   (define (between x lower upper)
     (and (>= x lower) (<= x upper)))
