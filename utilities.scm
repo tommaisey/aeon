@@ -124,11 +124,11 @@
 		     (cons x (cons y b))
 		     (cons x (loop (car a) (key (car a)) (cdr a) y ky b))))))))
 
-  ;; Chez provides for-all, which checks all items in a
+  ;; R6RS provides for-all, which checks all items in a
   ;; list return true for pred. Here's the 'none' and
   ;; 'any' versions.
   (define (for-any pred lst)
-    (not (for-all (lambda (x) (not (pred x))) lst)))
+    (exists pred lst))
 
   (define (for-none pred lst)
     (not (for-any pred lst)))
