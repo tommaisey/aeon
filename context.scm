@@ -14,7 +14,8 @@
     context-rewind
     context-map
     context-filter
-    contexts-merge)
+    contexts-merge
+    contextualize)
   (import (chezscheme) (utilities) (note))
 
   ;; ---------------------------------------------
@@ -131,5 +132,13 @@
 				     (range-start (context-range c2)))
 				(max (range-end   (context-range c1))
 				     (range-end   (context-range c2)))))))
+
+  ;; Takes a value and a context. If the value is a proc, supplies the context
+  ;; to it and returns the result. Otherwise returns the value unaffected.
+  ;; This supplies the main 'polymorphy' in pattern code, whereby values
+  ;; can just be raw numbers/strings *or* functions that take a context and
+  ;; return a value (to facilitate e.g. consistent pseudo randomness).
+  (define (contextualize v context)
+    (if (procedure? v) (v context) v))
 
   ) ; end module context

@@ -116,7 +116,7 @@
       ((_ key value)
        ; (check-type symbol? key "First argument of 'to' must be a key.")
        (context-node [context]
-	 (cons key value)))))
+	 (cons key (contextualize value context))))))
 
   ;; Returns the context's current note with the changes
   ;; of all the to-fns applied (see 'to' above). 

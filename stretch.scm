@@ -3,6 +3,8 @@
   (export stretch)
   (import (scheme) (utilities) (context))
 
+  (define rest-symbol '~)
+
   ;; Allows definition of nested lists without (quasi)quoting.
   ;; Lists that start with an identifier are evaluated.
   ;; Lists that don't start with an identifier are just a list.
@@ -21,19 +23,6 @@
         ((_ v)
 	 (syntax v))))) ;; normal value in a list
 
-  ;; Any item in a pattern may be a raw value or a proc taking a context.
-  (define (getv v context)
-    (if (procedure? v) (v context) v))
-
-  (define process-stretch-def
-    (case-lambda
-      ((t start end)
-       (lambda (lst) (filter (lambda (x) (between-each x t start end))
-			(map (lambda (y) (* t y)) lst))))
-
-      ((t) (process-stretch-def t 0 t))
-      (()  (process-stretch-def 1))))
-
   ;; Returns a list of x repeated n times.
   ;;
   ;; (subdiv 3 5) => (5 5 5)
@@ -48,15 +37,20 @@
   ;; (psegment '[~ 3] 1 #f) => ((1/2 . ~) (1/2 . 3))
   ;; (psegment '[~ 3] 1 #t) => ((1/2 . ~) (1/6 . 3) (1/6 . 3) (1/6 . 3))
   (define (psegment p t do-subdiv)
-    (let ([subseg (lambda (sub-p) (psegment sub-p (/ t (length p)) do-subdiv))])
-      (cond
-       ((pair? p)
-	(merge-inner (map subseg p)))
-       ((and do-subdiv (number? p) (> p 1))
-	(subdiv p (cons (* t (/ 1 p)) p)))
-       (else (cons t p)))))
+    (cond
+     ((pair? p)
+      (let ([subseg (lambda (sub-p) (psegment sub-p (/ t (length p)) do-subdiv))])
+	(merge-inner (map subseg p))))
+     ((and do-subdiv (number? p) (> p 1))
+      (subdiv p (cons (* t (/ 1 p)) p)))
+     (else (cons t p))))
 
-  (define (pfill segs len start end map-seg flt-result)
+  ;; Builds up a list according to the input segments, the active time range,
+  ;; and a convert-fn to process/filter each segment's time & value.
+  ;; The convert-fn should return #f for items that shouldn't be added, or the
+  ;; value to be added otherwise (e.g. a note).
+  ;; See @pfill-notes and @pfill-edits for examples.
+  (define (pfill segs len start end convert-fn)
     (define get-seg-t car)
     (define get-seg-v cdr)
     (if (and (> end start)
@@ -66,19 +60,30 @@
 		   [o '()])
 	  (cond
 	   ((null? s) (loop segs t o))
-	   ((>= t end) (reverse (filter flt-result o)))
-	   (else
-	    (loop (cdr s)
-		  (+ t (get-seg-t (car s)))
-		  (cons (map-seg t (get-seg-v (car s))) o)))))
+	   ((>= t end) (reverse o))
+	   (else (let* ([seg-len (get-seg-t (car s))]
+			[t-n (+ t seg-len)]
+			[v-n (convert-fn t seg-len (get-seg-v (car s)))]
+			[o-n (if v-n (cons v-n o) o)])
+		   (loop (cdr s) t-n o-n)))))
 	'()))
-  
+
+  ;; Build a list of notes with appropriate times from some segments & stretch info.
   (define (pfill-notes segs len start end)
-    (define (make-note-or-rest t val)
-      (if (eq? val '~) (list) (make-note t)))
-    (define (ensure-inside note)
-      (and (pair? note) (between (note-beat note) start end)))
-    (pfill segs len start end make-note-or-rest ensure-inside))
+    (define (make-rest-or-note t seg-len val)
+      (if (or (eq? val rest-symbol)
+	      (not (between t start end)))
+	  #f (make-note t)))
+    (pfill segs len start end make-rest-or-note))
+
+  ;; Builds a function that transforms a context from some segments whose values
+  ;; should be functions taking a context and returning a new note with the required
+  ;; changes applied. The output function applies the correct note-transform fn for
+  ;; each note in the context based on each note's time.
+  ;;
+  ;; TODO...
+  (define (pfill-edits segs len start end)
+    (list))
   
   (define (build-event-pattern pattern-def stretch-def-args)
     (lambda (context)
