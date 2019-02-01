@@ -6,7 +6,7 @@
     context-note
     context-notes-next
     context-notes-prev
-    context-window
+    context-range
     context-print
     context-move
     context-to-closest-note
@@ -25,24 +25,24 @@
   (define-record-type context
     (fields (immutable notes-next)
 	    (immutable notes-prev)
-	    (immutable window))
+	    (immutable range))
     (protocol
      (lambda (new)
        (case-lambda ; notes-prev is optional in ctor
-	 ((notes-next notes-prev window)
-	  (new notes-next notes-prev window))
-	 ((notes-next window)
-	  (new notes-next '() window))))))
+	 ((notes-next notes-prev range)
+	  (new notes-next notes-prev range))
+	 ((notes-next range)
+	  (new notes-next '() range))))))
 
   (define (context-note c)
     (car (context-notes-next c)))
 
   (define (context-print c)
-    (let ([win (context-window c)])
-      (display "Window: ")
-      (display (window-start win))
+    (let ([win (context-range c)])
+      (display "Range: ")
+      (display (range-start win))
       (display ", ")
-      (display (window-end win))
+      (display (range-end win))
       (newline)
       (print-notes (context-notes-next c))))
 
@@ -53,7 +53,7 @@
     (let ([next (get-next c)] [prev (get-prev c)])
       (make-context (if (pair? next) (cdr next) '())
 		    (if (pair? prev) (cons (car next) prev) '())
-		    (context-window c))))
+		    (context-range c))))
 
   (define (context-move1-fwd c)
     (context-move1 c context-notes-next context-notes-prev))
@@ -106,7 +106,7 @@
   (define (context-transform context build-notes-fn)
     (let recur ([c context] [output '()])
       (if (context-complete? c)
-	  (make-context (reverse output) '() (context-window c))
+	  (make-context (reverse output) '() (context-range c))
 	  (recur (context-move1-fwd c)
 		 (build-notes-fn c output)))))
 
@@ -127,9 +127,9 @@
       (make-context (merge-sorted (context-notes-next c1)
 				  (context-notes-next c2)
 				  note-before?)
-		    (make-window (min (window-start (context-window c1))
-				      (window-start (context-window c2)))
-				 (max (window-end   (context-window c1))
-				      (window-end   (context-window c2)))))))
+		    (make-range (min (range-start (context-range c1))
+				     (range-start (context-range c2)))
+				(max (range-end   (context-range c1))
+				     (range-end   (context-range c2)))))))
 
   ) ; end module context

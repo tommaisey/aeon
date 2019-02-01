@@ -78,26 +78,26 @@
       (not (eqv? (quotient bucket steps)
 		 (quotient (+ bucket hits) steps)))))
 
-  ;; Make the notes inside a window w given a euclidean pattern e
+  ;; Make the notes inside a range w given a euclidean pattern e
   (define (euclidean-rhythm w e stretch)
     (check-type euclid? e "Parameter 'e' must be a euclid record")
-    (check-type window? w "Parameter 'w' must be a window record")
+    (check-type range? w "Parameter 'w' must be a range record")
 
     (let*
 	([num-steps  (euclid-num-steps e)]
 	 [step-size  (/ stretch num-steps)]
-	 [start-beat (snap-next-if (window-start w) step-size)])
+	 [start-beat (snap-next-if (range-start w) step-size)])
       (define (next-step notes e w)
-	(if (window-valid? w)
+	(if (range-valid? w)
 	    (let*
-		([beat  (window-start w)]
+		([beat  (range-start w)]
 		 [next  (snap-next beat step-size)]
 		 [step  (% (round (/ beat step-size)) num-steps)]
 		 [notes (if (euclidean-hit? step e)
 			    (cons (make-note beat) notes)
 			    notes)])
-	      (next-step notes e (window-with-start w next)))
+	      (next-step notes e (range-with-start w next)))
 	    notes))
-      (next-step '() e (window-with-start w start-beat))))
+      (next-step '() e (range-with-start w start-beat))))
 
   ); end module 'rhythm'

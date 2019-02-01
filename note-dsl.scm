@@ -18,11 +18,27 @@
 ;; ------------------------------------------------------------
 
 (library (note-dsl)
-  (export to is any-of all-of none-of phrase
+  (export rnd to is any-of all-of none-of phrase
 	  change morph-all shadow-all morph-if shadow-if)
 
   (import (chezscheme) (utilities) (note) (context)
 	  (srfi s26 cut))
+
+  ;;--------------------------------------------------------
+  ;; A random generator for use in a pattern pipeline. This returns
+  ;; a lambda which, given a context, returns a random number.
+  ;; This allows 'pure' random values, generated with a seed based
+  ;; on a property of the context (e.g. beat of context's current note).
+  (define rnd
+    (case-lambda
+      [(key)
+       (rnd 0.0 1.0 key)]
+      [(min max key)
+       (lambda (context)
+	 (let* ([note (context-note context)]
+		[seed (* (note-beat note)
+			 (note-get note key 1))])
+	   (pseudo-rand min max seed)))]))
 
   ;;--------------------------------------------------------
   ;; Abstracts away the concept of a 'context' from the user.
@@ -32,7 +48,7 @@
   (define-syntax context-node
     (lambda (x)
       (syntax-case x ()
-	((_ [context notes-id window-id] body rest ...)
+	((_ [context notes-id range-id] body rest ...)
 	 (with-syntax ([this    (datum->syntax (syntax context) 'this)]
 		       [next    (datum->syntax (syntax context) 'next)]
 		       [nearest (datum->syntax (syntax context) 'nearest)])
@@ -48,9 +64,9 @@
 	      (begin body rest ...)))))
 
 	((_ [context] body rest ...)
-	 (syntax (context-node [context notes window] body rest ...)))
+	 (syntax (context-node [context notes range] body rest ...)))
 	((_ [context notes-id] body rest ...)
-	 (syntax (context-node [context notes-id window] body rest ...))))))
+	 (syntax (context-node [context notes-id range] body rest ...))))))
 
   ;;---------------------------------------------------------
   ;; Takes either a key (shorthand for (this key #f) or a lambda
@@ -136,7 +152,7 @@
   (define (add to-add)
     0) ; TODO: stub
 
-  (define (add-looped loop-window to-add)
+  (define (add-looped loop-range to-add)
     0) ; TODO: stub
 
   ) ; end module 'note dsl'

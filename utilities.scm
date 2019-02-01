@@ -3,7 +3,7 @@
 ;; Fundamental utilities
 ;; ---------------------------------------------------------
 (library (utilities)
-  (export fmod % rand
+  (export fmod % pseudo-rand
 	  nearly-divisible divisible on-each
 	  above below between
 	  equal nearly-equal
@@ -20,7 +20,7 @@
 	  remove-list
 	  check-type)
 
-  (import (chezscheme))
+  (import (chezscheme) (srfi s27 random-bits))
 
   ;; A negative-aware modulo that works with floats or fracs
   ;; Warning! breaks sometimes due to floating point error.
@@ -32,14 +32,17 @@
   ;; We need to use modulo a lot - use the trad symbol
   (define % modulo)
 
-  ;; Extend the simple random function that comes with Chez.
-  (define sys-rand random)
-
-  (define rand
-    (case-lambda
-      [() (sys-rand 1.0)]
-      [(max) (sys-rand max)]
-      [(min max) (+ min (sys-rand (- max min)))]))
+  ;; A pseudo-random number generator that takes a seed.
+  (define pseudo-rand-src (make-random-source))
+  
+  (define (pseudo-rand min max seed)
+    (let* ([i (exact (truncate seed))]
+	   [j (exact (truncate (* 100 (- seed i))))]
+	   [len (- max min)])
+      (random-source-pseudo-randomize! pseudo-rand-src i j)
+      (+ min (if (and (exact? min) (exact? max))
+		 ((random-source-make-integers pseudo-rand-src) len)
+		 (* len ((random-source-make-reals pseudo-rand-src)))))))
 
   ;; Some 'english sounding' math operators. These are intended to
   ;; be intuitive for non-programmers, so don't always conform
@@ -74,6 +77,13 @@
   (define (between x lower upper)
     (and (>= x lower) (<= x upper)))
 
+  (define (between-each val each lower upper)
+    (let ([m (fmod val each)])
+      (between m lower upper)))
+
+  ;; It's going to be more readable for users to write 'pair' than 'cons'.
+  (define pair cons)
+
   ;; Takes the head off each inner list until one of
   ;; them runs out. The heads of each column are offered
   ;; to a joiner func, along with an accumulated result.
@@ -92,7 +102,18 @@
 
   ;;  ((1 2 3) (x y) (a b c)) -> (1 2 3 x y a b c)
   (define (merge-inner col-list)
-    (fold-left append '() col-list))
+    (fold-right (lambda (x v)
+		 (if (proper? x)
+		     (append x v)
+		     (append (list x) v)))
+	       '() col-list))
+
+  ;; Check if something is a list but not a pair (or any other type). 
+  (define (proper? pair)
+    (and (pair? pair)
+	 (or
+	  (eq?   (cdr pair) '())
+	  (pair? (cdr pair)))))
 
   ;; Check if a list is sorted or not.
   (define (sorted? less? l)

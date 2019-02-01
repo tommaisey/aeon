@@ -24,15 +24,16 @@
    make-notes-with-times
    make-notes-regular
    
-   window
-   window?
-   make-window
-   window-with-start
-   window-with-end
-   window-start
-   window-end
-   window-valid?
-   within-window?)
+   range
+   range?
+   range1
+   make-range
+   range-with-start
+   range-with-end
+   range-start
+   range-end
+   range-valid?
+   within-range?)
 
   (import (chezscheme) (utilities) (srfi s26 cut)
 	  (only (srfi s1 lists) delete-duplicates))
@@ -113,24 +114,30 @@
       ((num interval) ; start is optional
        (make-notes-regular num interval 0))))
 
-  ;; A window of time (in beats)
-  (define-record-type window
+  ;; A range of time (in beats)
+  (define-record-type range
     (fields (immutable start)
 	    (immutable end)))
 
-  (define (window-with-start w new-start)
-    (make-window new-start (window-end w)))
-  (define (window-with-end w new-end)
-    (make-window (window-start w) new-end))
-  (define (window-valid? w)
-    (< (window-start w) (window-end w)))
-  (define (within-window? w t)
-    (between t (window-start w) (window-end w)))
+  ;; A useful alias for creating a range.
+  (define rng make-range)
+  
+  ;; A useful alias for the most common range.
+  (define range1 (rng 0.0 1.0))
 
-  ;; Find the window which a list of notes encompasses.
+  (define (range-with-start r new-start)
+    (make-range new-start (range-end r)))
+  (define (range-with-end r new-end)
+    (make-range (range-start r) new-end))
+  (define (range-valid? r)
+    (< (range-start r) (range-end r)))
+  (define (within-range? r t)
+    (between t (range-start r) (range-end r)))
+
+  ;; Find the range which a list of notes encompasses.
   ;; The call to list-last makes this relatively slow.
-  (define (window-from-notes notes)
-    (apply make-window
+  (define (range-from-notes notes)
+    (apply make-range
      (if (null? notes)
 	 (list 0 0)
 	 (list (note-beat (car notes))
