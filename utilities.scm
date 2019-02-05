@@ -5,7 +5,7 @@
 (library (utilities)
   (export fmod % pseudo-rand
 	  nearly-divisible divisible on-each
-	  above below between
+	  above below between between-each
 	  equal nearly-equal
 	  column-process
 	  merge-columns
@@ -76,7 +76,7 @@
     (not (equal)))
 
   (define (between x lower upper)
-    (and (>= x lower) (<= x upper)))
+    (and (>= x lower) (< x upper)))
 
   (define (between-each val each lower upper)
     (let ([m (fmod val each)])

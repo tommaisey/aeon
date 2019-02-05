@@ -18,6 +18,7 @@
     context-rewind
     context-map
     context-filter
+    context-empty?
     contexts-merge
     contextualize
     contextualize-for-add)
@@ -72,9 +73,11 @@
 
   ;; Public iteration functions
   (define (context-rewind c)
-    (if (context-ended? c)
-	(context-with-notes c (reverse (cons (context-note c) (context-notes-prev c))))
-	(context-move c -9999999))) ;; Lazy
+    (cond
+     ((context-empty? c) c)
+     ((context-ended? c)
+      (context-with-notes c (reverse (cons (context-note c) (context-notes-prev c)))))
+     (else (context-move c -9999999)))) ;; Lazy
   
   (define (context-move c n)
     (context-it c (until-zero-or-end n)))
@@ -183,10 +186,8 @@
       (make-context (merge-sorted (context-notes-next c1)
 				  (context-notes-next c2)
 				  note-before?)
-		    (make-range (min (range-start (context-range c1))
-				     (range-start (context-range c2)))
-				(max (range-end   (context-range c1))
-				     (range-end   (context-range c2)))))))
+		    (make-range (min (context-start c1) (context-start c2))
+				(max (context-end c1) (context-end c2))))))
 
   ;; Inserts the new note in a sorted fashion into the context, leaving the
   ;; context pointing to the new note, not the original one.

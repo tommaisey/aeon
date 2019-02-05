@@ -5,24 +5,6 @@
 
   (define rest-symbol '~)
 
-  ;; Allows definition of nested lists without (quasi)quoting.
-  ;; Lists that start with an identifier are evaluated.
-  ;; Lists that don't start with an identifier are just a list.
-  ;;
-  ;; (auto-quasi (1 2 "hi" (+ 2 2) (5 (+ 5 5)))) => (1 2 "hi" 4 (5 10))
-  (define-syntax auto-quasi
-    (lambda (x)
-      (syntax-case x ()
-	((_ (v rest ...))
-	 (identifier? (syntax v))
-	 (syntax (v rest ...))) ; identifier first, call as lambda
-	
-	((_ (v ...))
-	 (syntax (list (auto-quasi v) ...))) ;; make list
-     
-        ((_ v)
-	 (syntax v))))) ;; normal value in a list
-
   ;; Returns a list of x repeated n times.
   ;;
   ;; (repeat 3 5) => (5 5 5)
@@ -57,7 +39,7 @@
 
   ;; Implements transformation of a pdef template into a list of notes.
   ;; A pdef value of 1 gives one note. For values > 1, creates N subdivided
-  ;; notes. Returns () for a rest.
+  ;; notes. The symbol ~ creates a rest. Notes are returned in reverse order.
   (define (pfill-notes context pdur pdef)
     (define (add-fn sub-ctxt c-val t dur)
       (let ([val (contextualize-for-add c-val t sub-ctxt)])
@@ -71,19 +53,58 @@
 	 (else (raise "Event stretch patterns should only contain numbers.")))))
     (pfill context pdur pdef add-fn))
 
-  ;; TODO: this is all wrong so far...
-  (define-syntax event-pdef
+  ;; Allows definition of nested lists without (quasi)quoting.
+  ;; Lists that start with an identifier are evaluated.
+  ;; Lists that don't start with an identifier are just a list.
+  ;;
+  ;; (auto-quasi (1 2 "hi" (+ 2 2) (5 (+ 5 5)))) => (1 2 "hi" 4 (5 10))
+  (define-syntax auto-quasi
+    (lambda (x)
+      (syntax-case x ()
+	((_ (v rest ...))
+	 (identifier? (syntax v))
+	 (syntax (v rest ...))) ; identifier first, call as lambda
+	
+	((_ (v ...))
+	 (syntax (list (auto-quasi v) ...))) ;; make list
+     
+        ((_ v)
+	 (syntax v))))) ;; normal value in a list
+  
+  (define (sdef-cfilter sdef context)
+    (cond
+     ((and (list? sdef) (not (context-empty? context)))
+      (if (= 3 (length sdef))
+	  (let* ([dur (car sdef)]
+		 [min (cadr sdef)]
+		 [max (caddr sdef)]
+		 [flt (lambda (c) (between-each (note-beat (context-note c)) dur min max))])
+	    (context-filter flt context))
+	  (raise "stretch def must be a single number or a list of three numbers.")))
+     (else context)))
+
+  (define (sdef-dur sdef)
+    (if (list? sdef) (car sdef) sdef))
+  
+  (define-syntax event-pdef->context
     (syntax-rules ()
       ((_ pdef sdef)
        (lambda (context)
-	 (let ([c (sdef-restrict-context sdef context)]
-	       [d (sdef-gur sdef)]))
-	 (pfill-notes c (auto-quasi pdef) d)))))
-  
+	 (let* ([dur (sdef-dur 'sdef)]
+		[lst (auto-quasi pdef)]
+		[notes (pfill-notes context dur lst)]
+		[flt (lambda (c) (sdef-cfilter 'sdef c))])
+	   (flt (context-with-notes context (reverse notes))))))))
+
+  ;; TODO: This basic version appears to be working, but only when I evaluate
+  ;; each form after auto-quasi in this file separately. Otherwise it says
+  ;; 'invalid syntax (stretch (...))'. Hmm...
   (define-syntax stretch
     (syntax-rules (event)
       ((_) (lambda (context) context)) ;; Base case
       
       ((_ [event pdef sdef] rest ...)
-       ((stretch rest) ... ((event-pdef pdef sdef) context)))))
+       (lambda (context)
+	 (let* ([c ((event-pdef->context pdef sdef) context)])
+	   (contexts-merge context ((stretch rest ...) c)))))))
   )

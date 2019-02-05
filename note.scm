@@ -107,7 +107,7 @@
     (case-lambda
       ((num interval start)
        (define (impl lst num t)
-	 (if (= num 0) lst
+	 (if (<= num 0) lst
 	     (impl (cons t lst) (sub1 num) (+ t interval))))
        (make-notes-with-times (reverse (impl '() num start))))
       
