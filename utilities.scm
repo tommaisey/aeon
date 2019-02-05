@@ -18,6 +18,7 @@
 	  combine-preds
 	  list-last
 	  remove-list
+	  push-front
 	  check-type)
 
   (import (chezscheme) (srfi s27 random-bits))
@@ -170,6 +171,10 @@
   ;; Remove matching items in b from a
   (define (remove-list a b)
     (filter (lambda (x) (not (member x b))) a))
+
+  ;; Adds the element to the list. If the element is a list, it is appended.
+  (define (push-front val list)
+    ((if (list? val) append cons) val list))
 
    ;; Throw an error if the wrong type is used
   (define (check-type pred val string)

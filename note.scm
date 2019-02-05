@@ -52,7 +52,7 @@
        (list (cons 'beat start-beat) (cons 'key value) ...))
       
       ((_ ...)
-       (syntax-error "make-note syntax: (_ 1/16 [:freq 100]"))))
+       (syntax-error "make-note syntax: (make-note 1/16 [:freq 100] [:pan 0]"))))
 
   (define (note-get note key default)
     (let ([result (assq key note)])
@@ -114,6 +114,7 @@
       ((num interval) ; start is optional
        (make-notes-regular num interval 0))))
 
+  ;;--------------------------------------------------
   ;; A range of time (in beats)
   (define-record-type range
     (fields (immutable start)

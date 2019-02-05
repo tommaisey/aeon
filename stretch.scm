@@ -1,7 +1,7 @@
 
 (library (stretch)
-  (export stretch)
-  (import (scheme) (utilities) (context))
+  (export stretch pfill-notes)
+  (import (scheme) (utilities) (note) (context))
 
   (define rest-symbol '~)
 
@@ -25,68 +25,65 @@
 
   ;; Returns a list of x repeated n times.
   ;;
-  ;; (subdiv 3 5) => (5 5 5)
-  (define (subdiv n x)
+  ;; (repeat 3 5) => (5 5 5)
+  (define (repeat n x)
     (let loop ([n n] [o '()])
       (if (= 0 n) o (loop (- n 1) (cons x o)))))
-  
-  ;; Turn a pattern-def into a list of time segments paired with the original
-  ;; value of each item in the pattern. If do-subdiv is #t, numeric items
-  ;; greater than 1 are considered instructions to subdivide the step by N.
-  ;;
-  ;; (psegment '[~ 3] 1 #f) => ((1/2 . ~) (1/2 . 3))
-  ;; (psegment '[~ 3] 1 #t) => ((1/2 . ~) (1/6 . 3) (1/6 . 3) (1/6 . 3))
-  (define (psegment p t do-subdiv)
+
+  ;; Implements the recursive subdivision of an input pdef template into
+  ;; equal-sized elements. Creation of the elements is left to an add-fn, which
+  ;; should return a list of elements for an inpit value. It is also handed a
+  ;; context, because pdef template elements are allowed to be c-vals. 
+  (define (pfill context pdur pdef add-fn)
     (cond
-     ((pair? p)
-      (let ([subseg (lambda (sub-p) (psegment sub-p (/ t (length p)) do-subdiv))])
-	(merge-inner (map subseg p))))
-     ((and do-subdiv (number? p) (> p 1))
-      (subdiv p (cons (* t (/ 1 p)) p)))
-     (else (cons t p))))
-
-  ;; Builds up a list according to the input segments, the active time range,
-  ;; and a convert-fn to process/filter each segment's time & value.
-  ;; The convert-fn should return #f for items that shouldn't be added, or the
-  ;; value to be added otherwise (e.g. a note).
-  ;; See @pfill-notes and @pfill-edits for examples.
-  (define (pfill segs len start end convert-fn)
-    (define get-seg-t car)
-    (define get-seg-v cdr)
-    (if (and (> end start)
-	     (pair? segs))
-	(let loop ([s segs]
-		   [t (exact (truncate (/ start len)))]
-		   [o '()])
+     ((null? pdef) '())
+     ((not (list? pdef)) (pfill context pdur (list pdef) add-fn))
+     (else
+      (let ([subdiv (/ pdur (length pdef))])
+	(let loop ([t (* pdur (exact (truncate (/ (context-start context) pdur))))]
+		   [lst pdef]
+		   [out '()])
 	  (cond
-	   ((null? s) (loop segs t o))
-	   ((>= t end) (reverse o))
-	   (else (let* ([seg-len (get-seg-t (car s))]
-			[t-n (+ t seg-len)]
-			[v-n (convert-fn t seg-len (get-seg-v (car s)))]
-			[o-n (if v-n (cons v-n o) o)])
-		   (loop (cdr s) t-n o-n)))))
-	'()))
+	   ((>= t (context-end context)) out)
+	   ((null? lst) (loop t pdef out))
+	   (else
+	    (let* ([item (car lst)]
+		   [next-t (+ t subdiv)]
+		   [context (context-with-range context (make-range t next-t))]
+		   [value (if (list? item)
+			      (pfill context subdiv item add-fn)
+			      (add-fn context item t subdiv))])
+	      (loop next-t (cdr lst) (append value out))))))))))
 
-  ;; Build a list of notes with appropriate times from some segments & stretch info.
-  (define (pfill-notes segs len start end)
-    (define (make-rest-or-note t seg-len val)
-      (if (or (eq? val rest-symbol)
-	      (not (between t start end)))
-	  #f (make-note t)))
-    (pfill segs len start end make-rest-or-note))
+  ;; Implements transformation of a pdef template into a list of notes.
+  ;; A pdef value of 1 gives one note. For values > 1, creates N subdivided
+  ;; notes. Returns () for a rest.
+  (define (pfill-notes context pdur pdef)
+    (define (add-fn sub-ctxt c-val t dur)
+      (let ([val (contextualize-for-add c-val t sub-ctxt)])
+	(cond
+	 ((number? val)
+	  (let* ([val (max 1 val)]
+		 [dur (/ dur val)]
+		 [make (lambda (i) (make-note (+ t (* i dur)) ('length dur)))])
+	    (map make (reverse (iota val)))))
+	 ((eq? val rest-symbol) '())
+	 (else (raise "Event stretch patterns should only contain numbers.")))))
+    (pfill context pdur pdef add-fn))
 
-  ;; Builds a function that transforms a context from some segments whose values
-  ;; should be functions taking a context and returning a new note with the required
-  ;; changes applied. The output function applies the correct note-transform fn for
-  ;; each note in the context based on each note's time.
-  ;;
-  ;; TODO...
-  (define (pfill-edits segs len start end)
-    (list))
+  ;; TODO: this is all wrong so far...
+  (define-syntax event-pdef
+    (syntax-rules ()
+      ((_ pdef sdef)
+       (lambda (context)
+	 (let ([c (sdef-restrict-context sdef context)]
+	       [d (sdef-gur sdef)]))
+	 (pfill-notes c (auto-quasi pdef) d)))))
   
-  (define (build-event-pattern pattern-def stretch-def-args)
-    (lambda (context)
-      (let* ([times (range-start (context-range context))]))))
-
+  (define-syntax stretch
+    (syntax-rules (event)
+      ((_) (lambda (context) context)) ;; Base case
+      
+      ((_ [event pdef sdef] rest ...)
+       ((stretch rest) ... ((event-pdef pdef sdef) context)))))
   )
