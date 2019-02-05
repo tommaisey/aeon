@@ -84,7 +84,7 @@
   (define (context-rewind c)
     (cond
      ((context-empty? c) c)
-     ((context-ended? c)
+     ((context-last? c)
       (context-with-notes c (reverse (cons (context-note c) (context-notes-prev c)))))
      (else (context-move c -9999999)))) ;; Lazy
   
@@ -100,22 +100,21 @@
   ;;----------------------------------------------------------------------
   ;; Transformations.
   ;;
-  ;; Takes a lambda taking a context, returning a note
+  ;; Takes a lambda taking a context, returning a note.
   (define (context-map new-note-fn context)
     (context-transform
      context (lambda (c output) (cons (new-note-fn c) output))))
 
-  ;; Takes a lambda taking a context, returning bool
+  ;; Takes a lambda taking a context, returning bool.
   (define (context-filter pred context)
     (context-transform
      context (lambda (c output)
 	       (if (pred c) (cons (context-note c) output) output))))
 
-  ;; Removes all notes from the context that don't fall within range.
+  ;; Removes notes from the context that don't fall within range.
   (define (context-trim context)
-    (define (pred c) (between (note-beat (context-note c))
-			      (context-start c)
-			      (context-end c)))
+    (define (pred c)
+      (between (note-beat (context-note c)) (context-start c) (context-end c)))
     (context-filter pred context))
 
   (define (contexts-merge c1 c2)
@@ -185,8 +184,8 @@
       (define (get-delt bounds-check? default get-note)
 	(if (bounds-check? c) default (delta time (get-note c))))
       (let ([cur (get-delt context-empty? 0 context-note)]
-	    [prv (get-delt context-start? -inf.0 context-prev-unchecked)]
-	    [nxt (get-delt context-ended? +inf.0 context-next-unchecked)])
+	    [prv (get-delt context-first? -inf.0 context-prev-unchecked)]
+	    [nxt (get-delt context-last?  +inf.0 context-next-unchecked)])
 	(if (<= (abs cur) (abs nxt))
 	    (if (< (abs prv) (abs cur)) -1 0) +1))))
 
@@ -197,18 +196,22 @@
       (define (get-delt bounds-check? default get-note)
 	(if (bounds-check? c) default (delta time (get-note c))))
       (let ([cur (get-delt context-empty? 0 context-note)]
-	    [prv (get-delt context-start? -inf.0 context-prev-unchecked)]
-	    [nxt (get-delt context-ended? +inf.0 context-next-unchecked)])
+	    [prv (get-delt context-first? -inf.0 context-prev-unchecked)]
+	    [nxt (get-delt context-last?  +inf.0 context-next-unchecked)])
 	(cond
 	 ((and (> cur 0) (>= nxt 0) (< nxt cur)) +1)
 	 ((and (< cur 0) (<= prv 0) (> prv cur)) -1)
 	 (else 0)))))
 
-  (define (context-start? c)
-    (eqv? '() (context-notes-prev c)))
-  
-  (define (context-ended? c)
-    (eqv? '() (cdr (context-notes-next c))))
+  (define (context-first? c)
+    (null? (context-notes-prev c)))
+
+  (define (context-last? c)
+    (or (context-empty? c)
+	(null? (cdr (context-notes-next c)))))
+
+  (define (context-it-end? c)
+    (null? (context-notes-next c)))
 
   (define (context-empty? c)
     (and (null? (context-notes-next c))
@@ -222,7 +225,7 @@
   (define (context-transform context build-notes-fn)
     (let loop ([c context]
 	       [output '()])
-      (if (context-ended? c)
+      (if (context-it-end? c)
 	  (context-with-notes c (reverse output))
 	  (loop (context-move1-fwd c)
 		(build-notes-fn c output)))))

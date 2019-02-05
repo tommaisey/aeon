@@ -19,6 +19,7 @@
 	(rhythm)
 	(note-dsl)
 	(pattern-node)
+	(subdivide)
 	(context)
 	(playback)
 	(rsc3)

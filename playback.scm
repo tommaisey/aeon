@@ -6,6 +6,8 @@
   (export
    add-pattern
    remove-pattern
+   bpm->mps bpm->spm
+   secs-until
    semaphore semaphore? make-semaphore
    semaphore-val semaphore-mutex semaphore-cond
    start-waiting stop-waiting
@@ -25,6 +27,16 @@
 
   (define (remove-pattern uid)
     (set! running-patterns (alist-delete uid running-patterns)))
+
+  ;;------------------------------------------------
+  ;; Some useful functions for dealing with musical time.
+  ;; Its useful to convert bpm to measures per second (mps)
+  ;; and also to seconds per measure.
+  (define (bpm->mps bpm) (/ bpm 4 60)) 
+  (define (bpm->spm bpm) (/ 1 (bpm->mps bpm)))
+  
+  (define (secs-until beat current-beat bpm)
+    (/ (- beat current-beat) (bpm->mps bpm)))
 
   ;;------------------------------------------------
   ;; Infrastructure for a special playback thread. This will wake up
