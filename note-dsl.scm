@@ -105,18 +105,18 @@
     (define (merge-results ll)
       (let* ([columns  (map (cut sort note-before? <>) ll)]
 	     [patterns (columns-to-rows columns)])
-	(merge-inner (filter (cut sorted? note-before? <>) patterns))))
+	(concatenate (filter (cut sorted? note-before? <>) patterns))))
     (lambda [notes]
-      (merge-inner (map (cut <> notes) filters))))
+      (concatenate (map (cut <> notes) filters))))
 
   ;;-----------------------------------------------
   ;; Returns the alist cell to update a note. 
   (define-syntax to
     (syntax-rules ()
       ((_ key value)
-       ; (check-type symbol? key "First argument of 'to' must be a key.")
        (context-node [context]
-	 (cons key (contextualize value context))))))
+	 (check-type symbol? key "First argument of 'to' must be a key.")
+	 (cons key (get-c-val value context))))))
 
   ;; Returns the context's current note with the changes
   ;; of all the to-fns applied (see 'to' above). 

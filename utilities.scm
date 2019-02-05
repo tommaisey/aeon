@@ -3,14 +3,14 @@
 ;; Fundamental utilities
 ;; ---------------------------------------------------------
 (library (utilities)
-  (export fmod % pseudo-rand
+  (export fmod % round-down-f pseudo-rand
 	  nearly-divisible divisible on-each
 	  above below between between-each
 	  equal nearly-equal
-	  column-process
+	  pair first rest
 	  merge-columns
 	  columns-to-rows
-	  merge-inner
+	  concatenate
 	  merge-sorted
 	  sorted?
 	  for-any
@@ -18,20 +18,23 @@
 	  combine-preds
 	  list-last
 	  remove-list
+	  unsafe-list?
 	  push-front
 	  check-type)
 
   (import (chezscheme) (srfi s27 random-bits))
 
-  ;; A negative-aware modulo that works with floats or fracs
-  ;; Warning! breaks sometimes due to floating point error.
-  ;; e.g. (fmod 4.666666666666666 (/ 4.0 12))
-  ;; Need to find a more robust version... Or stick to fracs!
+  ;; Negative-aware modulo that works with floats or fracs.
+  ;; Warning! Unreliable with floats! e.g. (fmod 4.666666666666666 (/ 4.0 12))
   (define (fmod n mod)
     (- n (* (floor (/ n mod)) mod)))
 
-  ;; We need to use modulo a lot - use the trad symbol
+  ;; This can be quite a lot easier to read in some cases.
   (define % modulo)
+
+  ;; Find the nearest whole multiple of divisor that's <= x.
+  (define (round-down-f x divisor)
+    (* divisor (exact (truncate (/ x divisor)))))
 
   ;; A pseudo-random number generator that takes a seed.
   (define pseudo-rand-src (make-random-source))
@@ -45,9 +48,7 @@
 		 ((random-source-make-integers pseudo-rand-src) len)
 		 (* len ((random-source-make-reals pseudo-rand-src)))))))
 
-  ;; Some 'english sounding' math operators. These are intended to
-  ;; be intuitive for non-programmers, so don't always conform
-  ;; to the expectations a programmer might have.
+  ;; Some 'english sounding' math operators.
   (define (nearly-divisible val div error)
     (let* ([remain (/ val div)]
 	   [truncated (truncate remain)])
@@ -82,8 +83,10 @@
     (let ([m (fmod val each)])
       (between m lower upper)))
 
-  ;; It's going to be more readable for users to write 'pair' than 'cons'.
+  ;; More readable for users to write pair/first/rest
   (define pair cons)
+  (define first car)
+  (define rest cdr)
 
   ;; Takes the head off each inner list until one of
   ;; them runs out. The heads of each column are offered
@@ -102,19 +105,8 @@
     (reverse (column-process col-list (lambda (a b) (cons b a)))))
 
   ;;  ((1 2 3) (x y) (a b c)) -> (1 2 3 x y a b c)
-  (define (merge-inner col-list)
-    (fold-right (lambda (x v)
-		 (if (proper? x)
-		     (append x v)
-		     (append (list x) v)))
-	       '() col-list))
-
-  ;; Check if something is a list but not a pair (or any other type). 
-  (define (proper? pair)
-    (and (pair? pair)
-	 (or
-	  (eq?   (cdr pair) '())
-	  (pair? (cdr pair)))))
+  (define (concatenate col-list)
+    (fold-right push-front '() col-list))
 
   ;; Check if a list is sorted or not.
   (define (sorted? less? l)
@@ -172,9 +164,17 @@
   (define (remove-list a b)
     (filter (lambda (x) (not (member x b))) a))
 
+  ;; #t for any kind of list, proper, improper, or cyclic. 
+  ;; Faster than 'list?' but improper lists fail with e.g. append.
+  (define (unsafe-list? x)
+    (or (eq? x '())
+	(and (pair? x)
+	     (or (eq? (cdr x) '())
+		 (pair? (cdr x))))))
+
   ;; Adds the element to the list. If the element is a list, it is appended.
   (define (push-front val list)
-    ((if (list? val) append cons) val list))
+    ((if (unsafe-list? val) append cons) val list))
 
    ;; Throw an error if the wrong type is used
   (define (check-type pred val string)

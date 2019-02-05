@@ -32,6 +32,7 @@
    range-with-end
    range-start
    range-end
+   range-length
    range-valid?
    within-range?)
 
@@ -134,6 +135,8 @@
     (< (range-start r) (range-end r)))
   (define (within-range? r t)
     (between t (range-start r) (range-end r)))
+  (define (range-length r)
+    (- (range-end r) (range-start r)))
 
   ;; Find the range which a list of notes encompasses.
   ;; The call to list-last makes this relatively slow.

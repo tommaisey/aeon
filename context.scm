@@ -3,6 +3,7 @@
   (export
     context
     make-context
+    make-empty-context
     context-note
     context-notes-next
     context-notes-prev
@@ -11,17 +12,18 @@
     context-end
     context-print
     context-with-notes
-    context-with-range
+    context-with-range rerange
+    context-length
     context-move
     context-to-closest-note
     context-to-note-after
     context-rewind
     context-map
     context-filter
+    context-trim
     context-empty?
     contexts-merge
-    contextualize
-    contextualize-for-add)
+    get-c-val)
   (import (chezscheme) (utilities) (note))
 
   ;; ---------------------------------------------
@@ -42,6 +44,9 @@
 	  (new notes-next '() range))
 	 ((range)
 	  (new '() '() range))))))
+
+  (define (make-empty-context start end)
+    (make-context (make-range start end)))
 
   (define (context-note c)
     (let ([n (context-notes-next c)])
@@ -65,6 +70,10 @@
 
   (define (context-with-range c r)
     (make-context (context-notes-next c) (context-notes-prev c) r))
+  (define rerange context-with-range)
+
+  (define (context-length c)
+    (range-length (context-range c)))
 
   ;;--------------------------------------------------------------------
   ;; Iteration. A context has a list of previous and next notes - these
@@ -87,6 +96,55 @@
 
   (define (context-to-note-after c time)
     (context-it c (to-before time)))
+
+  ;;----------------------------------------------------------------------
+  ;; Transformations.
+  ;;
+  ;; Takes a lambda taking a context, returning a note
+  (define (context-map new-note-fn context)
+    (context-transform
+     context (lambda (c output) (cons (new-note-fn c) output))))
+
+  ;; Takes a lambda taking a context, returning bool
+  (define (context-filter pred context)
+    (context-transform
+     context (lambda (c output)
+	       (if (pred c) (cons (context-note c) output) output))))
+
+  ;; Removes all notes from the context that don't fall within range.
+  (define (context-trim context)
+    (define (pred c) (between (note-beat (context-note c))
+			      (context-start c)
+			      (context-end c)))
+    (context-filter pred context))
+
+  (define (contexts-merge c1 c2)
+    (let ([c1 (context-rewind c1)]
+	  [c2 (context-rewind c2)])
+      (make-context (merge-sorted (context-notes-next c1)
+				  (context-notes-next c2)
+				  note-before?)
+		    (make-range (min (context-start c1) (context-start c2))
+				(max (context-end c1) (context-end c2))))))
+
+  ;;------------------------------------------------------------------------
+  ;; c-vals
+  ;;
+  ;; Our patterns allow both simple values and 'contextual' values, which are
+  ;; functions taking a context and returning a value. A value which might be
+  ;; either of these is known as a 'c-val'. This function gets the value of a c-val.
+  (define get-c-val
+    (case-lambda
+      ((c-val context)
+       (if (procedure? c-val)
+	   (c-val context) c-val))
+
+      ;; If we use a c-val when adding a new event, the context will look wrong.
+      ;; The event doesn't yet exist, so e.g. next/prev functions would be broken.
+      ;; In this case, add an empty note to the context before evaluating.
+      ((c-val time-to-add context)
+       (if (procedure? c-val)
+	   (c-val (context-insert context (make-note time-to-add))) c-val))))
 
   ;;---------------------------------------------------------------------
   ;; Helpers used in public iteration functions.
@@ -160,7 +218,7 @@
   (define (context-prev-unchecked c) (car (context-notes-prev c)))
   (define (delta t note) (- t (note-get note time-key +inf.0)))
 
-  ;; Used in context-map and context-filter below
+  ;; Used in context-map and context-filter
   (define (context-transform context build-notes-fn)
     (let loop ([c context]
 	       [output '()])
@@ -168,26 +226,6 @@
 	  (context-with-notes c (reverse output))
 	  (loop (context-move1-fwd c)
 		(build-notes-fn c output)))))
-
-  ;; Takes a lambda taking a context, returning a note
-  (define (context-map new-note-fn context)
-    (context-transform
-     context (lambda (c output) (cons (new-note-fn c) output))))
-
-  ;; Takes a lambda taking a context, returning bool
-  (define (context-filter pred context)
-    (context-transform
-     context (lambda (c output)
-	       (if (pred c) (cons (context-note c) output) output))))
-
-  (define (contexts-merge c1 c2)
-    (let ([c1 (context-rewind c1)]
-	  [c2 (context-rewind c2)])
-      (make-context (merge-sorted (context-notes-next c1)
-				  (context-notes-next c2)
-				  note-before?)
-		    (make-range (min (context-start c1) (context-start c2))
-				(max (context-end c1) (context-end c2))))))
 
   ;; Inserts the new note in a sorted fashion into the context, leaving the
   ;; context pointing to the new note, not the original one.
@@ -198,19 +236,5 @@
 	       [nxt (context-notes-next moved)]
 	       [prv (context-notes-prev moved)])
 	  (context-with-notes c (cons new-note nxt) prv))))
-
-  ;; We want our patterns to allow both simple values and 'contextual' values,
-  ;; which are functions taking a context and returning a value. The sum of these
-  ;; two types is known as a 'c-val'. This function gets the value of a c-val.
-  (define (contextualize c-val context)
-    (if (procedure? c-val) (c-val context) c-val))
-
-  ;; We want to allow c-vals (see above) when creating notes too, but in this
-  ;; case there's no note for the contextual value to refer to yet (it's about
-  ;; to be created). This adds a fake note at the right time, so the context makes sense.
-  (define (contextualize-for-add c-val t context)
-    (if (procedure? c-val)
-	(c-val (context-insert context (make-note t)))
-	c-val))
 
   ) ; end module context
