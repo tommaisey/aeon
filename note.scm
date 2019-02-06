@@ -14,6 +14,7 @@
    note-set
    note-update
    note-check
+   note-clean
    note-optimise
    note-prioritise
    
@@ -72,17 +73,21 @@
     (let ([v (note-get note key #f)])
       (if v (apply pred (cons v args)) #f)))
 
-  ;; note-optimise returns an identical-looking note that's
-  ;; been cleaned of obsolete mappings and had certain key/value
-  ;; pairs moved to the front to accelerate finding common entries.
+  ;; Copy commonly used entries to the front of the alist,
+  ;; accelerating future searches for them.
   (define (note-prioritise note key)
     (let ([result (note-get note key #f)])
       (if (not result) note
 	  (note-set note key result))))
-  
+
+  ;; Remove the 'history' of the alist. One entry per key.
+  (define (note-clean note)
+    (delete-duplicates note (lambda (x y) (eq? (car x) (car y)))))
+
+  ;; Prioritise and clean the note (see above).
   (define (note-optimise note)
     (let ([n (fold-left (cut note-prioritise <> <>) note priority-keys)])
-      (delete-duplicates n (lambda (x y) (eq? (car x) (car y))))))
+      (note-clean n)))
 
   ;; Some note convenience functions
   (define (print-note note)

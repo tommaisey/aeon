@@ -16,6 +16,7 @@
 	  for-any
 	  for-none
 	  combine-preds
+	  list-nth
 	  list-last
 	  remove-list
 	  unsafe-list?
@@ -154,7 +155,14 @@
     (lambda (x)
       (for-all/any/none (lambda (p) (p x)) preds)))
 
-  ;; Get the last element of a list. Slow operation.
+  ;; Get the nth element of a list. Linear time.
+  (define (list-nth l n)
+    (cond
+     ((null? l) '())
+     ((eq? n 0) (car l))
+     (else (list-nth (cdr l) (- n 1)))))
+
+  ;; Get the last element of a list. Linear time.
   (define (list-last l)
     (if (null? (cdr l))
 	(car l)

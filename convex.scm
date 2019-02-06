@@ -1,11 +1,12 @@
 ;; -*- geiser-scheme-implementation: chez-*-
 (load "init.scm")
 
+;;-----------------------------------------------------------------
 ;; A SuperCollider test sound...
 (send-synth
  s "sine-grain"
- (letc ([freq 440] [attack 0.01] [release 1])
-   (let* ([d (env-perc attack release 1 (list -4 -4))]
+ (letc ([freq 440] [attack 0.01] [length 1])
+   (let* ([d (env-perc attack length 1 (list -4 -4))]
 	  [e (env-gen kr 1 0.1 0 1 remove-synth d)])
      (out 0 (mul e (sin-osc ar freq 0))))))
 
@@ -17,35 +18,21 @@
 (define (play name . arg-pairs)
   (play-at name (utc) arg-pairs))
 
-;; Make a pair
-(define-syntax npair
-  (syntax-rules ()
-    ((_ var) (cons (symbol->string 'var) var))))
-
-(define (sine-perc freq release)
+(define (sine-perc freq length)
   (play "sine-grain"
-	(npair freq)
-	(npair release)))
-
-(define (sine-smooth freq time)
-  (play "sine-grain"
-	(npair freq)
-	(cons "attack" time)
-	(cons "release" time)))
+	(cons "freq" freq)
+	(cons "length" length)))
 
 ;;-----------------------------------------------------------------
 ;; Plays a note at the right time in the future.
 (define (play-note note current-beat)
   (define (entry-convert pair)
     (cons (symbol->string (car pair)) (cdr pair)))
-  (define (entry-filter pair)
-    (and (not (eq? (car pair) 'beat))
-	 (not (eq? (car pair) 'inst))))
   (let* ([inst (note-get note 'inst "sine-grain")]
 	 [beat (note-beat note)]
 	 [until (secs-until beat current-beat bpm)]
 	 [t (+ (utc) until playback-latency)]) ;; TODO: adjust latency based on frame jitter
-    (apply play-at inst t (map entry-convert (filter entry-filter note)))))
+    (apply play-at inst t (map entry-convert (note-clean note)))))
 
 ;; Called each chunk of time by the playback thread.  
 (define (process-chunk)

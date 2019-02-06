@@ -20,6 +20,7 @@
 	(note-dsl)
 	(pattern-node)
 	(subdivide)
+	(c-vals)
 	(context)
 	(playback)
 	(rsc3)

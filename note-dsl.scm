@@ -18,28 +18,11 @@
 ;; ------------------------------------------------------------
 
 (library (note-dsl)
-  (export rnd to is any-of all-of none-of phrase
+  (export to is any-of all-of none-of phrase
 	  change morph-all shadow-all morph-if shadow-if)
 
   (import (chezscheme) (utilities) (note) (context)
 	  (srfi s26 cut))
-
-  ;;--------------------------------------------------------
-  ;; A random generator for use in a pattern pipeline. This returns
-  ;; a lambda which, given a context, returns a random number.
-  ;; This allows 'pure' random values, generated with a seed based
-  ;; on a property of the context (e.g. beat of context's current note).
-  (define rnd
-    (case-lambda
-      [(key)
-       (rnd 0.0 1.0 key)]
-      [(min max key)
-       (lambda (context)
-	 (let* ([note (context-note context)]
-		[seed (* (note-beat note)
-			 (note-get note key 1))])
-	   (pseudo-rand min max seed)))]))
-
   ;;--------------------------------------------------------
   ;; Abstracts away the concept of a 'context' from the user.
   ;; Inside a macro using this (currently just 'is' and 'to') it's

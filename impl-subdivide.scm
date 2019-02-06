@@ -38,7 +38,8 @@
 	 ((or (eq? val rest-symbol) (eq? val 0))
 	  (list))
 	 ((not (number? val))
-	  (raise "'event' subdivide patterns should only contain numbers or rests."))
+	  (raise (string-append "subdivide for 'event' should "
+				"contain only numbers or rests.")))
 	 (else
 	  (let* ([num (max 1 val)]
 		 [dur (/ (context-length context) num)]
