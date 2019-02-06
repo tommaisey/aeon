@@ -35,15 +35,15 @@
     (define (add-fn context t c-val)
       (let ([val (get-c-val c-val t context)])
 	(cond
-	 ((or (eq? val rest-symbol)
-	      (eq? val 0))
+	 ((or (eq? val rest-symbol) (eq? val 0))
 	  (list))
-	 ((number? val)
+	 ((not (number? val))
+	  (raise "'event' subdivide patterns should only contain numbers or rests."))
+	 (else
 	  (let* ([num (max 1 val)]
 		 [dur (/ (context-length context) num)]
 		 [mke (lambda (i) (make-note (+ t (* i dur)) (length dur)))])
-	    (map mke (reverse (iota num)))))
-	 (else (raise "'event' subdivide patterns should only contain numbers or rests.")))))
+	    (map mke (reverse (iota num))))))))
     (context-trim
      (context-with-notes
       context (reverse (papply context pdur pdef add-fn)))))
@@ -53,12 +53,11 @@
   ;; the corresponding value at key.
   (define (pmorph context pdur pdef key)
     (define (add-fn context t c-val)
-      (let* ([val (get-c-val c-val t context)]
-	     [mke (lambda (n) (note-set n key val))]
-	     [notes (context-notes-next (context-trim context))])
-	(if (eq? val rest-symbol)
-	    notes
-	    (map mke (reverse notes)))))
+      (let ([context (context-trim context)]
+	    [morpher (lambda (c) (note-set (context-note c) key (get-c-val c-val c)))])
+	(if (eq? c-val rest-symbol)
+	    (context-notes-next context)
+	    (context-notes-next (context-map morpher context)))))
     (context-with-notes
      context (reverse (papply context pdur pdef add-fn))))
 
