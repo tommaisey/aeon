@@ -131,11 +131,4 @@
 	     [changed (context-map change-fn copied)])
 	(contexts-merge context changed))))
 
-  ;; Adding statements
-  (define (add to-add)
-    0) ; TODO: stub
-
-  (define (add-looped loop-range to-add)
-    0) ; TODO: stub
-
   ) ; end module 'note dsl'
