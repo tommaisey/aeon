@@ -27,6 +27,17 @@
 	(sosc)
 	(rhs))
 
+;;-----------------------------------------------------
+;; Stop a mutex in the innards of Chez from blocking on Emacs REPLs.
+;; This prevents our background thread from running in Emacs.
+(define (fix-emacs-repl)
+  (let ([stdin (transcoded-port (standard-input-port)
+				(make-transcoder (utf-8-codec)))])
+    (current-input-port stdin)
+    (console-input-port stdin)))
+
+(fix-emacs-repl)
+
 ;;------------------------------------------------------
 ;; TODO: check that SuperCollider is running, issue a warning if not.
 ;; As per sclang put the default server into variable named 's'
