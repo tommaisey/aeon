@@ -29,7 +29,7 @@
       ((_ qlist) (pick qlist '()))
 
       ((_ qlist key/keys)
-       (let* ([lst (auto-quasi qlist)]
+       (let* ([lst (pdef-quasi qlist)]
 	      [len (length lst)])
 	 (lambda (context)
 	   (list-nth lst ((rnd 0 len key/keys) context)))))))
@@ -38,7 +38,7 @@
   (define-syntax each
     (syntax-rules ()
       ((_ measures qlist)
-       (let* ([lst (auto-quasi qlist)]
+       (let* ([lst (pdef-quasi qlist)]
 	      [len (length lst)])
 	 (lambda (context)
 	   (let* ([t (note-beat (context-note context))]
@@ -60,4 +60,5 @@
        ((unsafe-list? key/keys)
 	(fold-left fn init (note-clean (filter matches-key? note)))))))
 
+  
   )

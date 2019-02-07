@@ -24,8 +24,8 @@
 	 (syntax v)))))
 
   ;;-------------------------------------------------------------------
-  ;; Same as above, but quotes the special character '~' if it's at the
-  ;; beginning of a list, since in the context of a pdef it represents a rest.
+  ;; Same as above, but quotes the special character '~', since in the
+  ;; context of a pdef it represents a rest.
   (define ~)
   
   (define-syntax pdef-quasi
