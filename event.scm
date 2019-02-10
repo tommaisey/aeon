@@ -43,13 +43,13 @@
   (import (chezscheme) (utilities) (srfi s26 cut)
 	  (only (srfi s1 lists) delete-duplicates))
 
-  (define time-key 'beat)
-  (define priority-keys '(length freq beat))
+  (define time-key ':beat)
+  (define priority-keys '(:sustain :freq :beat))
 
   (define-syntax make-event
     (syntax-rules ()
       ((_ start-beat (key value) ...)
-       (list (cons 'beat start-beat) (cons 'key value) ...))
+       (list (cons ':beat start-beat) (cons 'key value) ...))
       
       ((_ ...)
        (syntax-error "make-event syntax: (make-event 1/16 [:freq 100] [:pan 0]"))))

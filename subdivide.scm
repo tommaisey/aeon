@@ -43,7 +43,7 @@
 	 (else
 	  (let* ([num (max 1 val)]
 		 [dur (/ (context-length context) num)]
-		 [mke (lambda (i) (make-event (+ t (* i dur)) (sustain dur)))])
+		 [mke (lambda (i) (make-event (+ t (* i dur)) (:sustain dur)))])
 	    (map mke (reverse (iota num))))))))
     (context-trim
      (context-with-events

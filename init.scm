@@ -15,22 +15,39 @@
 (define (play-now name . arg-pairs)
   (play-when name (utc) arg-pairs))
 
+;; Override this rsc3 macro (which defines synthdef args) to also make
+;; a top level 'keyword' (i.e. self-evaluating symbol) out of the name.
+(define-syntax letc
+  (syntax-rules ()
+    ((_ () expr)
+     expr)
+    ((_ ((name default) ...) expr)
+     (let ((name (begin
+		   (define-top-level-value (quote name) (quote name))
+		   (make-control* (symbol->string (quote name)) default kr 0)))
+	   ...)
+       expr))))
+
+;; Extra keyword definitions
+(define :inst ':inst)
+
 (send-synth
  s "sine-grain"
- (letc ([freq 440] [attack 0.01] [sustain 1] [amp 0.2])
-   (let* ([osc (sin-osc ar freq 0)]
-	  [env (env-perc attack sustain 1 (list -4 -4))]
-	  [env (env-gen kr 1 amp 0 1 remove-synth env)])
+ (letc ([:freq 440] [:attack 0.01] [:sustain 1] [:amp 0.2])
+   (let* ([osc (sin-osc ar :freq 0)]
+	  [env (env-perc :attack :sustain 1 (list -4 -4))]
+	  [env (env-gen kr 1 :amp 0 1 remove-synth env)])
      (out 0 (mul env osc)))))
 
 (send-synth
  s "sampler-mono"
- (letc ([sample 0] [attack 0.01] [sustain 1] [pan 0.5] [speed 1] [release 0.25] [amp 0.3])
-   (let* ([rte (mul speed (buf-rate-scale kr sample))]
-	  [osc (play-buf 1 ar sample rte 1 0 no-loop remove-synth)]
-	  [env (env-linen attack sustain release 1 '(-4 -4 -4))]
-	  [env (env-gen kr 1 amp 0 1 remove-synth env)])
-     (out 0 (pan2 (mul env osc) (add (mul pan 2) -1) 1)))))
+ (letc ([:sample 0] [:attack 0.01] [:sustain 1] [:pan 0.5] [:speed 1] [:release 0.25] [:amp 0.3])
+   (let* ([rte (mul :speed (buf-rate-scale kr :sample))]
+	  [osc (play-buf 1 ar :sample rte 1 0 no-loop remove-synth)]
+	  [env (env-linen :attack :sustain :release 1 '(-4 -4 -4))]
+	  [env (env-gen kr 1 :amp 0 1 remove-synth env)])
+     (out 0 (pan2 (mul env osc)
+		  (add (mul :pan 2) -1) 1)))))
 
 (define (add-sample path bufnum)
   (async s (b-alloc-read bufnum path 0 0)))
@@ -40,15 +57,15 @@
 
 (define (sine-perc freq length)
   (play-now "sine-grain"
-	    (cons "freq" freq)
-	    (cons "length" length)))
+	    (cons ":freq" freq)
+	    (cons ":length" length)))
 
 ;;-----------------------------------------------------------------
 ;; Plays a event at the right time in the future.
 (define (play-event event current-beat)
   (define (entry-convert pair)
     (cons (symbol->string (car pair)) (cdr pair)))
-  (let* ([inst (event-get event 'inst "sine-grain")]
+  (let* ([inst (event-get event :inst "sine-grain")]
 	 [beat (event-beat event)]
 	 [until (secs-until beat current-beat bpm)]
 	 [t (+ (utc) until playback-latency)]) ;; TODO: adjust latency based on frame jitter
