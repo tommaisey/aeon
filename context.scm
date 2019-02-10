@@ -127,11 +127,8 @@
 				(max (context-end c1) (context-end c2))))))
 
   ;;------------------------------------------------------------------------
-  ;; c-vals
-  ;;
-  ;; Our patterns allow both simple values and 'contextual' values, which are
-  ;; functions taking a context and returning a value. A value which might be
-  ;; either of these is known as a 'c-val'. This function gets the value of a c-val.
+  ;; See c-val.scm for details. This is kept here because it frees other
+  ;; libraries from importing (c-vals).
   (define get-c-val
     (case-lambda
       ((c-val context)

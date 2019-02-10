@@ -43,7 +43,7 @@
 	 (else
 	  (let* ([num (max 1 val)]
 		 [dur (/ (context-length context) num)]
-		 [mke (lambda (i) (make-note (+ t (* i dur)) (length dur)))])
+		 [mke (lambda (i) (make-note (+ t (* i dur)) (sustain dur)))])
 	    (map mke (reverse (iota num))))))))
     (context-trim
      (context-with-notes

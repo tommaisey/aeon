@@ -5,10 +5,13 @@
 ;; Many of these functions base their value on the time/beat of the current
 ;; note in the context, unless passed one or more extra keys to look at.
 ;;
-;; For functions that take a list, we define macros that use auto-quasi -
+;; Others of these functions don't really need a context - but may want to treat
+;; their arguments as c-vals. e.g. round
+;;
+;; For functions taking some kind of list, we define macros that use auto-quasi -
 ;; this frees the user from needing to (quasi)quote those input lists. 
 (library (c-vals)
-  (export rnd pick each)
+  (export rnd pick each snap)
   (import (scheme) (utilities) (context) (note)
 	  (for (auto-quasi) expand))
 
@@ -44,6 +47,15 @@
 	   (let* ([t (note-beat (context-note context))]
 		  [n (exact (truncate (/ t measures)))])
 	     (get-c-val (list-nth lst (modulo n len)) context)))))))
+
+  ;; Snap the input value to the next number divisible by divisor.
+  (define (snap divisor c-val)
+    (lambda (context)
+      (let* ([val (get-c-val c-val context)]
+	     [overlap (fmod val divisor)]
+	     [prev (- val overlap)])
+	(if (>= overlap (* 0.5 divisor))
+	    (+ prev divisor) prev))))
 
   ;; Some c-vals allow the user to specify which properties of the
   ;; context's current note are considered when contextualising. This
