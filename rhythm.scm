@@ -16,7 +16,7 @@
    euclid-offset
    euclidean-rhythm)
 
-  (import (chezscheme) (utilities) (note))
+  (import (chezscheme) (utilities) (event))
 
   ;; Snap a value to the next number divisible by divisor.
   (define (snap-next beat divisor)
@@ -78,7 +78,7 @@
       (not (eqv? (quotient bucket steps)
 		 (quotient (+ bucket hits) steps)))))
 
-  ;; Make the notes inside a range w given a euclidean pattern e
+  ;; Make the events inside a range w given a euclidean pattern e
   (define (euclidean-rhythm w e stretch)
     (check-type euclid? e "Parameter 'e' must be a euclid record")
     (check-type range? w "Parameter 'w' must be a range record")
@@ -87,17 +87,17 @@
 	([num-steps  (euclid-num-steps e)]
 	 [step-size  (/ stretch num-steps)]
 	 [start-beat (snap-next-if (range-start w) step-size)])
-      (define (next-step notes e w)
+      (define (next-step events e w)
 	(if (range-valid? w)
 	    (let*
 		([beat  (range-start w)]
 		 [next  (snap-next beat step-size)]
 		 [step  (% (round (/ beat step-size)) num-steps)]
-		 [notes (if (euclidean-hit? step e)
-			    (cons (make-note beat) notes)
-			    notes)])
-	      (next-step notes e (range-with-start w next)))
-	    notes))
+		 [events (if (euclidean-hit? step e)
+			    (cons (make-event beat) events)
+			    events)])
+	      (next-step events e (range-with-start w next)))
+	    events))
       (next-step '() e (range-with-start w start-beat))))
 
   ); end module 'rhythm'

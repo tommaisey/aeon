@@ -3,7 +3,7 @@
 ;; transparency that is key for the system to work.
 ;;
 ;; Many of these functions base their value on the time/beat of the current
-;; note in the context, unless passed one or more extra keys to look at.
+;; event in the context, unless passed one or more extra keys to look at.
 ;;
 ;; Others of these functions don't really need a context - but may want to treat
 ;; their arguments as c-vals. e.g. round
@@ -12,7 +12,7 @@
 ;; this frees the user from needing to (quasi)quote those input lists. 
 (library (c-vals)
   (export rnd pick each snap)
-  (import (scheme) (utilities) (context) (note)
+  (import (scheme) (utilities) (context) (event)
 	  (for (auto-quasi) expand))
 
   ;; A random number
@@ -44,7 +44,7 @@
        (let* ([lst (pdef-quasi qlist)]
 	      [len (length lst)])
 	 (lambda (context)
-	   (let* ([t (note-beat (context-note context))]
+	   (let* ([t (event-beat (context-event context))]
 		  [n (exact (truncate (/ t measures)))])
 	     (get-c-val (list-nth lst (modulo n len)) context)))))))
 
@@ -58,19 +58,19 @@
 	    (+ prev divisor) prev))))
 
   ;; Some c-vals allow the user to specify which properties of the
-  ;; context's current note are considered when contextualising. This
+  ;; context's current event are considered when contextualising. This
   ;; makes the implementation of that simpler.
   (define (fold-by-keys fn init key/keys context)
     (define (matches-key? pair)
       (find (lambda (k) (eq? k (car pair))) key/keys))
-    (let ([note (context-note context)])
+    (let ([event (context-event context)])
       (cond
        ((null? key/keys)
-	(fn init (note-beat note)))
+	(fn init (event-beat event)))
        ((symbol? key/keys)
-	(fn init (note-get note key/keys 1)))
+	(fn init (event-get event key/keys 1)))
        ((unsafe-list? key/keys)
-	(fold-left fn init (note-clean (filter matches-key? note)))))))
+	(fold-left fn init (event-clean (filter matches-key? event)))))))
 
   
   )

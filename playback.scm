@@ -1,6 +1,6 @@
 ;; -*- geiser-scheme-implementation: chez-*-
 ;; This is the place where patterns are registered with a playback
-;; thread. The thread periodically pulls notes from the patterns and
+;; thread. The thread periodically pulls events from the patterns and
 ;; pushes them on to our sound engine back-ends (e.g. OSC , MIDI).
 (library (playback)
   (export
@@ -13,7 +13,7 @@
    start-waiting stop-waiting
    start-suspendable-thread)
   
-  (import (note-dsl) (context) (rsc3) (sosc)
+  (import (context) (rsc3) (sosc)
 	  (except (scheme) reset random)
 	  (only (srfi s1 lists) alist-cons alist-delete))
 
@@ -41,7 +41,7 @@
   ;;------------------------------------------------
   ;; Infrastructure for a special playback thread. This will wake up
   ;; periodically (according to bpm and chunk-size) and send the next
-  ;; chunk of note information to SuperCollider.
+  ;; chunk of event information to SuperCollider.
   (define-record-type semaphore
     (fields (mutable val semaphore-val set-semaphore-val!)
 	    (immutable mutex)

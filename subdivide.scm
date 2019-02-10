@@ -1,6 +1,6 @@
 (library (subdivide)
   (export pcreate pmorph)
-  (import (scheme) (utilities) (note) (context))
+  (import (scheme) (utilities) (event) (context))
 
   (define rest-symbol '~)
 
@@ -28,9 +28,9 @@
 	      (loop next-t (cdr p) (append value out))))))))))
 
   ;; Takes a pdef template and a context, and returns a new context with the
-  ;; same range, containing notes according to the the pdef template.
-  ;; A pdef value of 1 gives one note. For values > 1, creates N subdivided
-  ;; notes. The symbol ~ creates a rest.
+  ;; same range, containing events according to the the pdef template.
+  ;; A pdef value of 1 gives one event. For values > 1, creates N subdivided
+  ;; events. The symbol ~ creates a rest.
   (define (pcreate context pdur pdef)
     (define (add-fn context t c-val)
       (let ([val (get-c-val c-val t context)])
@@ -43,22 +43,22 @@
 	 (else
 	  (let* ([num (max 1 val)]
 		 [dur (/ (context-length context) num)]
-		 [mke (lambda (i) (make-note (+ t (* i dur)) (sustain dur)))])
+		 [mke (lambda (i) (make-event (+ t (* i dur)) (sustain dur)))])
 	    (map mke (reverse (iota num))))))))
     (context-trim
-     (context-with-notes
+     (context-with-events
       context (reverse (papply context pdur pdef add-fn)))))
 
   ;; Takes a pdef template and a context, and returns a new context with the
-  ;; values in the pdef applied to any notes in the context.
+  ;; values in the pdef applied to any events in the context.
   (define (pmorph context pdur pdef key)
     (define (add-fn context t c-val)
       (let ([context (context-trim context)]
-	    [morpher (lambda (c) (note-set (context-note c) key (get-c-val c-val c)))])
+	    [morpher (lambda (c) (event-set (context-event c) key (get-c-val c-val c)))])
 	(if (eq? c-val rest-symbol)
-	    (context-notes-next context)
-	    (context-notes-next (context-map morpher context)))))
-    (context-with-notes
+	    (context-events-next context)
+	    (context-events-next (context-map morpher context)))))
+    (context-with-events
      context (reverse (papply context pdur pdef add-fn))))
 
   )

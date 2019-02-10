@@ -17,10 +17,10 @@
 
 (send-synth
  s "sine-grain"
- (letc ([freq 440] [attack 0.01] [sustain 1])
+ (letc ([freq 440] [attack 0.01] [sustain 1] [amp 0.2])
    (let* ([osc (sin-osc ar freq 0)]
 	  [env (env-perc attack sustain 1 (list -4 -4))]
-	  [env (env-gen kr 1 0.2 0 1 remove-synth env)])
+	  [env (env-gen kr 1 amp 0 1 remove-synth env)])
      (out 0 (mul env osc)))))
 
 (send-synth
@@ -44,15 +44,15 @@
 	    (cons "length" length)))
 
 ;;-----------------------------------------------------------------
-;; Plays a note at the right time in the future.
-(define (play-note note current-beat)
+;; Plays a event at the right time in the future.
+(define (play-event event current-beat)
   (define (entry-convert pair)
     (cons (symbol->string (car pair)) (cdr pair)))
-  (let* ([inst (note-get note 'inst "sine-grain")]
-	 [beat (note-beat note)]
+  (let* ([inst (event-get event 'inst "sine-grain")]
+	 [beat (event-beat event)]
 	 [until (secs-until beat current-beat bpm)]
 	 [t (+ (utc) until playback-latency)]) ;; TODO: adjust latency based on frame jitter
-    (apply play-when inst t (map entry-convert (note-clean note)))))
+    (apply play-when inst t (map entry-convert (event-clean event)))))
 
 ;; Our test pattern for the moment. Redefine for fun and profit!
 (define *1 (cycle (event [1 3])))
@@ -62,7 +62,7 @@
   (let* ([t playback-time]
 	 [nxt-t (+ t playback-chunk)]
 	 [c (make-empty-context t nxt-t)])
-    (for-each (lambda (n) (play-note n t)) (context-notes-next (*1 c)))
+    (for-each (lambda (n) (play-event n t)) (context-events-next (*1 c)))
     (set! playback-time nxt-t)))
 
 ;;-----------------------------------------------------------------
@@ -70,7 +70,7 @@
 ;; This essentially controls playback for now.
 (define bpm 120)
 (define playback-thread #f)
-(define playback-chunk 1/4) ; 1 quarter note for now
+(define playback-chunk 1/4) ; 1 quarter measure for now
 (define playback-thread-semaphore (make-semaphore))
 (define playback-time 0)
 (define playback-latency 0.2)

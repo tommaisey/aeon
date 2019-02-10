@@ -4,19 +4,19 @@
     context
     make-context
     make-empty-context
-    context-note
-    context-notes-next
-    context-notes-prev
+    context-event
+    context-events-next
+    context-events-prev
     context-range
     context-start
     context-end
     context-print
-    context-with-notes
+    context-with-events
     context-with-range rerange
     context-length
     context-move
-    context-to-closest-note
-    context-to-note-after
+    context-to-closest-event
+    context-to-event-after
     context-rewind
     context-map
     context-filter
@@ -24,32 +24,32 @@
     context-empty?
     contexts-merge
     get-c-val)
-  (import (chezscheme) (utilities) (note))
+  (import (chezscheme) (utilities) (event))
 
   ;; ---------------------------------------------
-  ;; A context for a note in a series. notes-next contains the
-  ;; remaining notes (starting with 'this' note) and prev-notes
-  ;; contains the previous notes in reverse, starting with the one
+  ;; A context for a event in a series. events-next contains the
+  ;; remaining events (starting with 'this' event) and prev-events
+  ;; contains the previous events in reverse, starting with the one
   ;; preceding 'this'.
   (define-record-type context
-    (fields (immutable notes-next)
-	    (immutable notes-prev)
+    (fields (immutable events-next)
+	    (immutable events-prev)
 	    (immutable range))
     (protocol
      (lambda (new)
-       (case-lambda ; notes-prev is optional in ctor
-	 ((notes-next notes-prev range)
-	  (new notes-next notes-prev range))
-	 ((notes-next range)
-	  (new notes-next '() range))
+       (case-lambda ; events-prev is optional in ctor
+	 ((events-next events-prev range)
+	  (new events-next events-prev range))
+	 ((events-next range)
+	  (new events-next '() range))
 	 ((range)
 	  (new '() '() range))))))
 
   (define (make-empty-context start end)
     (make-context (make-range start end)))
 
-  (define (context-note c)
-    (let ([n (context-notes-next c)])
+  (define (context-event c)
+    (let ([n (context-events-next c)])
       (if (null? n) '() (car n))))
 
   (define (context-start c) (range-start (context-range c)))
@@ -61,22 +61,22 @@
     (display ", ")
     (display (context-end c))
     (newline)
-    (print-notes (context-notes-next c)))
+    (print-events (context-events-next c)))
 
-  (define context-with-notes
+  (define context-with-events
     (case-lambda
-      ((c nxt) (context-with-notes c nxt '()))
+      ((c nxt) (context-with-events c nxt '()))
       ((c nxt prv) (make-context nxt prv (context-range c)))))
 
   (define (context-with-range c r)
-    (make-context (context-notes-next c) (context-notes-prev c) r))
+    (make-context (context-events-next c) (context-events-prev c) r))
   (define rerange context-with-range)
 
   (define (context-length c)
     (range-length (context-range c)))
 
   ;;--------------------------------------------------------------------
-  ;; Iteration. A context has a list of previous and next notes - these
+  ;; Iteration. A context has a list of previous and next events - these
   ;; functions assist in moving around in the context, as well as things like
   ;; mapping, filtering etc.
 
@@ -85,44 +85,44 @@
     (cond
      ((context-empty? c) c)
      ((context-last? c)
-      (context-with-notes c (reverse (cons (context-note c) (context-notes-prev c)))))
+      (context-with-events c (reverse (cons (context-event c) (context-events-prev c)))))
      (else (context-move c -9999999)))) ;; Lazy
   
   (define (context-move c n)
     (context-it c (until-zero-or-end n)))
 
-  (define (context-to-closest-note c time)
+  (define (context-to-closest-event c time)
     (context-it c (to-closest time)))
 
-  (define (context-to-note-after c time)
+  (define (context-to-event-after c time)
     (context-it c (to-before time)))
 
   ;;----------------------------------------------------------------------
   ;; Transformations.
   ;;
-  ;; Takes a lambda taking a context, returning a note.
-  (define (context-map new-note-fn context)
+  ;; Takes a lambda taking a context, returning a event.
+  (define (context-map new-event-fn context)
     (context-transform
-     context (lambda (c output) (cons (new-note-fn c) output))))
+     context (lambda (c output) (cons (new-event-fn c) output))))
 
   ;; Takes a lambda taking a context, returning bool.
   (define (context-filter pred context)
     (context-transform
      context (lambda (c output)
-	       (if (pred c) (cons (context-note c) output) output))))
+	       (if (pred c) (cons (context-event c) output) output))))
 
-  ;; Removes notes from the context that don't fall within range.
+  ;; Removes events from the context that don't fall within range.
   (define (context-trim context)
     (define (pred c)
-      (between (note-beat (context-note c)) (context-start c) (context-end c)))
+      (between (event-beat (context-event c)) (context-start c) (context-end c)))
     (context-filter pred context))
 
   (define (contexts-merge c1 c2)
     (let ([c1 (context-rewind c1)]
 	  [c2 (context-rewind c2)])
-      (make-context (merge-sorted (context-notes-next c1)
-				  (context-notes-next c2)
-				  note-before?)
+      (make-context (merge-sorted (context-events-next c1)
+				  (context-events-next c2)
+				  event-before?)
 		    (make-range (min (context-start c1) (context-start c2))
 				(max (context-end c1) (context-end c2))))))
 
@@ -137,10 +137,10 @@
 
       ;; If we use a c-val when adding a new event, the context will look wrong.
       ;; The event doesn't yet exist, so e.g. next/prev functions would be broken.
-      ;; In this case, add an empty note to the context before evaluating.
+      ;; In this case, add an empty event to the context before evaluating.
       ((c-val time-to-add context)
        (if (procedure? c-val)
-	   (c-val (context-insert context (make-note time-to-add))) c-val))))
+	   (c-val (context-insert context (make-event time-to-add))) c-val))))
 
   ;;---------------------------------------------------------------------
   ;; Helpers used in public iteration functions.
@@ -149,11 +149,11 @@
   (define (context-move1 c get-next get-prev)
     (let ([next (get-next c)] [prev (get-prev c)])
       (if (null? next) c
-	  (context-with-notes c (cdr next) (cons (car next) prev)))))
+	  (context-with-events c (cdr next) (cons (car next) prev)))))
   (define (context-move1-fwd c)
-    (context-move1 c context-notes-next context-notes-prev))
+    (context-move1 c context-events-next context-events-prev))
   (define (context-move1-bck c)
-    (context-move1 c context-notes-prev context-notes-next))
+    (context-move1 c context-events-prev context-events-next))
 
   ;; direction-fn returns +1 for move fwd, -1 for back, 0 for stop.
   (define (context-it c direction-fn)
@@ -167,32 +167,32 @@
     (lambda (context)
       (let ([x n]
 	    [get (if (positive? n)
-		     context-notes-next
-		     context-notes-prev)])
+		     context-events-next
+		     context-events-prev)])
 	(cond
 	 ((or (zero? x) (null? (get context))) 0)
 	 ((positive? x) (set! n (sub1 n)) x)
 	 ((negative? x) (set! n (add1 n)) x)))))
 
-  ;; direction-fn that drives context iteration to the note closest
+  ;; direction-fn that drives context iteration to the event closest
   ;; to the requested time. 
   (define (to-closest time)
     (lambda (c)
-      (define (get-delt bounds-check? default get-note)
-	(if (bounds-check? c) default (delta time (get-note c))))
-      (let ([cur (get-delt context-empty? 0 context-note)]
+      (define (get-delt bounds-check? default get-event)
+	(if (bounds-check? c) default (delta time (get-event c))))
+      (let ([cur (get-delt context-empty? 0 context-event)]
 	    [prv (get-delt context-first? -inf.0 context-prev-unchecked)]
 	    [nxt (get-delt context-last?  +inf.0 context-next-unchecked)])
 	(if (<= (abs cur) (abs nxt))
 	    (if (< (abs prv) (abs cur)) -1 0) +1))))
 
-  ;; direction-fn that moves a context to the first note that's greater
+  ;; direction-fn that moves a context to the first event that's greater
   ;; than or equal to the requested time.
   (define (to-before time)
     (lambda (c)
-      (define (get-delt bounds-check? default get-note)
-	(if (bounds-check? c) default (delta time (get-note c))))
-      (let ([cur (get-delt context-empty? 0 context-note)]
+      (define (get-delt bounds-check? default get-event)
+	(if (bounds-check? c) default (delta time (get-event c))))
+      (let ([cur (get-delt context-empty? 0 context-event)]
 	    [prv (get-delt context-first? -inf.0 context-prev-unchecked)]
 	    [nxt (get-delt context-last?  +inf.0 context-next-unchecked)])
 	(cond
@@ -201,40 +201,40 @@
 	 (else 0)))))
 
   (define (context-first? c)
-    (null? (context-notes-prev c)))
+    (null? (context-events-prev c)))
 
   (define (context-last? c)
     (or (context-empty? c)
-	(null? (cdr (context-notes-next c)))))
+	(null? (cdr (context-events-next c)))))
 
   (define (context-it-end? c)
-    (null? (context-notes-next c)))
+    (null? (context-events-next c)))
 
   (define (context-empty? c)
-    (and (null? (context-notes-next c))
-	 (null? (context-notes-prev c))))
+    (and (null? (context-events-next c))
+	 (null? (context-events-prev c))))
 
-  (define (context-next-unchecked c) (cadr (context-notes-next c)))
-  (define (context-prev-unchecked c) (car (context-notes-prev c)))
-  (define (delta t note) (- t (note-get note time-key +inf.0)))
+  (define (context-next-unchecked c) (cadr (context-events-next c)))
+  (define (context-prev-unchecked c) (car (context-events-prev c)))
+  (define (delta t event) (- t (event-get event time-key +inf.0)))
 
   ;; Used in context-map and context-filter
-  (define (context-transform context build-notes-fn)
+  (define (context-transform context build-events-fn)
     (let loop ([c context]
 	       [output '()])
       (if (context-it-end? c)
-	  (context-with-notes c (reverse output))
+	  (context-with-events c (reverse output))
 	  (loop (context-move1-fwd c)
-		(build-notes-fn c output)))))
+		(build-events-fn c output)))))
 
-  ;; Inserts the new note in a sorted fashion into the context, leaving the
-  ;; context pointing to the new note, not the original one.
-  (define (context-insert c new-note)
+  ;; Inserts the new event in a sorted fashion into the context, leaving the
+  ;; context pointing to the new event, not the original one.
+  (define (context-insert c new-event)
     (if (context-empty? c)
-	(context-with-notes c (list new-note))
-	(let* ([moved (context-to-note-after c (note-beat new-note))]
-	       [nxt (context-notes-next moved)]
-	       [prv (context-notes-prev moved)])
-	  (context-with-notes c (cons new-note nxt) prv))))
+	(context-with-events c (list new-event))
+	(let* ([moved (context-to-event-after c (event-beat new-event))]
+	       [nxt (context-events-next moved)]
+	       [prv (context-events-prev moved)])
+	  (context-with-events c (cons new-event nxt) prv))))
 
   ) ; end module context

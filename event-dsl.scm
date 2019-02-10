@@ -8,48 +8,48 @@
 ;; DSL basically consists of two parts: filters and transformers.
 ;;
 ;; Filters return lambdas taking a context (or, for repl convenience,
-;; a raw note list - see pipeline-node) and returning a new one
-;; with a filtered note list. While it would be simpler if it returned
-;; a lambda taking an individual note, we want filters to be able to
-;; recognise sequential patterns of notes.
+;; a raw event list - see pipeline-node) and returning a new one
+;; with a filtered event list. While it would be simpler if it returned
+;; a lambda taking an individual event, we want filters to be able to
+;; recognise sequential patterns of events.
 ;;
-;; Transformers also take a context/note-list, and do something to
-;; each of the notes, returning a new list.
+;; Transformers also take a context/event-list, and do something to
+;; each of the events, returning a new list.
 ;; ------------------------------------------------------------
 
-(library (note-dsl)
+(library (event-dsl)
   (export to is any-of all-of none-of phrase
 	  change morph-all shadow-all morph-if shadow-if)
 
-  (import (chezscheme) (utilities) (note) (context)
+  (import (chezscheme) (utilities) (event) (context)
 	  (srfi s26 cut))
   ;;--------------------------------------------------------
   ;; Abstracts away the concept of a 'context' from the user.
   ;; Inside a macro using this (currently just 'is' and 'to') it's
-  ;; easy to access properties of the current note with 'this' and
-  ;; neighbouring notes with 'next'.
+  ;; easy to access properties of the current event with 'this' and
+  ;; neighbouring events with 'next'.
   (define-syntax context-node
     (lambda (x)
       (syntax-case x ()
-	((_ [context notes-id range-id] body rest ...)
+	((_ [context events-id range-id] body rest ...)
 	 (with-syntax ([this    (datum->syntax (syntax context) 'this)]
 		       [next    (datum->syntax (syntax context) 'next)]
 		       [nearest (datum->syntax (syntax context) 'nearest)])
 	   (syntax
 	    (lambda (context)
 	      (define (get c k d)
-		(note-get (context-note c) k d))
+		(event-get (context-event c) k d))
 	      (define (next idx k d)
 		(get (context-move context idx) k d))
 	      (define (nearest time k d)
-		(get (context-to-closest-note context time) k d))
+		(get (context-to-closest-event context time) k d))
 	      (define (this k d) (get context k d))
 	      (begin body rest ...)))))
 
 	((_ [context] body rest ...)
-	 (syntax (context-node [context notes range] body rest ...)))
-	((_ [context notes-id] body rest ...)
-	 (syntax (context-node [context notes-id range] body rest ...))))))
+	 (syntax (context-node [context events range] body rest ...)))
+	((_ [context events-id] body rest ...)
+	 (syntax (context-node [context events-id range] body rest ...))))))
 
   ;;---------------------------------------------------------
   ;; Takes either a key (shorthand for (this key #f) or a lambda
@@ -74,7 +74,7 @@
     (lambda (context)
       ((combine-preds preds for-any) context)))
 
-  ;; Subtract the notes matched by each filter from the input.
+  ;; Subtract the events matched by each filter from the input.
   (define (none-of . preds)
     (lambda (context)
       ((combine-preds preds for-none) context)))
@@ -86,14 +86,14 @@
   ;; TODO: not updated since switched to new context model...
   (define (phrase . filters)
     (define (merge-results ll)
-      (let* ([columns  (map (cut sort note-before? <>) ll)]
+      (let* ([columns  (map (cut sort event-before? <>) ll)]
 	     [patterns (columns-to-rows columns)])
-	(concatenate (filter (cut sorted? note-before? <>) patterns))))
-    (lambda [notes]
-      (concatenate (map (cut <> notes) filters))))
+	(concatenate (filter (cut sorted? event-before? <>) patterns))))
+    (lambda [events]
+      (concatenate (map (cut <> events) filters))))
 
   ;;-----------------------------------------------
-  ;; Returns the alist cell to update a note. 
+  ;; Returns the alist cell to update a event. 
   (define-syntax to
     (syntax-rules ()
       ((_ key value)
@@ -101,12 +101,12 @@
 	 (check-type symbol? key "First argument of 'to' must be a key.")
 	 (cons key (get-c-val value context))))))
 
-  ;; Returns the context's current note with the changes
+  ;; Returns the context's current event with the changes
   ;; of all the to-fns applied (see 'to' above). 
   (define (change . to-fns)
     (lambda (context)
       (fold-left (lambda (n to-fn) (cons (to-fn context) n))
-		 (context-note context) to-fns)))
+		 (context-event context) to-fns)))
 
   ;;------------------------------------------------------
   ;; Top level transformation statements. Typically pred would
@@ -118,7 +118,7 @@
   (define (morph-if pred change-fn)
     (lambda (context)
       (define (update c)
-	(if (pred c) (change-fn c) (context-note c)))
+	(if (pred c) (change-fn c) (context-event c)))
       (context-map update context)))
   
   (define (shadow-all change-fn)
@@ -131,4 +131,4 @@
 	     [changed (context-map change-fn copied)])
 	(contexts-merge context changed))))
 
-  ) ; end module 'note dsl'
+  ) ; end module 'event dsl'
