@@ -2,11 +2,11 @@
 
 (library (pattern-node)
   (export ->>)
-  (import (chezscheme) (utilities) (context))
+  (import (chezscheme) (utilities))
 
   ;; A very simple unary threading macro.
   ;;
-  ;; (->> my-thread
+  ;; (->> my-pipeline
   ;;     (lambda (x) (+ x 1))
   ;;     (lambda (x) (* x 2))
   ;;     display)

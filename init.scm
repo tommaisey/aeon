@@ -33,11 +33,12 @@
 
 (send-synth
  s "sine-grain"
- (letc ([:freq 440] [:attack 0.01] [:sustain 1] [:amp 0.2])
+ (letc ([:freq 440] [:attack 0.01] [:sustain 1] [:amp 0.2] [:pan 0.5])
    (let* ([osc (sin-osc ar :freq 0)]
 	  [env (env-perc :attack :sustain 1 (list -4 -4))]
 	  [env (env-gen kr 1 :amp 0 1 remove-synth env)])
-     (out 0 (mul env osc)))))
+     (out 0 (pan2 (mul env osc)
+		  (add (mul :pan 2) -1) 1)))))
 
 (send-synth
  s "sampler-mono"
@@ -72,7 +73,7 @@
     (apply play-when inst t (map entry-convert (event-clean event)))))
 
 ;; Our test pattern for the moment. Redefine for fun and profit!
-(define *1 (cycle (event [1 3])))
+(define *1 (cy+ [1 3]))
 
 ;; Called each chunk of time by the playback thread.  
 (define (process-chunk)

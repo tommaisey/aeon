@@ -27,7 +27,7 @@
 (recompile-import event)
 (recompile-import event-dsl)
 (recompile-import pattern-node)
-(recompile-import cycle)
+(recompile-import cyx)
 (recompile-import context)
 (recompile-import c-vals)
 (recompile-import playback)
