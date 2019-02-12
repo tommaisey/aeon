@@ -10,6 +10,7 @@
     context-range
     context-start
     context-end
+    context-now
     context-print
     context-with-events
     context-with-range rerange
@@ -54,6 +55,12 @@
 
   (define (context-start c) (range-start (context-range c)))
   (define (context-end c) (range-end (context-range c)))
+
+  (define (context-now c)
+    (let ([e (context-event c)])
+      (if (null? e)
+	  (context-start c)
+	  (event-beat e))))
 
   (define (context-print c)
     (display "Range: ")
@@ -140,7 +147,8 @@
       ;; In this case, add an empty event to the context before evaluating.
       ((c-val time-to-add context)
        (if (procedure? c-val)
-	   (c-val (context-insert context (make-event time-to-add))) c-val))))
+	   (c-val (context-insert context (make-event time-to-add)))
+	   c-val))))
 
   ;;---------------------------------------------------------------------
   ;; Helpers used in public iteration functions.

@@ -22,46 +22,17 @@
 	  change morph-all shadow-all morph-if shadow-if)
 
   (import (chezscheme) (utilities) (event) (context)
-	  (srfi s26 cut))
-  ;;--------------------------------------------------------
-  ;; Abstracts away the concept of a 'context' from the user.
-  ;; Inside a macro using this (currently just 'is' and 'to') it's
-  ;; easy to access properties of the current event with 'this' and
-  ;; neighbouring events with 'next'.
-  (define-syntax context-node
-    (lambda (x)
-      (syntax-case x ()
-	((_ [context events-id range-id] body rest ...)
-	 (with-syntax ([this    (datum->syntax (syntax context) 'this)]
-		       [next    (datum->syntax (syntax context) 'next)]
-		       [nearest (datum->syntax (syntax context) 'nearest)])
-	   (syntax
-	    (lambda (context)
-	      (define (get c k d)
-		(event-get (context-event c) k d))
-	      (define (next idx k d)
-		(get (context-move context idx) k d))
-	      (define (nearest time k d)
-		(get (context-to-closest-event context time) k d))
-	      (define (this k d) (get context k d))
-	      (begin body rest ...)))))
-
-	((_ [context] body rest ...)
-	 (syntax (context-node [context events range] body rest ...)))
-	((_ [context events-id] body rest ...)
-	 (syntax (context-node [context events-id range] body rest ...))))))
-
+	  (c-vals) (srfi s26 cut))
   ;;---------------------------------------------------------
-  ;; Takes either a key (shorthand for (this key #f) or a lambda
-  ;; that returns a value given a context, e.g. (next +1 :freq)
+  ;; Takes either a key (shorthand for (this key #f)) or a c-val.
   ;; BEWARE: what if we want to check for values of #f?
   (define-syntax is
     (syntax-rules ()
       ((_ key/getter pred args ...)
-       (context-node [context]
+       (lambda (context)
 	 (let ([v (if (procedure? key/getter)
 		      (key/getter context)
-		      (this key/getter #f))])
+		      ((this key/getter #f) context))])
 	   (and v (pred v args ...)))))))
   
   ;; Find the intersection of the inner filters
@@ -93,11 +64,11 @@
       (concatenate (map (cut <> events) filters))))
 
   ;;-----------------------------------------------
-  ;; Returns the alist cell to update a event. 
+  ;; Returns the alist cell to update an event. 
   (define-syntax to
     (syntax-rules ()
       ((_ key value)
-       (context-node [context]
+       (lambda (context)
 	 (check-type symbol? key "First argument of 'to' must be a key.")
 	 (cons key (get-c-val value context))))))
 
@@ -105,8 +76,8 @@
   ;; of all the to-fns applied (see 'to' above). 
   (define (change . to-fns)
     (lambda (context)
-      (fold-left (lambda (n to-fn) (cons (to-fn context) n))
-		 (context-event context) to-fns)))
+      (let ([fn (lambda (n to-fn) (cons (to-fn context) n))])
+	(fold-left fn (context-event context) to-fns))))
 
   ;;------------------------------------------------------
   ;; Top level transformation statements. Typically pred would
@@ -128,7 +99,8 @@
   (define (shadow-if pred change-fn)
     (lambda (context)
       (let* ([copied (context-filter pred context)]
-	     [changed (context-map change-fn copied)])
-	(contexts-merge context changed))))
+	     [changed (context-map change-fn copied)]
+	     [trimmed (context-trim changed)])
+	(contexts-merge context trimmed))))
 
   ) ; end module 'event dsl'

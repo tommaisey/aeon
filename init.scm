@@ -73,14 +73,14 @@
     (apply play-when inst t (map entry-convert (event-clean event)))))
 
 ;; Our test pattern for the moment. Redefine for fun and profit!
-(define *1 (cy+ [1 3]))
+(define p1 (cy+ [1 3]))
 
 ;; Called each chunk of time by the playback thread.  
 (define (process-chunk)
   (let* ([t playback-time]
 	 [nxt-t (+ t playback-chunk)]
 	 [c (make-empty-context t nxt-t)])
-    (for-each (lambda (n) (play-event n t)) (context-events-next (*1 c)))
+    (for-each (lambda (n) (play-event n t)) (context-events-next (p1 c)))
     (set! playback-time nxt-t)))
 
 ;;-----------------------------------------------------------------

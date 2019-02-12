@@ -10,6 +10,7 @@
 ;; ------------------------------------------------------------
 (library (event)
   (export
+   :beat
    time-key
    priority-keys
    make-event
@@ -43,7 +44,8 @@
   (import (chezscheme) (utilities) (srfi s26 cut)
 	  (only (srfi s1 lists) delete-duplicates))
 
-  (define time-key ':beat)
+  (define :beat ':beat)
+  (define time-key :beat)
   (define priority-keys '(:sustain :freq :beat))
 
   (define-syntax make-event

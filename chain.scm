@@ -1,6 +1,6 @@
 ;; -*- geiser-scheme-implementation: chez-*-
 
-(library (pattern-node)
+(library (chain)
   (export ->>)
   (import (chezscheme) (utilities))
 

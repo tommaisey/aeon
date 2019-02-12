@@ -80,8 +80,8 @@
   (define (between x lower upper)
     (and (>= x lower) (< x upper)))
 
-  (define (between-each val each lower upper)
-    (let ([m (fmod val each)])
+  (define (between-each x each lower upper)
+    (let ([m (fmod x each)])
       (between m lower upper)))
 
   ;; More readable for users to write pair/first/rest

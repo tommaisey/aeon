@@ -11,11 +11,58 @@
 ;; For functions taking some kind of list, we define macros that use auto-quasi -
 ;; this frees the user from needing to (quasi)quote those input lists. 
 (library (c-vals)
-  (export rnd pick each snap)
+  (export this next nearest
+	  c+ c- c* c/
+	  rnd pick each snap)
   (import (scheme) (utilities) (context) (event)
 	  (for (auto-quasi) expand))
 
-  ;; A random number
+  (define (get c key default)
+    (event-get (context-event c) key default))
+
+  ;; Get values from the current or neighbouring events in the context.
+  (define (this key default)
+    (lambda (context)
+      (get context key default)))
+
+  (define (next idx key default)
+    (lambda (context)
+      (get (context-move context idx) key default)))
+
+  (define (nearest time key default)
+    (lambda (context)
+      (get (context-to-closest-event context time) key default)))
+
+  ;;-------------------------------------------------------------------
+  ;; Maths
+  (define (c-val-apply fn c-vals)
+    (lambda (context)
+      (apply fn (map (lambda (v) (get-c-val v context)) c-vals))))
+
+  (define (c+ . c-vals)
+    (c-val-apply + c-vals))
+  
+  (define (c- . c-vals)
+    (c-val-apply - c-vals))
+
+  (define (c* . c-vals)
+    (c-val-apply * c-vals))
+
+  (define (c/ . c-vals)
+    (c-val-apply / c-vals))
+
+  ;; Snap the input value to the next number divisible by divisor.
+  (define (snap divisor val)
+    (lambda (context)
+      (let* ([val (get-c-val val context)]
+	     [divisor (get-c-val divisor context)]
+	     [overlap (fmod val divisor)]
+	     [prev (- val overlap)])
+	(if (>= overlap (* 0.5 divisor))
+	    (+ prev divisor) prev))))
+
+  ;;-------------------------------------------------------------------
+  ;; Pseudo-random values and choices.
   (define rnd
     (case-lambda
       [() (rnd '())]
@@ -35,8 +82,10 @@
        (let* ([lst (pdef-quasi qlist)]
 	      [len (length lst)])
 	 (lambda (context)
-	   (list-nth lst ((rnd 0 len key/keys) context)))))))
+	   (get-c-val (list-nth lst ((rnd 0 len key/keys) context)) context))))))
 
+  ;;--------------------------------------------------------------------
+  ;; Rhythmic & sequencing operations.
   ;; Choose from a list according to the current measure
   (define-syntax each
     (syntax-rules ()
@@ -44,18 +93,9 @@
        (let* ([lst (pdef-quasi qlist)]
 	      [len (length lst)])
 	 (lambda (context)
-	   (let* ([t (event-beat (context-event context))]
+	   (let* ([t (context-now context)]
 		  [n (exact (truncate (/ t measures)))])
 	     (get-c-val (list-nth lst (modulo n len)) context)))))))
-
-  ;; Snap the input value to the next number divisible by divisor.
-  (define (snap divisor c-val)
-    (lambda (context)
-      (let* ([val (get-c-val c-val context)]
-	     [overlap (fmod val divisor)]
-	     [prev (- val overlap)])
-	(if (>= overlap (* 0.5 divisor))
-	    (+ prev divisor) prev))))
 
   ;; Some c-vals allow the user to specify which properties of the
   ;; context's current event are considered when contextualising. This
@@ -63,14 +103,14 @@
   (define (fold-by-keys fn init key/keys context)
     (define (matches-key? pair)
       (find (lambda (k) (eq? k (car pair))) key/keys))
-    (let ([event (context-event context)])
+    (let ([time (context-now context)]
+	  [event (context-event context)])
       (cond
        ((null? key/keys)
-	(fn init (event-beat event)))
+	(fn init time))
        ((symbol? key/keys)
 	(fn init (event-get event key/keys 1)))
        ((unsafe-list? key/keys)
 	(fold-left fn init (event-clean (filter matches-key? event)))))))
-
   
   )

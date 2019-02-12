@@ -26,7 +26,7 @@
 (recompile-import utilities)
 (recompile-import event)
 (recompile-import event-dsl)
-(recompile-import pattern-node)
+(recompile-import chain)
 (recompile-import cyx)
 (recompile-import context)
 (recompile-import c-vals)

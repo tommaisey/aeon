@@ -4,11 +4,25 @@
 (start)
 (pause)
 
-(define *1
-  (cy+ 1 [1 2]
-    (:freq 2 [[440 550] 880])))
+(define p1
+  (->>
+   (cy+ 1 [1 2])
 
-(define *1
+   (shadow-all
+    (change
+     [to :freq 660]
+     [to :beat (c+ (this :beat 0) 1/72)]))))
+
+(define p1
+  (->>
+   (cy+ 1 [1 2])
+
+   (shadow-if
+    [is :beat equal 0]
+    (change
+     [to :freq 660]))))
+
+(define p1
   (->>
    (cy+ 1 [1 (rnd 2 12) (pick [~ 2 4 6]) 2]
      (:attack 0.2)
@@ -20,7 +34,7 @@
      (:sustain 0.9)
      (:pan (rnd 0.25 0.75)))))
 
-(define *1
+(define p1
   (->>
    (cy+ 1 [2 (pick [~ 1 3]) (pick [1 3 ~]) 2]
      (:sample bd)
@@ -54,15 +68,15 @@
      (:pan 1/2 [0.25 0.75]))))
 
 
-(define *1
+(define p1
   (->>
    (cy+ 2 [[2 (rnd 1 5) 2 4] [(rnd 2 6) 3 1 ~]]
      (:freq 1   [220 330 110])
      (:length 3 [0.8 0.4 1.2 0.3]))
    
    (cy+ 1 [~ (pick [3 6 8]) 2 1]
-       (:freq 3   [(* 110 3) 880 990 (* 110 6)])
-       (:freq 3/2 [~ [~ 440]]))
+     (:freq 3   [(* 110 3) 880 990 (* 110 6)])
+     (:freq 3/2 [~ [~ 440]]))
 
    (cy+ 1/2 [~ 1]
      (:inst "sampler-mono")
