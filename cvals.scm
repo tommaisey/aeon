@@ -1,4 +1,7 @@
-;; A library of 'contextual' functions which return a value based
+;;----------------------------------------------------------------------
+;; cvals
+;;
+;; These are 'contextual' values - functions which return a value based
 ;; on the context they are passed. This lets us maintain the referential
 ;; transparency that is key for the system to work.
 ;;
@@ -6,16 +9,19 @@
 ;; event in the context, unless passed one or more extra keys to look at.
 ;;
 ;; Others of these functions don't really need a context - but may want to treat
-;; their arguments as c-vals. e.g. round
+;; their arguments as c-vals.
 ;;
-;; For functions taking some kind of list, we define macros that use auto-quasi -
-;; this frees the user from needing to (quasi)quote those input lists. 
-(library (c-vals)
-  (export this next nearest
-	  c+ c- c* c/
-	  rnd pick each snap)
-  (import (scheme) (utilities) (context) (event)
-	  (for (auto-quasi) expand))
+;; cvals form the 'leaves' of a tree of functions defining musical patterns.
+;;----------------------------------------------------------------------
+(library (cvals)
+  (export
+   this next nearest
+   ~ c+ c- c* c/
+   rnd pick each snap)
+  
+  (import
+    (chezscheme) (utilities) (context) (event)
+    (for (auto-quasi) expand))
 
   (define (get c key default)
     (event-get (context-event c) key default))

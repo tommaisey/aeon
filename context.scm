@@ -13,6 +13,7 @@
     context-now
     context-print
     context-with-events
+    context-clear-events
     context-with-range rerange
     context-length
     context-move
@@ -74,6 +75,9 @@
     (case-lambda
       ((c nxt) (context-with-events c nxt '()))
       ((c nxt prv) (make-context nxt prv (context-range c)))))
+
+  (define (context-clear-events c)
+    (context-with-events c '()))
 
   (define (context-with-range c r)
     (make-context (context-events-next c) (context-events-prev c) r))

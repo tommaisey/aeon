@@ -1,5 +1,5 @@
 (library (subdivide)
-  (export cy+impl cy!impl)
+  (export in+impl to!impl)
   (import (scheme) (utilities) (event) (context))
 
   (define rest-symbol '~)
@@ -31,7 +31,7 @@
   ;; same range, containing events according to the the pdef template.
   ;; A pdef value of 1 gives one event. For values > 1, creates N subdivided
   ;; events. The symbol ~ creates a rest.
-  (define (cy+impl context pdur pdef)
+  (define (in+impl context pdur pdef)
     (define (add-fn context t c-val)
       (let ([val (get-c-val c-val t context)])
 	(cond
@@ -50,7 +50,7 @@
 
   ;; Takes a pdef template and a context, and returns a new context with the
   ;; values in the pdef applied to any events in the context.
-  (define (cy!impl context pdur pdef key)
+  (define (to!impl context pdur pdef key)
     (define (add-fn context t c-val)
       (let ([context (context-trim context)]
 	    [morpher (lambda (c) (event-set (context-event c) key (get-c-val c-val c)))])

@@ -73,7 +73,7 @@
     (apply play-when inst t (map entry-convert (event-clean event)))))
 
 ;; Our test pattern for the moment. Redefine for fun and profit!
-(define p1 (cy+ [1 3]))
+(define p1 (in+ [1 3]))
 
 ;; Called each chunk of time by the playback thread.  
 (define (process-chunk)
