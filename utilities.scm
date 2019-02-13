@@ -80,7 +80,7 @@
   (define (between x lower upper)
     (and (>= x lower) (< x upper)))
 
-  (define (between-each x each lower upper)
+  (define (between-each x lower upper each)
     (let ([m (fmod x each)])
       (between m lower upper)))
 
@@ -172,12 +172,12 @@
   (define (remove-list a b)
     (filter (lambda (x) (not (member x b))) a))
 
-  ;; #t for any kind of list, proper, improper, or cyclic. 
+  ;; #t for any kind of list: null, proper, improper, or cyclic. 
   ;; Faster than 'list?' but improper lists fail with e.g. append.
   (define (unsafe-list? x)
-    (or (eq? x '())
+    (or (null? x)
 	(and (pair? x)
-	     (or (eq? (cdr x) '())
+	     (or (null? (cdr x))
 		 (pair? (cdr x))))))
 
   ;; Adds the element to the list. If the element is a list, it is appended.

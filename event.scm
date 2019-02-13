@@ -90,21 +90,20 @@
       (event-clean n)))
 
   ;; Some event convenience functions
-  (define (print-event event)
-    (display "[")
+  (define (print-event event port)
+    (display "[" port)
     (for-each
-     (lambda (p)
-       (display " ")
-       (display (car p))
-       (display ": ")
-       (display (cdr p))
-       (display ", "))
+     (lambda (kv)
+       (display (car kv) port)
+       (display ": " port)
+       (display (cdr kv) port)
+       (display " " port))
      (event-optimise event))
-    (display "]")
-    (newline))
+    (display "]" port)
+    (newline port))
 
-  (define (print-events event-list)
-    (for-each print-event event-list))
+  (define (print-events event-list port)
+    (for-each (lambda (e) (print-event e port)) event-list))
 
   (define (make-events-with-times times-list)
     (map (lambda (t) (make-event t)) times-list))

@@ -75,13 +75,8 @@
 ;; Our test pattern for the moment. Redefine for fun and profit!
 (define p1 (in+ [1 3]))
 
-;; Called each chunk of time by the playback thread.  
-(define (process-chunk)
-  (let* ([t playback-time]
-	 [nxt-t (+ t playback-chunk)]
-	 [c (make-empty-context t nxt-t)])
-    (for-each (lambda (n) (play-event n t)) (context-events-next (p1 c)))
-    (set! playback-time nxt-t)))
+;; Adds custom priting of contexts.
+(record-writer (type-descriptor context) context-print) 
 
 ;;-----------------------------------------------------------------
 ;; A thread that wakes up every playback-chunk beats to call (process-chunk)
@@ -92,6 +87,14 @@
 (define playback-thread-semaphore (make-semaphore))
 (define playback-time 0)
 (define playback-latency 0.2)
+
+;; Called each chunk of time by the playback thread.  
+(define (process-chunk)
+  (let* ([t playback-time]
+	 [nxt-t (+ t playback-chunk)]
+	 [c (make-empty-context t nxt-t)])
+    (for-each (lambda (n) (play-event n t)) (context-events-next (p1 c)))
+    (set! playback-time nxt-t)))
 
 ;; Only creates new thread if one isn't already in playback-thread.
 (define (start-thread sem)

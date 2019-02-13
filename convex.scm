@@ -5,24 +5,24 @@
 (pause)
 
 (define p1
-  (in+ 1 [2 (pick [~ 1 3]) (pick [1 3 ~]) 2]))
+  (in+ 1 [4 2 3 1]))
 
 (define p1
   (o->
    (in+ 1 [2 (pick [~ 1 3]) (pick [1 3 ~]) 2])
-   (to! :sample bd)
-   (to! :inst "sampler-mono")
-   (to! :amp 1/2 [0.3 0.05 (rnd 0.1 0.15)])))
+   (to! :amp 1/2 [0.3 0.05 (rnd 0.1 0.15)])
+   (cp! (to! :freq [660 550])
+	(to! :sustain (pick [0.2 0.4])))))
 
 (define p1
   (o->
-   (o->
-    (in+ 1 [2 (pick [~ 1 3]) (pick [1 3 ~]) 2])
-    (to! :sample bd)
-    (to! :inst "sampler-mono")
-    (to! :amp 1/2 [0.3 0.05 (rnd 0.1 0.15)]))
 
    ;; Shorthand for similar form as above
+   (in+ 1 [2 (pick [~ 1 3]) (pick [1 3 ~]) 2]
+     (:sample bd)
+     (:inst "sampler-mono")
+     (:amp 1/2 [0.3 0.05 (rnd 0.1 0.15)]))
+
    (in+ 1 [~ 1 ~ 1]
      (:sample sn)
      (:inst "sampler-mono")
@@ -51,23 +51,23 @@
 
 
 (define p1
-  (->>
-   (cy+ 2 [[2 (rnd 1 5) 2 4] [(rnd 2 6) 3 1 ~]]
+  (o->
+   (in+ 2 [[2 (rnd 1 5) 2 4] [(rnd 2 6) 3 1 ~]]
      (:freq 1   [220 330 110])
      (:length 3 [0.8 0.4 1.2 0.3]))
    
-   (cy+ 1 [~ (pick [3 6 8]) 2 1]
+   (in+ 1 [~ (pick [3 6 8]) 2 1]
      (:freq 3   [(* 110 3) 880 990 (* 110 6)])
      (:freq 3/2 [~ [~ 440]]))
 
-   (cy+ 1/2 [~ 1]
+   (in+ 1/2 [~ 1]
      (:inst "sampler-mono")
      (:sample sn))
 
-   (cy+ 1 [1 ~ [(rnd 0 1) ~ ~ (rnd 0 4)] (rnd 0 2)]
+   (in+ 1 [1 ~ [(rnd 0 1) ~ ~ (rnd 0 4)] (rnd 0 2)]
      (:inst "sampler-mono")
      (:sample bd))
 
-   (cy+ 1/2 [~ (rnd 1 6) ~ 1]
+   (in+ 1/2 [~ (rnd 1 6) ~ 1]
      (:inst "sampler-mono")
      (:sample hh))))

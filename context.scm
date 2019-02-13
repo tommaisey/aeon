@@ -63,13 +63,14 @@
 	  (context-start c)
 	  (event-beat e))))
 
-  (define (context-print c)
-    (display "Range: ")
-    (display (context-start c))
-    (display ", ")
-    (display (context-end c))
-    (newline)
-    (print-events (context-events-next c)))
+  ;; For use as a record-writer in chez (see init.scm)
+  (define (context-print c port wr)
+    (display "Range: " port)
+    (display (context-start c) port)
+    (display ", " port)
+    (display (context-end c) port)
+    (newline port)
+    (print-events (context-events-next c) port))
 
   (define context-with-events
     (case-lambda
