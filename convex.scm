@@ -9,15 +9,13 @@
 
 (define p1
   (o->
-   (in+ 1 [2 (pick [~ 1 3]) (pick [1 3 ~]) 2])
+   (in+ 1 [2 (pick [~ 1 3]) (pick [~ 1 3]) 2])
    (to! :amp 1/2 [0.3 0.05 (rnd 0.1 0.15)])
    (cp! (to! :freq [660 550])
 	(to! :sustain (pick [0.2 0.4])))))
 
 (define p1
   (o->
-
-   ;; Shorthand for similar form as above
    (in+ 1 [2 (pick [~ 1 3]) (pick [1 3 ~]) 2]
      (:sample bd)
      (:inst "sampler-mono")

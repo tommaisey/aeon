@@ -74,6 +74,7 @@
 
 ;; Our test pattern for the moment. Redefine for fun and profit!
 (define p1 (in+ [1 3]))
+(define (reset-p1) (define-top-level-value 'p1 (in+ 1)))
 
 ;; Adds custom priting of contexts.
 (record-writer (type-descriptor context) context-print) 
@@ -90,11 +91,16 @@
 
 ;; Called each chunk of time by the playback thread.  
 (define (process-chunk)
-  (let* ([t playback-time]
-	 [nxt-t (+ t playback-chunk)]
-	 [c (make-empty-context t nxt-t)])
-    (for-each (lambda (n) (play-event n t)) (context-events-next (p1 c)))
-    (set! playback-time nxt-t)))
+  (guard (x [else (let ([p (console-output-port)])
+		    (display-condition x p)
+		    (newline p)
+		    (flush-output-port p)
+		    (reset-p1))])
+    (let* ([t playback-time]
+	   [nxt-t (+ t playback-chunk)]
+	   [c (make-empty-context t nxt-t)])
+      (for-each (lambda (n) (play-event n t)) (context-events-next (p1 c)))
+      (set! playback-time nxt-t))))
 
 ;; Only creates new thread if one isn't already in playback-thread.
 (define (start-thread sem)
