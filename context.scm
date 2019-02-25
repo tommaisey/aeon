@@ -1,31 +1,32 @@
 ;; -*- geiser-scheme-implementation: chez-*-
 (library (context)
   (export
-    context
-    make-context
-    make-empty-context
-    context-event
-    context-events-next
-    context-events-prev
-    context-range
-    context-start
-    context-end
-    context-now
-    context-print
-    context-with-events
-    context-clear-events
-    context-with-range rerange
-    context-length
-    context-move
-    context-to-closest-event
-    context-to-event-after
-    context-rewind
-    context-map
-    context-filter
-    context-trim
-    context-empty?
-    contexts-merge
-    get-c-val)
+   context
+   context?
+   make-context
+   make-empty-context
+   context-event
+   context-events-next
+   context-events-prev
+   context-range
+   context-start
+   context-end
+   context-now
+   context-print
+   context-with-events
+   context-clear-events
+   context-with-range rerange
+   context-length
+   context-move
+   context-to-closest-event
+   context-to-event-after
+   context-rewind
+   context-map
+   context-filter
+   context-trim
+   context-empty?
+   contexts-merge
+   get-c-val)
   (import (chezscheme) (utilities) (event))
 
   ;; ---------------------------------------------

@@ -37,8 +37,10 @@
 	(cond
 	 ((or (eq? val rest-symbol) (eq? val 0))
 	  (list))
+	 ((context? val)
+	  (reverse (context-events-next val)))
 	 ((not (number? val))
-	  (raise (string-append "cy+ pattern can contain only numbers or rests.")))
+	  (raise (string-append "in+ pattern can contain only numbers, rests, or other patterns.")))
 	 (else
 	  (let* ([num (max 1 val)]
 		 [dur (/ (context-length context) num)]
