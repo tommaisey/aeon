@@ -26,6 +26,7 @@
 (recompile-import utilities)
 (recompile-import event)
 (recompile-import context)
+(recompile-import auto-quasi)
 (recompile-import cvals)
 (recompile-import cnodes)
 (recompile-import playback)

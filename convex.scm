@@ -4,9 +4,20 @@
 (start)
 (pause)
 
-(define p1
-  (in+ 1 [4 2 3 1]))
+;; Basic sequencing:
+(define a
+  (in+ 1 12))
 
+(define b
+  (in+ 1 16))
+
+(define c
+  (in+ 1 4))
+
+(define p1
+  (in+ 3 [! a c b])) ;; list needs to be escaped with !
+
+;; Other stuff I was playing with:
 (define p1
   (o->
    (in+ 1 [2 (pick [~ 1 3]) (pick [~ 1 3]) 2])

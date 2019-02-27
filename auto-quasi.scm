@@ -1,46 +1,59 @@
 (library (auto-quasi)
-  (export auto-quasi pdef-quasi ~)
+  (export auto-quasi pdef-quasi ~ !)
   (import (scheme))
+
+  ;;------------------------------------------------------------------
+  ;; Two special markers used by these macros
+  (define ~) ;; Denotes a musical rest in a pdef
+  (define !) ;; Denotes a list that shouldn't be evaluated 
   
   ;;------------------------------------------------------------------
   ;; Allows definition of nested lists without (quasi)quoting.
   ;;
-  ;; Lists that start with an identifier are evaluated.
-  ;; Lists that don't start with an identifier are just a list.
+  ;; Lists not starting with an identifier are just a list.
+  ;; Lists starting with ! are just a list (prevents evaluation as a fn)
+  ;; Lists starting with any other identifier are evaluated as functions. 
   ;;
-  ;; (auto-quasi (1 2 "hi" (+ 2 2) (5 (+ 5 5)))) => (1 2 "hi" 4 (5 10))
+  ;; (auto-quasi (1 "hi" (+ 2 2) (5 (+ 5 5)))) => (1 "hi" 4 (5 10))
+  ;; (define x 7)
+  ;; (auto-quasi (x 8 9)   => error, calls x as a fn
+  ;; (auto-quasi (! x y z) => (7 8 9)
+  
   (define-syntax auto-quasi
     (lambda (x)
-      (syntax-case x ()
+      (syntax-case x (!)
+
+	((_ (! v ...)) ;; ! escapes, don't evaluate
+	 (syntax (list (auto-quasi v) ...)))
 	
-	((_ (v rest ...))
-	 (identifier? (syntax v))
-	 (syntax (v rest ...))) ; call as lambda
+	((_ (v rest ...)) (identifier? (syntax v))
+	 (syntax (v rest ...))) ;; evaluate as function
 	
 	((_ (v ...))
-	 (syntax (list (auto-quasi v) ...)))
+	 (syntax (auto-quasi (! v ...))))
      
 	((_ v)
 	 (syntax v)))))
 
   ;;-------------------------------------------------------------------
-  ;; Same as above, but quotes the special character '~', since in the
-  ;; context of a pdef it represents a rest.
-  (define ~)
+  ;; Same as above, but quotes the special character '~', since in
+  ;; the context of a pdef it represents a rest.
   
   (define-syntax pdef-quasi
     (lambda (x)
-      (syntax-case x (~)
+      (syntax-case x (~ !)
 
-	((_ (~ rest ...))
-	 (syntax (pdef-quasi ('~ rest ...))))
+	((_ (~ v ...))
+	 (syntax (pdef-quasi ('~ v ...))))
+
+	((_ (! v ...)) ;; ! escapes, don't evaluate
+	 (syntax (list (pdef-quasi v) ...)))
 	
-	((_ (v rest ...))
-	 (identifier? (syntax v))
-	 (syntax (v rest ...))) ; call as lambda
+	((_ (v q ...)) (identifier? (syntax v))
+	 (syntax (v q ...))) ;; evaluate as function
 	
 	((_ (v ...))
-	 (syntax (list (pdef-quasi v) ...)))
+	 (syntax (pdef-quasi (! v ...))))
 
 	((_ ~)
 	 (syntax '~))

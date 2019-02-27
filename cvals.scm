@@ -16,7 +16,7 @@
 (library (cvals)
   (export
    this next nearest
-   ~ c+ c- c* c/
+   c+ c- c* c/
    rnd pick each snap)
   
   (import
