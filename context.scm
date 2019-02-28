@@ -8,14 +8,14 @@
    context-event
    context-events-next
    context-events-prev
-   context-range
+   context-arc
    context-start
    context-end
    context-now
    context-print
    context-with-events
    context-clear-events
-   context-with-range rerange
+   context-with-arc rearc
    context-length
    context-move
    context-to-closest-event
@@ -37,26 +37,26 @@
   (define-record-type context
     (fields (immutable events-next)
 	    (immutable events-prev)
-	    (immutable range))
+	    (immutable arc))
     (protocol
      (lambda (new)
        (case-lambda ; events-prev is optional in ctor
-	 ((events-next events-prev range)
-	  (new events-next events-prev range))
-	 ((events-next range)
-	  (new events-next '() range))
-	 ((range)
-	  (new '() '() range))))))
+	 ((events-next events-prev arc)
+	  (new events-next events-prev arc))
+	 ((events-next arc)
+	  (new events-next '() arc))
+	 ((arc)
+	  (new '() '() arc))))))
 
   (define (make-empty-context start end)
-    (make-context (make-range start end)))
+    (make-context (make-arc start end)))
 
   (define (context-event c)
     (let ([n (context-events-next c)])
       (if (null? n) '() (car n))))
 
-  (define (context-start c) (range-start (context-range c)))
-  (define (context-end c) (range-end (context-range c)))
+  (define (context-start c) (arc-start (context-arc c)))
+  (define (context-end c) (arc-end (context-arc c)))
 
   (define (context-now c)
     (let ([e (context-event c)])
@@ -66,7 +66,7 @@
 
   ;; For use as a record-writer in chez (see init.scm)
   (define (context-print c port wr)
-    (display "Range: " port)
+    (display "Arc: " port)
     (display (context-start c) port)
     (display ", " port)
     (display (context-end c) port)
@@ -76,17 +76,17 @@
   (define context-with-events
     (case-lambda
       ((c nxt) (context-with-events c nxt '()))
-      ((c nxt prv) (make-context nxt prv (context-range c)))))
+      ((c nxt prv) (make-context nxt prv (context-arc c)))))
 
   (define (context-clear-events c)
     (context-with-events c '()))
 
-  (define (context-with-range c r)
+  (define (context-with-arc c r)
     (make-context (context-events-next c) (context-events-prev c) r))
-  (define rerange context-with-range)
+  (define rearc context-with-arc)
 
   (define (context-length c)
-    (range-length (context-range c)))
+    (arc-length (context-arc c)))
 
   ;;--------------------------------------------------------------------
   ;; Iteration. A context has a list of previous and next events - these
@@ -98,7 +98,9 @@
     (cond
      ((context-empty? c) c)
      ((context-last? c)
-      (context-with-events c (reverse (cons (context-event c) (context-events-prev c)))))
+      (context-with-events
+       c (reverse (cons (context-event c)
+			(context-events-prev c)))))
      (else (context-move c -9999999)))) ;; Lazy
   
   (define (context-move c n)
@@ -124,7 +126,7 @@
      context (lambda (c output)
 	       (if (pred c) (cons (context-event c) output) output))))
 
-  ;; Removes events from the context that don't fall within range.
+  ;; Removes events from the context that don't fall within arc.
   (define (context-trim context)
     (define (pred c)
       (between (event-beat (context-event c)) (context-start c) (context-end c)))
@@ -136,8 +138,8 @@
       (make-context (merge-sorted (context-events-next c1)
 				  (context-events-next c2)
 				  event-before?)
-		    (make-range (min (context-start c1) (context-start c2))
-				(max (context-end c1) (context-end c2))))))
+		    (make-arc (min (context-start c1) (context-start c2))
+			      (max (context-end c1) (context-end c2))))))
 
   ;;------------------------------------------------------------------------
   ;; See c-val.scm for details. This is kept here because it frees other

@@ -29,17 +29,15 @@
    make-events-with-times
    make-events-regular
    
-   range
-   range?
-   range1
-   make-range
-   range-with-start
-   range-with-end
-   range-start
-   range-end
-   range-length
-   range-valid?
-   within-range?)
+   arc arc?
+   make-arc
+   arc-with-start
+   arc-with-end
+   arc-start
+   arc-end
+   arc-length
+   arc-valid?
+   within-arc?)
 
   (import (chezscheme) (utilities) (srfi s26 cut)
 	  (only (srfi s1 lists) delete-duplicates))
@@ -121,31 +119,25 @@
 
   ;;--------------------------------------------------
   ;; A range of time (in beats)
-  (define-record-type range
+  (define-record-type arc
     (fields (immutable start)
 	    (immutable end)))
 
-  ;; A useful alias for creating a range.
-  (define rng make-range)
-  
-  ;; A useful alias for the most common range.
-  (define range1 (rng 0.0 1.0))
+  (define (arc-with-start r new-start)
+    (make-arc new-start (arc-end r)))
+  (define (arc-with-end r new-end)
+    (make-arc (arc-start r) new-end))
+  (define (arc-valid? r)
+    (< (arc-start r) (arc-end r)))
+  (define (within-arc? r t)
+    (between t (arc-start r) (arc-end r)))
+  (define (arc-length r)
+    (- (arc-end r) (arc-start r)))
 
-  (define (range-with-start r new-start)
-    (make-range new-start (range-end r)))
-  (define (range-with-end r new-end)
-    (make-range (range-start r) new-end))
-  (define (range-valid? r)
-    (< (range-start r) (range-end r)))
-  (define (within-range? r t)
-    (between t (range-start r) (range-end r)))
-  (define (range-length r)
-    (- (range-end r) (range-start r)))
-
-  ;; Find the range which a list of events encompasses.
+  ;; Find the arc which a list of events encompasses.
   ;; The call to list-last makes this relatively slow.
-  (define (range-from-events events)
-    (apply make-range
+  (define (arc-from-events events)
+    (apply make-arc
      (if (null? events)
 	 (list 0 0)
 	 (list (event-beat (car events))

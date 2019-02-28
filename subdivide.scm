@@ -21,14 +21,14 @@
 	   (else
 	    (let* ([item (car p)]
 		   [next-t (+ t subdur)]
-		   [context (rerange context (make-range t next-t))]
+		   [context (rearc context (make-arc t next-t))]
 		   [value (if (unsafe-list? item)
 			      (papply context subdur item add-fn)
 			      (add-fn context t item))])
 	      (loop next-t (cdr p) (append value out))))))))))
 
   ;; Takes a pdef template and a context, and returns a new context with the
-  ;; same range, containing events according to the the pdef template.
+  ;; same arc, containing events according to the the pdef template.
   ;; A pdef value of 1 gives one event. For values > 1, creates N subdivided
   ;; events. The symbol ~ creates a rest.
   (define (in+impl context pdur pdef)
