@@ -1,16 +1,15 @@
 ;; -*- geiser-scheme-implementation: chez-*-
 ;; ------------------------------------------------------------
-;; cnodes
+;; branches
 ;;
 ;; Functions that take contexts and return new contexts.
 ;; These form the backbone of our system, doing all the
 ;; transformations on contexts that make our musical patterns.
-;; The cnodes can be chained and combined with fns in @chain.
-;; The 'leaves' of our system are described in @cvals.
+;; The cnodes can be chained and combined with fns in @trunk.
+;; The 'leaves' of our system are described in @leaf.
 ;; ------------------------------------------------------------
-(library (cnodes)
+(library (branch)
   (export
-   x-> o->
    in+ to! to? cp! cp? is?
    any-of all-of none-of phrase)
 
@@ -19,22 +18,7 @@
     (for (auto-quasi) expand)
     (for (subdivide) expand)
     (utilities) (event) (context)
-    (cvals) (srfi s26 cut))
-
-  ;; ------------------------------------------------------------
-  ;; Pipeline blocks
-  
-  ;; Apply all the cnodes to the input context.
-  (define (x-> . cnodes)
-    (lambda (context)
-      (fold-left (lambda (c t) (t c)) context cnodes)))
-
-  ;; Apply the cnodes to a blank context, then merge with the input.
-  (define (o-> . cnodes)
-    (lambda (context)
-      (let* ([blank (context-clear-events context)]
-	     [new (fold-left (lambda (c t) (t c)) blank cnodes)])
-	(contexts-merge context new))))
+    (trunk) (leaf) (srfi s26 cut))
 
   ;; ------------------------------------------------------------
   ;; Main cnodes
@@ -67,20 +51,20 @@
   ;; should get things working (to an extent I can use).
   (define (cp! . cnodes)
     (lambda (context)
-      (let ([changed ((apply x-> cnodes) context)])
+      (let ([changed (render (apply x-> cnodes) context)])
 	(contexts-merge context (context-trim changed)))))
   
   (define (cp? pred . cnodes)
     (lambda (context)
       (let* ([filtered (context-filter pred context)]
-	     [changed ((apply x-> cnodes) filtered)])
+	     [changed (render (apply x-> cnodes) filtered)])
 	(contexts-merge context (context-trim changed)))))
 
   (define (to? pred . cnodes)
     (lambda (context)
       (let* ([unfiltered (context-filter (lambda (c) (not (pred c))) context)]
 	     [filtered (context-filter pred context)]
-	     [changed ((apply x-> cnodes) filtered)])
+	     [changed (render (apply x-> cnodes) filtered)])
 	(contexts-merge unfiltered (context-trim changed)))))
   
   ;;---------------------------------------------------------

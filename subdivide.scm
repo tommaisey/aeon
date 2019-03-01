@@ -6,7 +6,7 @@
 
   ;; Implements the recursive subdivision of an input pdef into equal-sized
   ;; elements. An add-fn is supplied, which returns a list of events for each
-  ;; c-val in the pdef.
+  ;; leaf in the pdef.
   (define (papply context pdur pdef add-fn)
     (cond
      ((null? pdef) '())
@@ -32,8 +32,8 @@
   ;; A pdef value of 1 gives one event. For values > 1, creates N subdivided
   ;; events. The symbol ~ creates a rest.
   (define (in+impl context pdur pdef)
-    (define (add-fn context t c-val)
-      (let ([val (get-c-val c-val t context)])
+    (define (add-fn context t leaf)
+      (let ([val (get-leaf leaf t context)])
 	(cond
 	 ((or (eq? val rest-symbol) (eq? val 0))
 	  (list))
@@ -53,10 +53,10 @@
   ;; Takes a pdef template and a context, and returns a new context with the
   ;; values in the pdef applied to any events in the context.
   (define (to!impl context pdur pdef key)
-    (define (add-fn context t c-val)
+    (define (add-fn context t leaf)
       (let ([context (context-trim context)]
-	    [morpher (lambda (c) (event-set (context-event c) key (get-c-val c-val c)))])
-	(if (eq? c-val rest-symbol)
+	    [morpher (lambda (c) (event-set (context-event c) key (get-leaf leaf c)))])
+	(if (eq? leaf rest-symbol)
 	    (context-events-next context)
 	    (context-events-next (context-map morpher context)))))
     (context-with-events

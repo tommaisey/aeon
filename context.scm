@@ -16,6 +16,7 @@
    context-with-events
    context-clear-events
    context-with-arc rearc
+   context-add-arc
    context-length
    context-move
    context-to-closest-event
@@ -26,7 +27,7 @@
    context-trim
    context-empty?
    contexts-merge
-   get-c-val)
+   get-leaf)
   (import (chezscheme) (utilities) (event))
 
   ;; ---------------------------------------------
@@ -66,7 +67,7 @@
 
   ;; For use as a record-writer in chez (see init.scm)
   (define (context-print c port wr)
-    (display "Arc: " port)
+    (display "arc: " port)
     (display (context-start c) port)
     (display ", " port)
     (display (context-end c) port)
@@ -81,9 +82,14 @@
   (define (context-clear-events c)
     (context-with-events c '()))
 
-  (define (context-with-arc c r)
-    (make-context (context-events-next c) (context-events-prev c) r))
-  (define rearc context-with-arc)
+  (define (context-with-arc c a)
+    (make-context (context-events-next c)
+		  (context-events-prev c) a))
+  (define (context-add-arc c a)
+    (make-context (context-events-next c)
+		  (context-events-prev c)
+		  (arc-add (context-arc c) a)))
+  (define rearc context-with-arc) ; alias
 
   (define (context-length c)
     (arc-length (context-arc c)))
@@ -142,21 +148,20 @@
 			      (max (context-end c1) (context-end c2))))))
 
   ;;------------------------------------------------------------------------
-  ;; See c-val.scm for details. This is kept here because it frees other
-  ;; libraries from importing (c-vals).
-  (define get-c-val
+  ;; See leaf.scm for details. This is kept here because it frees other
+  ;; libraries from importing (leaf).
+  (define get-leaf
     (case-lambda
-      ((c-val context)
-       (if (procedure? c-val)
-	   (c-val context) c-val))
+      ((leaf context)
+       (if (procedure? leaf) (leaf context) leaf))
 
-      ;; If we use a c-val when adding a new event, the context will look wrong.
+      ;; If we use a leaf-fn when adding a new event, the context will look wrong.
       ;; The event doesn't yet exist, so e.g. next/prev functions would be broken.
       ;; In this case, add an empty event to the context before evaluating.
-      ((c-val time-to-add context)
-       (if (procedure? c-val)
-	   (c-val (context-insert context (make-event time-to-add)))
-	   c-val))))
+      ((leaf time-to-add context)
+       (if (procedure? leaf)
+	   (leaf (context-insert context (make-event time-to-add)))
+	   leaf))))
 
   ;;---------------------------------------------------------------------
   ;; Helpers used in public iteration functions.

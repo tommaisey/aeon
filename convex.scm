@@ -4,18 +4,23 @@
 (start)
 (pause)
 
-;; Basic sequencing:
-(define a
-  (in+ 1 12))
-
-(define b
-  (in+ 1 16))
-
-(define c
-  (in+ 1 4))
-
+;; Lookahead test:
 (define p1
-  (in+ 3 [! a c b])) ;; list needs to be escaped with !
+  (o->
+   (in+ 1 [1 ~ 1 ~])
+
+   (<-> 0 +1/2
+     (to! :beat (c- (this :beat 0) 1/12))
+     (<-> 0 1
+       (to! :inst "hi")))
+
+   (to! :freq 880)))
+
+;; Basic sequencing:
+(define a (in+ 1 12))
+(define b (in+ 1 16))
+(define c (in+ 1 4))
+(define p1 (in+ 3 [! a c b])) ;; prevent evaluation with !
 
 ;; Other stuff I was playing with:
 (define p1
@@ -62,11 +67,11 @@
 (define p1
   (o->
    (in+ 2 [[2 (rnd 1 5) 2 4] [(rnd 2 6) 3 1 ~]]
-     (:freq 1   [220 330 110])
-     (:length 3 [0.8 0.4 1.2 0.3]))
+     (:freq 1 [220 330 110])
+     (:sustain 3 [0.8 0.4 1.2 0.3]))
    
    (in+ 1 [~ (pick [3 6 8]) 2 1]
-     (:freq 3   [(* 110 3) 880 990 (* 110 6)])
+     (:freq 3 [(* 110 3) 880 990 (* 110 6)])
      (:freq 3/2 [~ [~ 440]]))
 
    (in+ 1/2 [~ 1]
@@ -79,4 +84,5 @@
 
    (in+ 1/2 [~ (rnd 1 6) ~ 1]
      (:inst "sampler-mono")
+     (:amp 1/2 [0.15 0.2])
      (:sample hh))))

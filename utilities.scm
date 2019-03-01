@@ -21,7 +21,8 @@
 	  remove-list
 	  unsafe-list?
 	  push-front
-	  check-type)
+	  check-type
+	  println)
 
   (import (chezscheme) (srfi s27 random-bits))
 
@@ -187,5 +188,8 @@
    ;; Throw an error if the wrong type is used
   (define (check-type pred val string)
     (unless (pred val) (raise string)))
+
+  (define (println . objs)
+    (for-each (lambda (x) (display x) (newline)) objs))
   
   ) ; end module 'utilities'

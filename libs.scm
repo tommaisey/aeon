@@ -27,8 +27,9 @@
 (recompile-import event)
 (recompile-import context)
 (recompile-import auto-quasi)
-(recompile-import cvals)
-(recompile-import cnodes)
+(recompile-import leaf)
+(recompile-import branch)
+(recompile-import trunk)
 (recompile-import playback)
 
 ;;-----------------------------------------------------

@@ -1,19 +1,19 @@
 ;;----------------------------------------------------------------------
-;; cvals
+;; leaves
 ;;
 ;; These are 'contextual' values - functions which return a value based
 ;; on the context they are passed. This lets us maintain the referential
 ;; transparency that is key for the system to work.
 ;;
+;; They form the 'leaves' of a tree of functions defining musical patterns.
+;;
 ;; Many of these functions base their value on the time/beat of the current
 ;; event in the context, unless passed one or more extra keys to look at.
 ;;
-;; Others of these functions don't really need a context - but may want to treat
-;; their arguments as c-vals.
-;;
-;; cvals form the 'leaves' of a tree of functions defining musical patterns.
+;; Others of these functions don't really need a context - but may want to
+;; treat their arguments as callable leaves.
 ;;----------------------------------------------------------------------
-(library (cvals)
+(library (leaf)
   (export
    this next nearest
    c+ c- c* c/
@@ -41,27 +41,27 @@
 
   ;;-------------------------------------------------------------------
   ;; Maths
-  (define (c-val-apply fn c-vals)
+  (define (leaf-apply fn leaves)
     (lambda (context)
-      (apply fn (map (lambda (v) (get-c-val v context)) c-vals))))
+      (apply fn (map (lambda (v) (get-leaf v context)) leaves))))
 
-  (define (c+ . c-vals)
-    (c-val-apply + c-vals))
+  (define (c+ . leaves)
+    (leaf-apply + leaves))
   
-  (define (c- . c-vals)
-    (c-val-apply - c-vals))
+  (define (c- . leaves)
+    (leaf-apply - leaves))
 
-  (define (c* . c-vals)
-    (c-val-apply * c-vals))
+  (define (c* . leaves)
+    (leaf-apply * leaves))
 
-  (define (c/ . c-vals)
-    (c-val-apply / c-vals))
+  (define (c/ . leaves)
+    (leaf-apply / leaves))
 
   ;; Snap the input value to the next number divisible by divisor.
   (define (snap divisor val)
     (lambda (context)
-      (let* ([val (get-c-val val context)]
-	     [divisor (get-c-val divisor context)]
+      (let* ([val (get-leaf val context)]
+	     [divisor (get-leaf divisor context)]
 	     [overlap (fmod val divisor)]
 	     [prev (- val overlap)])
 	(if (>= overlap (* 0.5 divisor))
@@ -88,7 +88,7 @@
        (let* ([lst (pdef-quasi qlist)]
 	      [len (length lst)])
 	 (lambda (context)
-	   (get-c-val (list-nth lst ((rnd 0 len key/keys) context)) context))))))
+	   (get-leaf (list-nth lst ((rnd 0 len key/keys) context)) context))))))
 
   ;;--------------------------------------------------------------------
   ;; Rhythmic & sequencing operations.
@@ -101,9 +101,9 @@
 	 (lambda (context)
 	   (let* ([t (context-now context)]
 		  [n (exact (truncate (/ t measures)))])
-	     (get-c-val (list-nth lst (modulo n len)) context)))))))
+	     (get-leaf (list-nth lst (modulo n len)) context)))))))
 
-  ;; Some c-vals allow the user to specify which properties of the
+  ;; Some leaves allow the user to specify which properties of the
   ;; context's current event are considered when contextualising. This
   ;; makes the implementation of that simpler.
   (define (fold-by-keys fn init key/keys context)

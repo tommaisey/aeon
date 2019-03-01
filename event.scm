@@ -36,6 +36,8 @@
    arc-start
    arc-end
    arc-length
+   arc-negate
+   arc-add
    arc-valid?
    within-arc?)
 
@@ -123,23 +125,20 @@
     (fields (immutable start)
 	    (immutable end)))
 
-  (define (arc-with-start r new-start)
-    (make-arc new-start (arc-end r)))
-  (define (arc-with-end r new-end)
-    (make-arc (arc-start r) new-end))
-  (define (arc-valid? r)
-    (< (arc-start r) (arc-end r)))
-  (define (within-arc? r t)
-    (between t (arc-start r) (arc-end r)))
-  (define (arc-length r)
-    (- (arc-end r) (arc-start r)))
-
-  ;; Find the arc which a list of events encompasses.
-  ;; The call to list-last makes this relatively slow.
-  (define (arc-from-events events)
-    (apply make-arc
-     (if (null? events)
-	 (list 0 0)
-	 (list (event-beat (car events))
-	       (event-beat (list-last events))))))
-  ) ; end module 'event'
+  (define (arc-with-start a new-start)
+    (make-arc new-start (arc-end a)))
+  (define (arc-with-end a new-end)
+    (make-arc (arc-start a) new-end))
+  (define (arc-valid? a)
+    (< (arc-start a) (arc-end a)))
+  (define (within-arc? a t)
+    (between t (arc-start a) (arc-end a)))
+  (define (arc-length a)
+    (- (arc-end a) (arc-start a)))
+  (define (arc-negate a)
+    (make-arc (- (arc-start a)) (- (arc-end a))))
+  (define (arc-add a1 a2)
+    (make-arc (+ (arc-start a1) (arc-start a2))
+	      (+ (arc-end a1) (arc-end a2))))
+  
+  ) ; END module 'event'

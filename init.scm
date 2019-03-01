@@ -63,17 +63,18 @@
 
 ;;-----------------------------------------------------------------
 ;; Plays a event at the right time in the future.
+;; TODO: adjust latency based on frame jitter
 (define (play-event event current-beat)
   (define (entry-convert pair)
     (cons (symbol->string (car pair)) (cdr pair)))
   (let* ([inst (event-get event :inst "sine-grain")]
 	 [beat (event-beat event)]
 	 [until (secs-until beat current-beat bpm)]
-	 [t (+ (utc) until playback-latency)]) ;; TODO: adjust latency based on frame jitter
+	 [t (+ (utc) until playback-latency)])
     (apply play-when inst t (map entry-convert (event-clean event)))))
 
 ;; Our test pattern for the moment. Redefine for fun and profit!
-(define p1 (in+ [1 3]))
+(define p1 (in+ 1))
 (define (reset-p1) (define-top-level-value 'p1 (in+ 1)))
 
 ;; Adds custom priting of contexts.
@@ -91,16 +92,12 @@
 
 ;; Called each chunk of time by the playback thread.  
 (define (process-chunk)
-  (guard (x [else (let ([p (console-output-port)])
-		    (display-condition x p)
-		    (newline p)
-		    (flush-output-port p)
-		    (reset-p1))])
-    (let* ([t playback-time]
-	   [nxt-t (+ t playback-chunk)]
-	   [c (make-empty-context t nxt-t)])
-      (for-each (lambda (n) (play-event n t)) (context-events-next (p1 c)))
-      (set! playback-time nxt-t))))
+  (guard (x [else (handle-error x)])
+    (let* ([t1 playback-time]
+	   [t2 (+ t1 playback-chunk)]
+	   [events (context-events-next (render-arc p1 (make-arc t1 t2)))])
+      (for-each (lambda (n) (play-event n t1)) events)
+      (set! playback-time t2))))
 
 ;; Only creates new thread if one isn't already in playback-thread.
 (define (start-thread sem)
@@ -119,6 +116,13 @@
 (define (stop)
   (pause)
   (set! playback-time 0))
+
+(define (handle-error condition)
+  (let ([p (console-output-port)])
+    (display-condition condition p)
+    (newline p)
+    (flush-output-port p)
+    (reset-p1)))
 
 ;;------------------------------------------------------------------
 ;; Set up some inital drum samples
