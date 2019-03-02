@@ -13,14 +13,14 @@
 ;; Others of these functions don't really need a context - but may want to
 ;; treat their arguments as callable leaves.
 ;;----------------------------------------------------------------------
-(library (leaf)
+(library (value-nodes)
   (export
    this next nearest
    c+ c- c* c/
    rnd pick each snap)
   
   (import
-    (chezscheme) (utilities) (context) (event)
+    (chezscheme) (utilities) (context) (node-eval) (event)
     (for (auto-quasi) expand))
 
   (define (get c key default)

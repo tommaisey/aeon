@@ -27,9 +27,10 @@
 (recompile-import event)
 (recompile-import context)
 (recompile-import auto-quasi)
-(recompile-import leaf)
-(recompile-import branch)
-(recompile-import trunk)
+(recompile-import value-nodes)
+(recompile-import logic-nodes)
+(recompile-import chain-nodes)
+(recompile-import node-eval)
 (recompile-import playback)
 
 ;;-----------------------------------------------------

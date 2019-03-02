@@ -8,7 +8,7 @@
 ;; The cnodes can be chained and combined with fns in @trunk.
 ;; The 'leaves' of our system are described in @leaf.
 ;; ------------------------------------------------------------
-(library (branch)
+(library (logic-nodes)
   (export
    in+ to! to? cp! cp? is?
    any-of all-of none-of phrase)
@@ -17,11 +17,8 @@
     (chezscheme)
     (for (auto-quasi) expand)
     (for (subdivide) expand)
-    (utilities) (event) (context)
-    (trunk) (leaf) (srfi s26 cut))
-
-  ;; ------------------------------------------------------------
-  ;; Main cnodes
+    (utilities) (event) (context) (node-eval)
+    (chain-nodes) (value-nodes) (srfi s26 cut))
   
   ;; A cnode that sets a property of events according to a subdividing pattern.
   (define-syntax to!

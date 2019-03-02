@@ -13,6 +13,7 @@
    context-end
    context-now
    context-print
+   context-insert
    context-with-events
    context-clear-events
    context-with-arc rearc
@@ -26,8 +27,7 @@
    context-filter
    context-trim
    context-empty?
-   contexts-merge
-   get-leaf)
+   contexts-merge)
   (import (chezscheme) (utilities) (event))
 
   ;; ---------------------------------------------
@@ -146,22 +146,6 @@
 				  event-before?)
 		    (make-arc (min (context-start c1) (context-start c2))
 			      (max (context-end c1) (context-end c2))))))
-
-  ;;------------------------------------------------------------------------
-  ;; See leaf.scm for details. This is kept here because it frees other
-  ;; libraries from importing (leaf).
-  (define get-leaf
-    (case-lambda
-      ((leaf context)
-       (if (procedure? leaf) (leaf context) leaf))
-
-      ;; If we use a leaf-fn when adding a new event, the context will look wrong.
-      ;; The event doesn't yet exist, so e.g. next/prev functions would be broken.
-      ;; In this case, add an empty event to the context before evaluating.
-      ((leaf time-to-add context)
-       (if (procedure? leaf)
-	   (leaf (context-insert context (make-event time-to-add)))
-	   leaf))))
 
   ;;---------------------------------------------------------------------
   ;; Helpers used in public iteration functions.

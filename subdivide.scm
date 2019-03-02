@@ -1,6 +1,6 @@
 (library (subdivide)
   (export in+impl to!impl)
-  (import (scheme) (utilities) (event) (context))
+  (import (scheme) (utilities) (event) (context) (node-eval))
 
   (define rest-symbol '~)
 
@@ -33,7 +33,7 @@
   ;; events. The symbol ~ creates a rest.
   (define (in+impl context pdur pdef)
     (define (add-fn context t leaf)
-      (let ([val (get-leaf leaf t context)])
+      (let ([val (get-leaf-early leaf t context)])
 	(cond
 	 ((or (eq? val rest-symbol) (eq? val 0))
 	  (list))
