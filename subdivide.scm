@@ -1,8 +1,9 @@
 (library (subdivide)
-  (export in+impl to!impl)
+  (export in+impl in±impl to!impl)
   (import (scheme) (utilities) (event) (context) (node-eval))
 
   (define rest-symbol '~)
+  (define :sustain ':sustain)
 
   ;; Implements the recursive subdivision of an input pdef into equal-sized
   ;; elements. An add-fn is supplied, which returns a list of events for each
@@ -27,28 +28,47 @@
 			      (add-fn context t item))])
 	      (loop next-t (cdr p) (append value out))))))))))
 
-  ;; Takes a pdef template and a context, and returns a new context with the
-  ;; same arc, containing events according to the the pdef template.
-  ;; A pdef value of 1 gives one event. For values > 1, creates N subdivided
-  ;; events. The symbol ~ creates a rest.
+  ;; Adds blank events to the context with a subdividing pattern (pdef)
+  ;; A pdef value of 1 gives one event.
+  ;; For values > 1, creates N subdivided values.
+  ;; The symbol ~ creates a rest.
   (define (in+impl context pdur pdef)
     (define (add-fn context t leaf)
-      (let ([val (get-leaf-early leaf t context)])
-	(cond
-	 ((or (eq? val rest-symbol) (eq? val 0))
-	  (list))
-	 ((context? val)
-	  (reverse (context-events-next val)))
-	 ((not (number? val))
-	  (raise (string-append "in+ pattern can contain only numbers, rests, or other patterns.")))
-	 (else
-	  (let* ([num (max 1 val)]
-		 [dur (/ (context-length context) num)]
-		 [mke (lambda (i) (make-event (+ t (* i dur)) (:sustain dur)))])
-	    (map mke (reverse (iota num))))))))
+      (in-adder
+       (lambda (val context)
+	 (let* ([num (max 1 val)]
+		[dur (/ (context-length context) num)]
+		[make (lambda (i) (make-event (+ t (* i dur)) (:sustain dur)))])
+	   (map make (reverse (iota num)))))
+       context t leaf))
     (context-trim
      (context-with-events
       context (reverse (papply context pdur pdef add-fn)))))
+
+  ;; Adds events with a certain property filled in by a subdivding pattern.
+  (define (in±impl key context pdur pdef)
+    (define (add-fn context t leaf)
+      (in-adder
+       (lambda (val context)
+	 (let ([dur (context-length context)])
+	   (list (event-set (make-event t (:sustain dur)) key val))))
+       context t leaf))
+    (context-trim
+     (context-with-events
+      context (reverse (papply context pdur pdef add-fn)))))
+
+  ;; Used by the 'in' impls above to get a value from a leaf node,
+  ;; and to use it to add a new note/notes to the context.
+  (define (in-adder maker context t leaf)
+    (let ([val (get-leaf-early leaf t context)])
+	(cond
+	 ((or (eq? val rest-symbol) (eq? val 0))
+	  '())
+	 ((context? val)
+	  (reverse (context-events-next val)))
+	 ((not (number? val))
+	  (raise (format "error in 'in' pattern - not a number, got: ~A" val)))
+	 (else (maker val context)))))
 
   ;; Takes a pdef template and a context, and returns a new context with the
   ;; values in the pdef applied to any events in the context.

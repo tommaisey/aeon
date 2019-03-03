@@ -10,7 +10,7 @@
 ;; ------------------------------------------------------------
 (library (logic-nodes)
   (export
-   in+ to! to? cp! cp? is?
+   in+ in± to! to? cp! cp? is?
    any-of all-of none-of phrase)
 
   (import
@@ -20,7 +20,7 @@
     (utilities) (event) (context) (node-eval)
     (chain-nodes) (value-nodes) (srfi s26 cut))
   
-  ;; A cnode that sets a property of events according to a subdividing pattern.
+  ;; A node that sets a property of events according to a subdividing pattern.
   (define-syntax to!
     (syntax-rules ()
 
@@ -31,17 +31,30 @@
        (lambda (context)
 	 (to!impl context pdur (pdef-quasi pdef) key)))))
 
-  ;; A cnode that adds blank events according to a subdividing pattern. 
+  ;; A node that adds blank events according to a subdividing pattern. 
   (define-syntax in+
     (syntax-rules ()
 
       ((_ pdef)
        (in+ 1 pdef))
 
-      ((_ pdur pdef (key r ...) ...)
+      ((_ pdur pdef (:to-key r ...) ...)
        (lambda (context)
 	 (let* ([c (in+impl context pdur (pdef-quasi pdef))]
-		[c ((to! key r ...) c)] ...)
+		[c ((to! :to-key r ...) c)] ...)
+	   (contexts-merge context c))))))
+
+  ;; A node that adds events with a single specified property.
+  (define-syntax in±
+    (syntax-rules ()
+
+      ((_ :key pdef)
+       (in± :key 1 pdef))
+
+      ((_ :key pdur pdef (:to-key r ...) ...)
+       (lambda (context)
+	 (let* ([c (in±impl :key context pdur (pdef-quasi pdef))]
+		[c ((to! :to-key r ...) c)] ...)
 	   (contexts-merge context c))))))
 
   ;; The implementation of these could be a lot better, but this

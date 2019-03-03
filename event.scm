@@ -51,7 +51,7 @@
   (define-syntax make-event
     (syntax-rules ()
       ((_ start-beat (key value) ...)
-       (list (cons ':beat start-beat) (cons 'key value) ...))
+       (list (cons :beat start-beat) (cons key value) ...))
       
       ((_ ...)
        (syntax-error "make-event syntax: (make-event 1/16 [:freq 100] [:pan 0]"))))

@@ -4,6 +4,9 @@
 (start)
 (pause)
 
+;; Test in±
+(define p1 (in± :freq 1 [440 660 990]))
+
 ;; Lookahead test:
 (define p1
   (o->
