@@ -20,7 +20,7 @@
 
   ;; Snap a value to the next number divisible by divisor.
   (define (snap-next beat divisor)
-    (let ([overlap (fmod beat divisor)])
+    (let ([overlap (mod beat divisor)])
       (+ (- beat overlap) divisor)))
 
   ;; Snap a value to the next number divisible by divisor,
@@ -31,7 +31,7 @@
 
   ;; Snap a value to the next number divisible by divisor.
   (define (snap-prev beat divisor)
-    (let ([overlap (fmod beat divisor)])
+    (let ([overlap (mod beat divisor)])
       (- beat overlap)))
 
   ;; Snap a value to the next number divisible by divisor,
@@ -42,7 +42,7 @@
 
   ;; Snap to the next or previous divisor, whichever's closer.
   (define (snap-nearest beat divisor)
-    (let* ([overlap (fmod beat divisor)]
+    (let* ([overlap (mod beat divisor)]
 	   [prev (- beat overlap)])
       (if (>= overlap (* 0.5 divisor))
 	  (+ prev divisor) prev)))
@@ -57,7 +57,7 @@
   ;; but the usual expectation is that it's on the first step
   ;; TODO: is this necessary? Wouldn't just (add1 offset) work?
   (define (euclid-normalise-offset e)
-    (let ([new-offset (% (add1 (euclid-offset e)) (euclid-num-steps e))])
+    (let ([new-offset (mod (add1 (euclid-offset e)) (euclid-num-steps e))])
       (make-euclid (euclid-num-steps e) (euclid-num-hits e) new-offset)))
 
   ;; non-iterative derivation of this algorithm:
@@ -71,9 +71,9 @@
 	 [steps  (euclid-num-steps e)]
 	 [offset (euclid-offset e)]
 	 ;; put bucket in state as if it had done N = offset iterations 
-	 [bucket (% (* hits (- steps offset)) steps)]
+	 [bucket (mod (* hits (- steps offset)) steps)]
 	 ;; compute state of bucket just before the requested step
-	 [bucket (+ bucket (* hits (% step steps)))])
+	 [bucket (+ bucket (* hits (mod step steps)))])
       
       (not (eqv? (quotient bucket steps)
 		 (quotient (+ bucket hits) steps)))))
@@ -92,7 +92,7 @@
 	    (let*
 		([beat  (range-start w)]
 		 [next  (snap-next beat step-size)]
-		 [step  (% (round (/ beat step-size)) num-steps)]
+		 [step  (mod (round (/ beat step-size)) num-steps)]
 		 [events (if (euclidean-hit? step e)
 			    (cons (make-event beat) events)
 			    events)])

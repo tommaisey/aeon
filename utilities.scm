@@ -3,7 +3,7 @@
 ;; Fundamental utilities
 ;; ---------------------------------------------------------
 (library (utilities)
-  (export fmod % round-down-f pseudo-rand
+  (export round-down-f pseudo-rand
 	  nearly-divisible divisible on-each
 	  above below between between-each
 	  equal nearly-equal
@@ -12,6 +12,7 @@
 	  columns-to-rows
 	  concatenate
 	  merge-sorted
+	  repeat
 	  sorted?
 	  for-any
 	  for-none
@@ -25,14 +26,6 @@
 	  println)
 
   (import (chezscheme) (srfi s27 random-bits))
-
-  ;; Negative-aware modulo that works with floats or fracs.
-  ;; Warning! Unreliable with floats! e.g. (fmod 4.666666666666666 (/ 4.0 12))
-  (define (fmod n mod)
-    (- n (* (floor (/ n mod)) mod)))
-
-  ;; This can be quite a lot easier to read in some cases.
-  (define % modulo)
 
   ;; Find the nearest whole multiple of divisor that's <= x.
   (define (round-down-f x divisor)
@@ -60,7 +53,7 @@
     (nearly-divisible val div 0.0001))
 
   (define (on-each val on each)
-    (let ([m (fmod val each)])
+    (let ([m (mod val each)])
       (= m on)))
 
   (define (above a b)
@@ -82,7 +75,7 @@
     (and (>= x lower) (< x upper)))
 
   (define (between-each x lower upper each)
-    (let ([m (fmod x each)])
+    (let ([m (mod x each)])
       (between m lower upper)))
 
   ;; More readable for users to write pair/first/rest
@@ -109,6 +102,10 @@
   ;;  ((1 2 3) (x y) (a b c)) -> (1 2 3 x y a b c)
   (define (concatenate col-list)
     (fold-right push-front '() col-list))
+
+  (define (repeat val n)
+    (let loop ([x '()] [n n])
+      (if (<= n 0) x (loop (cons val x) (- n 1)))))
 
   ;; Check if a list is sorted or not.
   (define (sorted? less? l)

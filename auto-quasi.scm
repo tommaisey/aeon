@@ -1,11 +1,11 @@
 (library (auto-quasi)
   (export auto-quasi pdef-quasi ~ !)
-  (import (scheme))
+  (import (scheme) (node-eval))
 
   ;;------------------------------------------------------------------
   ;; Two special markers used by these macros
   (define ~) ;; Denotes a musical rest in a pdef
-  (define !) ;; Denotes a list that shouldn't be evaluated 
+  (define !) ;; Denotes a list that shouldn't be evaluated
   
   ;;------------------------------------------------------------------
   ;; Allows definition of nested lists without (quasi)quoting.
@@ -35,9 +35,9 @@
 	((_ v)
 	 (syntax v)))))
 
+
   ;;-------------------------------------------------------------------
-  ;; Same as above, but quotes the special character '~', since in
-  ;; the context of a pdef it represents a rest.
+  ;; Same as auto-quasi, but adds characters with special meaning in pdefs.
   
   (define-syntax pdef-quasi
     (lambda (x)
@@ -57,7 +57,7 @@
 
 	((_ ~)
 	 (syntax '~))
-	
+
 	((_ v)
 	 (syntax v)))))
   )

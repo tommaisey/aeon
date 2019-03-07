@@ -62,7 +62,7 @@
     (lambda (context)
       (let* ([val (get-leaf val context)]
 	     [divisor (get-leaf divisor context)]
-	     [overlap (fmod val divisor)]
+	     [overlap (mod val divisor)]
 	     [prev (- val overlap)])
 	(if (>= overlap (* 0.5 divisor))
 	    (+ prev divisor) prev))))

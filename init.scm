@@ -95,7 +95,8 @@
   (guard (x [else (handle-error x)])
     (let* ([t1 playback-time]
 	   [t2 (+ t1 playback-chunk)]
-	   [events (context-events-next (render-arc p1 (make-arc t1 t2)))])
+	   [c (context-trim (render-arc p1 (make-arc t1 t2)))]
+	   [events (context-events-next c)])
       (for-each (lambda (n) (play-event n t1)) events)
       (set! playback-time t2))))
 

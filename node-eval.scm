@@ -5,11 +5,16 @@
    arc-mover-logic
    arc-mover-move
    make-arc-mover
+   splicer
+   splicer?
+   splicer-logic
+   build-splicer
    get-leaf
    get-leaf-early
    render
-   render-arc)
-  (import (scheme) (event) (context))
+   render-arc
+   & % n& n%)
+  (import (scheme) (utilities) (event) (context))
 
   ;;--------------------------------------------------------------
   ;; Call on the root of a tree to fill a context with events. 
@@ -44,8 +49,32 @@
 		(render (arc-mover-logic leaf) dummy-ctx)))
 	  leaf)))
 
+  ;; A special type that denotes a context-function which wants to mutate
+  ;; the context it receives as input to get a given output.
   (define-record-type arc-mover
     (fields (immutable logic)
 	    (immutable move)))
+
+  ;; A special type that denotes a function that can return a list
+  ;; to be spliced into the containing pdef list. This must be evaluated
+  ;; greedily while we work out the number of events in the pattern.
+  ;; "type" can be either '& (repeating) or '_ (length).
+  (define-record-type splicer
+    (fields (immutable logic)))
+
+  ;; Returns a splicer that repeats something or lengthens it.
+  (define (build-splicer type val num)
+    (make-splicer (lambda (context)
+		    (cons (get-leaf val context)
+			  (repeat (get-leaf type context)
+				  (- (get-leaf num context) 1))))))
+  (define & '&)
+  (define % '%)
+  
+  (define (n& val num)
+    (build-splicer '& val num))
+
+  (define (n% val num)
+    (build-splicer '% val num))
 
   )
