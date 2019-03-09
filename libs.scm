@@ -31,6 +31,7 @@
 (recompile-import logic-nodes)
 (recompile-import chain-nodes)
 (recompile-import node-eval)
+(recompile-import harmony)
 (recompile-import playback)
 
 ;;-----------------------------------------------------
