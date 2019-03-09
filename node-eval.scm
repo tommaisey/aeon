@@ -1,3 +1,5 @@
+#!chezscheme ;; Needed for the extra symbols like »
+
 (library (node-eval)
   (export
    arc-mover
@@ -13,7 +15,10 @@
    get-leaf-early
    render
    render-arc
-   & % n& n%)
+   × » •
+   repeat-sym
+   sustain-sym
+   rest-sym)
   (import (scheme) (utilities) (event) (context))
 
   ;;--------------------------------------------------------------
@@ -68,13 +73,12 @@
 		    (cons (get-leaf val context)
 			  (repeat (get-leaf type context)
 				  (- (get-leaf num context) 1))))))
-  (define & '&)
-  (define % '%)
   
-  (define (n& val num)
-    (build-splicer '& val num))
-
-  (define (n% val num)
-    (build-splicer '% val num))
+  (define × '×) ;; Denotes a repeated value in a pdef
+  (define » '») ;; Denotes a sustained value in a pdef
+  (define • '•) ;; Denotes a musical rest in a pdef
+  (define repeat-sym ×)
+  (define sustain-sym »)
+  (define rest-sym •)
 
   )

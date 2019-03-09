@@ -1,3 +1,5 @@
+#!chezscheme ;; Needed for the extra symbols like »
+
 (library (subdivide)
   (export in+impl in±impl to!impl)
   (import (scheme) (utilities) (event) (context) (node-eval))
@@ -20,21 +22,21 @@
 			  (list v))])
 	      (loop (cdr p) (append x out) (+ len (length x))))))))
 
-  ;; Drops at least one value, more if the following values are '%.
+  ;; Drops at least one value, more if the following values are sustains.
   ;; -> (values num-dropped new-lst)
   (define (drop-stretched lst)
     (let loop ([lst lst] [n 0])
       (if (and (not (null? lst))
 	       (or (zero? n)
-		   (eqv? '% (car lst))))
+		   (eq? sustain-sym (car lst))))
 	  (loop (cdr lst) (+ n 1))
 	  (values n lst))))
 
   (define (maybe-repeat item last)
-    (if (eqv? '& item) last item))
+    (if (eq? repeat-sym item) last item))
 
   (define (is-rest? item)
-    (eq? item '~))
+    (eq? item rest-sym))
 
   ;; Implements the recursive subdivision of an input pdef into equal-sized
   ;; elements. An add-fn is supplied, which returns a list of events for each
@@ -108,7 +110,7 @@
   ;; Takes a pdef template and a context, and returns a new context with the
   ;; values in the pdef applied to any events in the context.
   (define (to!impl context pdur pdef key)
-    (define (perform context t leaf)
+    (define (perform context leaf)
       (let ([context (context-trim context)]
 	    [morpher (lambda (c) (event-set (context-event c) key (get-leaf leaf c)))])
 	(context-events-next (context-map morpher context))))

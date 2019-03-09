@@ -1,10 +1,11 @@
+#!chezscheme ;; Needed for the extra symbols like »
+
 (library (auto-quasi)
-  (export auto-quasi pdef-quasi ~ !)
+  (export auto-quasi pdef-quasi • » × !)
   (import (scheme) (node-eval))
 
   ;;------------------------------------------------------------------
-  ;; Two special markers used by these macros
-  (define ~) ;; Denotes a musical rest in a pdef
+  ;; A special marker used by these macros
   (define !) ;; Denotes a list that shouldn't be evaluated
   
   ;;------------------------------------------------------------------
@@ -41,23 +42,26 @@
   
   (define-syntax pdef-quasi
     (lambda (x)
-      (syntax-case x (~ !)
+      (syntax-case x (• » × !)
 
-	((_ (~ v ...))
-	 (syntax (pdef-quasi ('~ v ...))))
+	((m (× v n))
+	 (syntax (build-splicer '× v n)))
 
-	((_ (! v ...)) ;; ! escapes, don't evaluate
+	((m (» v n))
+	 (syntax (build-splicer '» v n)))
+
+	((m (• v ...))
+	 (syntax (pdef-quasi ('• v ...))))
+
+	((m (! v ...)) ;; ! escapes, don't evaluate
 	 (syntax (list (pdef-quasi v) ...)))
 	
-	((_ (v q ...)) (identifier? (syntax v))
+	((m (v q ...)) (identifier? (syntax v))
 	 (syntax (v q ...))) ;; evaluate as function
 	
-	((_ (v ...))
+	((m (v ...))
 	 (syntax (pdef-quasi (! v ...))))
 
-	((_ ~)
-	 (syntax '~))
-
-	((_ v)
+	((m v)
 	 (syntax v)))))
   )
