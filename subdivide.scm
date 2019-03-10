@@ -1,7 +1,7 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (subdivide)
-  (export in+impl in±impl to!impl)
+  (export in*impl in=impl to=impl to-math-impl)
   (import (scheme) (utilities) (event) (context) (node-eval))
 
   (define :sustain ':sustain)
@@ -42,10 +42,10 @@
   ;; elements. An add-fn is supplied, which returns a list of events for each
   ;; leaf in the pdef.
   ;; -> (list note ...)
-  (define (papply context pdur pdef perform)
+  (define (subdiv context pdur pdef perform)
     (cond
      ((null? pdef) '())
-     ((not (unsafe-list? pdef)) (papply context pdur (list pdef) perform))
+     ((not (unsafe-list? pdef)) (subdiv context pdur (list pdef) perform))
      (else
       (let-values ([[pdef len start dur]
 		    (pdef-splice-expand pdef pdur context)])
@@ -61,9 +61,15 @@
 		     [new (cond
 			   ((is-rest? item) '())
 			   ((unsafe-list? item)
-			    (papply context dur item perform))
+			    (subdiv context dur item perform))
 			   (else (perform context item)))])
 		(loop next-t next-p item (append new out)))))))))))
+
+  ;; Just wraps the subdiv call, building a new context.
+  (define (apply-subdiv-to-context context pdur pdef perform-fn)
+    (context-trim
+     (context-with-events
+      context (reverse (subdiv context pdur pdef perform-fn)))))
 
   ;; Used by the 'in' impls below to get a value from a leaf node,
   ;; and to use it to add a new note/notes to the context.
@@ -80,22 +86,20 @@
   ;; A pdef value of 1 gives one event.
   ;; For values > 1, creates N subdivided values.
   ;; The symbol ~ creates a rest.
-  (define (in+impl context pdur pdef)
+  (define (in*impl context pdur pdef)
     (define (perform context leaf)
       (in-adder
        (lambda (val context)
 	 (let* ([num (max 1 val)]
 		[dur (/ (context-length context) num)]
-		[start (context-start context)]
-		[make (lambda (i) (make-event (+ start (* i dur)) (:sustain dur)))])
+		[start (context-start context)])
+	   (define (make i) (make-event (+ start (* i dur)) (:sustain dur)))
 	   (map make (reverse (iota num)))))
        context leaf))
-    (context-trim
-     (context-with-events
-      context (reverse (papply context pdur pdef perform)))))
+    (apply-subdiv-to-context context pdur pdef perform))
 
   ;; Adds events with a certain property filled in by a subdivding pattern.
-  (define (in±impl key context pdur pdef)
+  (define (in=impl key context pdur pdef)
     (define (perform context leaf)
       (in-adder
        (lambda (val context)
@@ -103,18 +107,26 @@
 	       [start (context-start context)])
 	   (list (event-set (make-event start (:sustain dur)) key val))))
        context leaf))
-    (context-trim
-     (context-with-events
-      context (reverse (papply context pdur pdef perform)))))
+    (apply-subdiv-to-context context pdur pdef perform))
 
   ;; Takes a pdef template and a context, and returns a new context with the
   ;; values in the pdef applied to any events in the context.
-  (define (to!impl context pdur pdef key)
+  (define (to=impl context pdur pdef key)
     (define (perform context leaf)
-      (let ([context (context-trim context)]
-	    [morpher (lambda (c) (event-set (context-event c) key (get-leaf leaf c)))])
-	(context-events-next (context-map morpher context))))
-    (context-with-events
-     context (reverse (papply context pdur pdef perform))))
+      (define (morpher c)
+	(event-set (context-event c) key (get-leaf leaf c)))
+      (context-events-next (context-map morpher (context-trim context))))
+    (apply-subdiv-to-context context pdur pdef perform))
+  
+  (define (to-math-impl math-fn context pdur pdef key)
+    (define (perform context leaf)
+      (define (morpher c)
+	(let* ([event (context-event c)]
+	       [current (event-get event key #f)])
+	  (if (eqv? current #f)
+	      event
+	      (event-set event key (math-fn current (get-leaf leaf c))))))
+      (context-events-next (context-map morpher (context-trim context))))
+    (apply-subdiv-to-context context pdur pdef perform))
   
   )

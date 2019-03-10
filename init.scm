@@ -84,8 +84,8 @@
     (event-set event :freq (event-freq event)))))
 
 ;; Our test pattern for the moment. Redefine for fun and profit!
-(define p1 (in+ 1))
-(define (reset-p1) (define-top-level-value 'p1 (in+ 1)))
+(define p1 (in* 1))
+(define (reset-p1) (define-top-level-value 'p1 (in* 1)))
 
 ;; Adds custom priting of contexts.
 (record-writer (type-descriptor context) context-print) 
@@ -93,7 +93,7 @@
 ;;-----------------------------------------------------------------
 ;; A thread that wakes up every playback-chunk beats to call (process-chunk)
 ;; This essentially controls playback for now.
-(define bpm 105)
+(define bpm 93)
 (define playback-thread #f)
 (define playback-chunk 1/4) ; 1 quarter measure for now
 (define playback-thread-semaphore (make-semaphore))

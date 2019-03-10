@@ -21,7 +21,7 @@
   
   (import
     (chezscheme) (utilities) (context) (node-eval) (event)
-    (for (auto-quasi) expand))
+    (for (pdef) expand))
 
   (define (get c key default)
     (event-get (context-event c) key default))
@@ -85,7 +85,7 @@
       ((_ qlist) (pick qlist '()))
 
       ((_ qlist key/keys)
-       (let* ([lst (pdef-quasi qlist)]
+       (let* ([lst (pdef qlist)]
 	      [len (length lst)])
 	 (lambda (context)
 	   (get-leaf (list-nth lst ((rnd 0 len key/keys) context)) context))))))
@@ -96,7 +96,7 @@
   (define-syntax each
     (syntax-rules ()
       ((_ measures qlist)
-       (let* ([lst (pdef-quasi qlist)]
+       (let* ([lst (pdef qlist)]
 	      [len (length lst)])
 	 (lambda (context)
 	   (let* ([t (context-now context)]

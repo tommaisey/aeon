@@ -10,56 +10,77 @@
 ;; ------------------------------------------------------------
 (library (logic-nodes)
   (export
-   in+ in± to! to? cp! cp? is?
+   in* in= to= to+ to- to* to/ to? cp= cp? is?
    any-of all-of none-of phrase)
 
   (import
     (chezscheme)
-    (for (auto-quasi) expand)
+    (for (pdef) expand)
     (for (subdivide) expand)
     (utilities) (event) (context) (node-eval)
     (chain-nodes) (value-nodes) (srfi s26 cut))
   
   ;; A node that sets a property of events according to a subdividing pattern.
-  (define-syntax to!
+  (define-syntax to=
     (syntax-rules ()
 
-      ((_ key pdef)
-       (to! key 1 pdef))
+      ((_ key def)
+       (to= key 1 def))
       
-      ((_ key pdur pdef)
+      ((_ key dur def)
        (lambda (context)
-	 (to!impl context pdur (pdef-quasi pdef) key)))))
+	 (to=impl context dur (pdef def) key)))))
+
+  ;; A general 'to', taking a math op, a key and a def. The math
+  ;; op is called with the value for key and the value returned by def.
+  (define-syntax to
+    (syntax-rules ()
+
+      ((_ math-op key def)
+       (to math-op key 1 def))
+      
+      ((_ math-op key dur def)
+       (lambda (context)
+	 (to-math-impl math-op context dur (pdef def) key)))))
+  
+  (define-syntax to+
+    (syntax-rules () ((_ x ...) (to + x ...))))
+  (define-syntax to-
+    (syntax-rules () ((_ x ...) (to - x ...))))
+  (define-syntax to*
+    (syntax-rules () ((_ x ...) (to * x ...))))
+  (define-syntax to/
+    (syntax-rules () ((_ x ...) (to + x ...))))
 
   ;; A node that adds blank events according to a subdividing pattern. 
-  (define-syntax in+
+  (define-syntax in*
     (syntax-rules ()
 
-      ((_ pdef)
-       (in+ 1 pdef))
+      ((_ def)
+       (in* 1 def))
 
-      ((_ pdur pdef (:to-key r ...) ...)
+      ((_ dur def (:to-key r ...) ...)
        (lambda (context)
-	 (let* ([c (in+impl context pdur (pdef-quasi pdef))]
-		[c ((to! :to-key r ...) c)] ...)
+	 (let* ([c (in*impl context dur (pdef def))]
+		[c ((to= :to-key r ...) c)] ...)
 	   (contexts-merge context c))))))
 
   ;; A node that adds events with a single specified property.
-  (define-syntax in±
+  (define-syntax in=
     (syntax-rules ()
 
-      ((_ :key pdef)
-       (in± :key 1 pdef))
+      ((_ :key def)
+       (in= :key 1 def))
 
-      ((_ :key pdur pdef (:to-key r ...) ...)
+      ((_ :key dur def (:to-key r ...) ...)
        (lambda (context)
-	 (let* ([c (in±impl :key context pdur (pdef-quasi pdef))]
-		[c ((to! :to-key r ...) c)] ...)
+	 (let* ([c (in=impl :key context dur (pdef def))]
+		[c ((to= :to-key r ...) c)] ...)
 	   (contexts-merge context c))))))
 
   ;; The implementation of these could be a lot better, but this
   ;; should get things working (to an extent I can use).
-  (define (cp! . cnodes)
+  (define (cp= . cnodes)
     (lambda (context)
       (let ([changed (render (apply x-> cnodes) context)])
 	(contexts-merge context (context-trim changed)))))

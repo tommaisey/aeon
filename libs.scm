@@ -26,7 +26,7 @@
 (recompile-import utilities)
 (recompile-import event)
 (recompile-import context)
-(recompile-import auto-quasi)
+(recompile-import pdef)
 (recompile-import value-nodes)
 (recompile-import logic-nodes)
 (recompile-import chain-nodes)
