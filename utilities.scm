@@ -22,6 +22,7 @@
 	  remove-list
 	  unsafe-list?
 	  push-front
+	  alist-let
 	  check-type
 	  println)
 
@@ -69,7 +70,7 @@
     (= a b))
 
   (define (not-equal a b)
-    (not (equal)))
+    (not (equal a b)))
 
   (define (between x lower upper)
     (and (>= x lower) (< x upper)))
@@ -83,6 +84,7 @@
   (define first car)
   (define rest cdr)
 
+  ;;-------------------------------------------------------------------
   ;; Takes the head off each inner list until one of
   ;; them runs out. The heads of each column are offered
   ;; to a joiner func, along with an accumulated result.
@@ -137,6 +139,7 @@
 		     (cons x (cons y b))
 		     (cons x (loop (car a) (key (car a)) (cdr a) y ky b))))))))
 
+  ;;--------------------------------------------------------------------
   ;; R6RS provides for-all, which checks all items in a
   ;; list return true for pred. Here's the 'none' and
   ;; 'any' versions.
@@ -153,6 +156,7 @@
     (lambda (x)
       (for-all/any/none (lambda (p) (p x)) preds)))
 
+  ;;----------------------------------------------------------------------
   ;; Get the nth element of a list. Linear time.
   (define (list-nth l n)
     (cond
@@ -182,6 +186,25 @@
   (define (push-front val list)
     ((if (unsafe-list? val) append cons) val list))
 
+  ;; A helpful macro to bind to multiple values in an alist.
+  ;; More efficient than searching seperately for each value.
+  (define-syntax alist-let
+    (syntax-rules ()
+      ((_ alist ([name key default] ...)
+	  body ...)
+       (let* ([targets (list (cons key default) ...)]
+	      [found '()]
+	      [setter (lambda (entry)
+			(let ([t (assq (car entry) targets)])
+			  (when t
+			    (set! found (cons entry found))
+			    (set! targets (remq t targets)))))])
+	 (for-each setter alist)
+	 (set! found (append targets found))
+	 (let ([name (cdr (assq key found))] ...)
+	   body ...)))))
+
+  ;;------------------------------------------------------------------------
    ;; Throw an error if the wrong type is used
   (define (check-type pred val string)
     (unless (pred val) (raise string)))

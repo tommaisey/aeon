@@ -17,7 +17,7 @@
   (export
    this next nearest
    c+ c- c* c/
-   rnd pick any each snap)
+   rnd pick each snap)
   
   (import
     (chezscheme) (utilities) (context) (node-eval) (event)
@@ -89,8 +89,6 @@
 	      [len (length lst)])
 	 (lambda (context)
 	   (get-leaf (list-nth lst ((rnd 0 len key/keys) context)) context))))))
-
-  (alias any pick)
 
   ;;--------------------------------------------------------------------
   ;; Rhythmic & sequencing operations.

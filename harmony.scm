@@ -8,8 +8,10 @@
    chromatic arabicA arabicB japanese ryukyu spanish
    I II III IV V VI VII VIII IX X XI XII
    Ab A A+ Bb B C C+ Db D D+ Eb E F F+ Gb G G+
-   
-   :octave :midinote :scale :tuning :degree
+
+   :tuning :octave
+   :root :midinote
+   :scale :scale-degree
    :chord-shape :chord-degree
 
    event-freq
@@ -21,24 +23,23 @@
   (define (midicps midi freqA)
     (* freqA (expt 2 (/ (- midi 69) 12))))
 
-  ;; TODO: replace the 'note-gets' with a single note-find-all call which searches
-  ;; for a set of keys at once. Faster, probably tighter syntax.
   ;; TODO: get defaults for :octave, :scale, :chord-shape etc from context defaults.
   (define (event-freq e)
-    (let ([freq (event-get e ':freq #f)]
-	  [midi (event-get e :midinote #f)]
-	  [sample (event-get e ':sample #f)])
-      (cond
-       (sample #f)
-       (freq freq)
-       (midi (midicps midi 440))
-       (else
-	(let ([oct (event-get e :octave 0)]
-	      [scale (event-get e :scale minor)]
-	      [degree (event-get e :degree I)]
-	      [chord-degree (event-get e :chord-degree I)]
-	      [chord-shape (event-get e :chord-shape triad)])
-	  (midicps (+ 60 (chord-semitone oct degree chord-degree chord-shape scale)) 440))))))
+    (alist-let
+     e ([freq ':freq #f]
+	[midi :midinote #f])
+     (cond
+      (freq freq)
+      (midi (midicps midi 440))
+      (else
+       (alist-let
+	e ([oct :octave 0]
+	   [root :root C]
+	   [scale :scale minor]
+	   [sc-deg :scale-degree I]
+	   [ch-deg :chord-degree I]
+	   [ch-shape :chord-shape triad])
+	(midicps (+ 60 root (chord-semitone oct sc-deg ch-deg ch-shape scale)) 440))))))
 
   ;; Gets the semitone of a chord with a particular root (scale-degree),
   ;; chord shape, scale shape and octave. Semitone is normalised to 0 = middle C.
@@ -68,11 +69,15 @@
   ;; Event key definitions
   (define :octave ':octave)
   (define :midinote ':midinote)
+  (define :root ':root)
   (define :scale ':scale)
   (define :tuning ':tuning)
-  (define :degree ':degree)
   (define :chord-shape ':chord-shape)
+  (define :scale-degree ':scale-degree)
   (define :chord-degree ':chord-degree)
+  (define :sc-deg :scale-degree)
+  (define :ch-deg :chord-degree)
+  (define :ch-shape :chord-shape)
 
   ;; Note name and scale numeral definitions
   (define Gb -6)

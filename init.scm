@@ -4,13 +4,13 @@
 ;;-----------------------------------------------------------------
 ;; Some SuperCollider setup: a default server, synthdef & event sender.
 ;; TODO: blocks if SuperCollider isn't running!! 
-(define s (udp:open "127.0.0.1" 57110))
-(send s (g-new1 1 add-to-tail 0))
+(define sc3 (udp:open "127.0.0.1" 57110))
+(send sc3 (g-new1 1 add-to-tail 0))
 
 (define (play-when name t . arg-pairs)
   (let ([args (list (s-new0 name -1 add-to-tail 1)
 		    (n-set -1 arg-pairs))])
-    (send s (bundle t args))))
+    (send sc3 (bundle t args))))
 
 (define (play-now name . arg-pairs)
   (play-when name (utc) arg-pairs))
@@ -32,7 +32,7 @@
 (define :inst ':inst)
 
 (send-synth
- s "sine-grain"
+ sc3 "sine-grain"
  (letc ([:freq 440] [:attack 0.01] [:sustain 1] [:amp 0.2] [:pan 0.5])
    (let* ([osc (sin-osc ar :freq 0)]
 	  [env (env-perc :attack :sustain 1 (list -4 -4))]
@@ -41,7 +41,7 @@
 		  (add (mul :pan 2) -1) 1)))))
 
 (send-synth
- s "sampler-mono"
+ sc3 "sampler"
  (letc ([:sample 0] [:attack 0.01] [:sustain 1] [:pan 0.5] [:speed 1] [:release 0.25] [:amp 0.3])
    (let* ([rte (mul :speed (buf-rate-scale kr :sample))]
 	  [osc (play-buf 1 ar :sample rte 1 0 no-loop remove-synth)]
@@ -51,10 +51,10 @@
 		  (add (mul :pan 2) -1) 1)))))
 
 (define (add-sample path bufnum)
-  (async s (b-alloc-read bufnum path 0 0)))
+  (async sc3 (b-alloc-read bufnum path 0 0)))
 
 (define (check-sample bufnum)
-  (async s (b-query1 bufnum)))
+  (async sc3 (b-query1 bufnum)))
 
 (define (sine-perc freq length)
   (play-now "sine-grain"
@@ -67,11 +67,21 @@
 (define (play-event event current-beat)
   (define (entry-convert pair)
     (cons (symbol->string (car pair)) (cdr pair)))
-  (let* ([inst (event-get event :inst "sine-grain")]
+  (let* ([event (preprocess-event event)]
+	 [inst (event-get event :inst "sine-grain")]
 	 [beat (event-beat event)]
 	 [until (secs-until beat current-beat bpm)]
 	 [t (+ (utc) until playback-latency)])
     (apply play-when inst t (map entry-convert (event-clean event)))))
+
+;; Preprocess an event. Computes frequency for events using the harmony
+;; system. Gives sampler instrument to events with samples. 
+(define (preprocess-event event)
+  (cond
+   ((event-get event :sample #f)
+    (event-set event :inst (event-get event :inst "sampler")))
+   (else
+    (event-set event :freq (event-freq event)))))
 
 ;; Our test pattern for the moment. Redefine for fun and profit!
 (define p1 (in+ 1))
@@ -83,7 +93,7 @@
 ;;-----------------------------------------------------------------
 ;; A thread that wakes up every playback-chunk beats to call (process-chunk)
 ;; This essentially controls playback for now.
-(define bpm 120)
+(define bpm 105)
 (define playback-thread #f)
 (define playback-chunk 1/4) ; 1 quarter measure for now
 (define playback-thread-semaphore (make-semaphore))

@@ -4,9 +4,15 @@
 (start)
 (pause)
 
+;; Well shit, that came together nicely. 
 (define p1
   (o->
-    (in± :freq 1 [330 × × » » 550 880 » 990 »])))
+    (in± :scale-degree 1 [! I × × » » IV (each 1 [! V VI]) » III »])
+    (cp! (to! :chord-degree (pick [3 4 6 8]))
+	 (to! :beat (c+ (this :beat 0) 1/16)))
+    (to! :octave 1/2 [0 1 [0 -1]])
+
+    (in± :scale-degree 3/2 [! I × × » » IV (each 1 [! V VI]) » III »])))
 
 ;; Er dunno, random messing about with a beat...
 (define p1
