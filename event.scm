@@ -21,6 +21,7 @@
    event-clean
    event-optimise
    event-prioritise
+   event-remove-multi
    
    event-beat
    event-before?
@@ -42,7 +43,7 @@
    within-arc?)
 
   (import (chezscheme) (utilities) (srfi s26 cut)
-	  (only (srfi s1 lists) delete-duplicates))
+	  (only (srfi s1 lists) delete-duplicates lset-difference))
 
   (define :beat ':beat)
   (define time-key :beat)
@@ -88,6 +89,9 @@
   (define (event-optimise event)
     (let ([n (fold-left (cut event-prioritise <> <>) event priority-keys)])
       (event-clean n)))
+
+  (define (event-remove-multi event key-list)
+    (lset-difference (lambda (entry k) (eq? k (car entry))) event key-list))
 
   ;; Some event convenience functions
   (define (print-event event port)

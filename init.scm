@@ -81,7 +81,7 @@
    ((event-get event :sample #f)
     (event-set event :inst (event-get event :inst "sampler")))
    (else
-    (event-set event :freq (event-freq event)))))
+    (event-with-freq event))))
 
 ;; Our test pattern for the moment. Redefine for fun and profit!
 (define p1 (in* 1))

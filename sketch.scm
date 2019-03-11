@@ -8,32 +8,32 @@
 (define p1
   (let ([base (pdef [! I × × » » IV (each 1 [! V VI]) » III »])])
     (o->
-      (in= :scale-degree 1 base)
-      (cp= (to= :chord-degree (pick [0 2 3 4 6]))
-	   (to+ :beat 1/16))
-      (in= :scale-degree 3/2 base)
-      (to= :octave 1/2 [-1 0 [0 -2]]))))
+      (in: :scale-degree 1 base)
+      (cp: (to: :chord-degree (pick [0 2 3 4 6]))
+	   (to+ :beat 3/64))
+      (in: :scale-degree 3/2 base)
+      (to: :octave 1/2 [-1 0 [0 -2]]))))
 
 ;; Er dunno, random messing about with a beat...
 (define p1
   (let ([bd1 (in* 1 [4 2 [1 •] 1])]
 	[bd2 (in* 1 [1 2 [2 •] 1])])
     (o->
-      (in= 2 [! bd2 bd1]
+      (in: 2 [! bd2 bd1]
 	(:sample bd)
 	(:amp 1/2 [0.25 (rnd 0.01 0.1) (rnd 0.01 0.1) (rnd 0.01 0.1)]))
      
-      (in= 1 [1 4 (pick [• 2 4 3]) 1]
+      (in: 1 [1 4 (pick [• 2 4 3]) 1]
 	(:sample hh)
 	(:amp 1/2 [0.1 0.1 0.25 0.1])
 	(:speed (rnd 0.95 1.05))
 	(:pan (rnd 0.6 0.8)))
       
-      (in= 1 [• 1 • 1]
+      (in: 1 [• 1 • 1]
 	(:sample sn)
 	(:pan 0.45))
 
-      (in= 1 [•
+      (in: 1 [•
 	      [(pick [3 2 4 •]) (pick [2 4 •])]
 	      (pick [• 1 3])
 	      [• (pick [• 1 2])]]
@@ -44,20 +44,18 @@
      
       (to! :inst "sampler"))))
 
-;; Test in=
-(define p1 (o-> p1 (in= :freq 1 [880 440 990 770])))
+;; Test in:
+(define p1 (o-> p1 (in: :freq 1 [880 440 990 770])))
 
 ;; Lookahead test:
 (define p1
   (o->
-    (in= 1 [1 • 1 •])
+    (in: 1 [1 • 1 •])
 
-    (<-> 0 +1/2
-      (to! :beat (c- (this :beat 0) 1/12))
-      (<-> 0 1
-	(to! :inst "hi")))
+    (<-> 0 1/12 (to- :beat 1/12)
+      (<-> 0 1 (to: :inst "hi")))
 
-    (to! :freq 880)))
+    (to: :freq 880)))
 
 ;; Basic sequencing:
 (define a  (in* 1 12))
@@ -69,9 +67,9 @@
 (define p1
   (o->
     (in* 1 [2 (pick [• 1 3]) (pick [• 1 3]) 2])
-    (to! :amp 1/2 [0.3 0.05 (rnd 0.1 0.15)])
-    (cp! (to! :freq [660 550])
-	 (to! :sustain (pick [0.2 0.4])))))
+    (to: :amp 1/2 [0.3 0.05 (rnd 0.1 0.15)])
+    (cp! (to: :freq [660 550])
+	 (to: :sustain (pick [0.2 0.4])))))
 
 (define p1
   (o->
@@ -94,7 +92,7 @@
        (:amp 0.1)
        (:sustain 0.05)
        (:release 0.05))
-     (to! :beat (c- (this :beat 0) 1/18)))
+     (to- :beat 1/18))
 
    (in* 1/4 [1 (rnd 0 1) 1 (rnd 0 3)]
      (:sample hh)

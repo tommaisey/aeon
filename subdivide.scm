@@ -1,7 +1,7 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (subdivide)
-  (export in*impl in=impl to=impl to-math-impl)
+  (export in*impl in:impl to:impl to-math-impl)
   (import (scheme) (utilities) (event) (context) (node-eval))
 
   (define :sustain ':sustain)
@@ -99,7 +99,7 @@
     (apply-subdiv-to-context context pdur pdef perform))
 
   ;; Adds events with a certain property filled in by a subdivding pattern.
-  (define (in=impl key context pdur pdef)
+  (define (in:impl key context pdur pdef)
     (define (perform context leaf)
       (in-adder
        (lambda (val context)
@@ -111,7 +111,7 @@
 
   ;; Takes a pdef template and a context, and returns a new context with the
   ;; values in the pdef applied to any events in the context.
-  (define (to=impl context pdur pdef key)
+  (define (to:impl context pdur pdef key)
     (define (perform context leaf)
       (define (morpher c)
 	(event-set (context-event c) key (get-leaf leaf c)))

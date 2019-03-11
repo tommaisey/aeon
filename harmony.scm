@@ -14,7 +14,7 @@
    :scale :scale-degree
    :chord-shape :chord-degree
 
-   event-freq
+   event-with-freq
    chord-semitone
    chord-shape)
 
@@ -24,7 +24,7 @@
     (* freqA (expt 2 (/ (- midi 69) 12))))
 
   ;; TODO: get defaults for :octave, :scale, :chord-shape etc from context defaults.
-  (define (event-freq e)
+  (define (event-with-freq e)
     (alist-let
      e ([freq ':freq #f]
 	[midi :midinote #f])
@@ -39,15 +39,18 @@
 	   [sc-deg :scale-degree I]
 	   [ch-deg :chord-degree I]
 	   [ch-shape :chord-shape triad])
-	(midicps (+ 60 root (chord-semitone oct sc-deg ch-deg ch-shape scale)) 440))))))
+	(let* ([s (chord-semitone oct sc-deg ch-deg ch-shape scale)]
+	       [f (midicps (+ 60 root s) 440)])
+	  (event-remove-multi (event-set e ':freq f)
+			      (list :scale :chord-shape :octave :root))))))))
 
   ;; Gets the semitone of a chord with a particular root (scale-degree),
   ;; chord shape, scale shape and octave. Semitone is normalised to 0 = middle C.
   (define (chord-semitone octave root-scale-deg chord-deg shape scale)
-    (let* ([scale (cadr scale)]
-	   [shape (cadr shape)]
-	   [sc-len (length scale)]
-	   [sh-len (length shape)]
+    (let* ([sc-len (shape-len scale)]
+	   [sh-len (shape-len shape)]
+	   [scale  (shape-degrees scale)]
+	   [shape  (shape-degrees shape)]
 	   [sh-idx (mod chord-deg sh-len)]
 	   [sh-deg (list-nth shape sh-idx)]
 	   [sc-deg (+ root-scale-deg sh-deg)]
@@ -111,10 +114,16 @@
   (define XI   10)
   (define XII  11)
 
+  ;; Used for chords and scales
+  (define-record-type shape
+    (fields (immutable name) ;; symbol
+	    (immutable degrees) ;; list
+	    (immutable len)))  ;; number
+
   (define-syntax def-shape
     (syntax-rules ()
       ((_ name lst)
-       (define name (cons 'name '(lst))))))
+       (define name (make-shape 'name 'lst (length 'lst))))))
 
   ;; Chord shape definitions (in degrees of current scale)
   (def-shape 5th   (0 4))

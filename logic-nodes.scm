@@ -10,7 +10,7 @@
 ;; ------------------------------------------------------------
 (library (logic-nodes)
   (export
-   in* in= to= to+ to- to* to/ to? cp= cp? is?
+   in* in: to: to+ to- to* to/ to? cp: cp? is?
    any-of all-of none-of phrase)
 
   (import
@@ -21,15 +21,15 @@
     (chain-nodes) (value-nodes) (srfi s26 cut))
   
   ;; A node that sets a property of events according to a subdividing pattern.
-  (define-syntax to=
+  (define-syntax to:
     (syntax-rules ()
 
       ((_ key def)
-       (to= key 1 def))
+       (to: key 1 def))
       
       ((_ key dur def)
        (lambda (context)
-	 (to=impl context dur (pdef def) key)))))
+	 (to:impl context dur (pdef def) key)))))
 
   ;; A general 'to', taking a math op, a key and a def. The math
   ;; op is called with the value for key and the value returned by def.
@@ -62,25 +62,25 @@
       ((_ dur def (:to-key r ...) ...)
        (lambda (context)
 	 (let* ([c (in*impl context dur (pdef def))]
-		[c ((to= :to-key r ...) c)] ...)
+		[c ((to: :to-key r ...) c)] ...)
 	   (contexts-merge context c))))))
 
   ;; A node that adds events with a single specified property.
-  (define-syntax in=
+  (define-syntax in:
     (syntax-rules ()
 
       ((_ :key def)
-       (in= :key 1 def))
+       (in: :key 1 def))
 
       ((_ :key dur def (:to-key r ...) ...)
        (lambda (context)
-	 (let* ([c (in=impl :key context dur (pdef def))]
-		[c ((to= :to-key r ...) c)] ...)
+	 (let* ([c (in:impl :key context dur (pdef def))]
+		[c ((to: :to-key r ...) c)] ...)
 	   (contexts-merge context c))))))
 
   ;; The implementation of these could be a lot better, but this
   ;; should get things working (to an extent I can use).
-  (define (cp= . cnodes)
+  (define (cp: . cnodes)
     (lambda (context)
       (let ([changed (render (apply x-> cnodes) context)])
 	(contexts-merge context (context-trim changed)))))
