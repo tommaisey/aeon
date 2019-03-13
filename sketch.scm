@@ -7,15 +7,21 @@
 (define p1
   (o->
     (in* 1 [[0 » 0 [0 × ×]] [0 × » [0 ×]]])
-    (to: :scd 2 [! V » » » IV » II »])
-    (cp: (to: :chd 3/2 [! II V VI III])
+    (to: :scd 2 [V » » » IV » II »])
+    (cp: (to: :chd 3/2 [I V IV II])
 	 (to+ :beat 1/8))
     (cp: (to: :octave -1)
-	 (to+ :beat 1/16))))
+	 (to+ :beat 1/16))
+    (to: :attack 0.01)
+    (to* :sustain 0.2)
+    (to: :release 0.6)
+    (to: :amp 1/8 [0.4 0.2])
+    (to: :scale minor)
+    (to: :inst "swirly-keys")))
 
 ;; First harmonic lick ever:
 (define p1
-  (let ([base (pdef [! I × × » » IV (each 1 [! V VI]) » III »])])
+  (let ([base (pdef [I × × » » IV (each 1 [V VI]) » III »])])
     (o->
       (in: :scale-degree 1 base)
       (cp: (to: :chord-degree (pick [0 2 3 4]))
@@ -28,7 +34,7 @@
   (let ([bd1 (in* 1 [4 2 [1 •] 1])]
 	[bd2 (in* 1 [1 2 [2 •] 1])])
     (o->
-      (in: 2 [! bd2 bd1]
+      (in: 2 [bd2 bd1]
 	(:sample bd)
 	(:amp 1/2 [0.25 (rnd 0.01 0.1) (rnd 0.01 0.1) (rnd 0.01 0.1)]))
      

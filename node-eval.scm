@@ -15,7 +15,7 @@
    get-leaf-early
    render
    render-arc
-   × » •
+   ;; × » • ;; placed in top level environment
    repeat-sym
    sustain-sym
    rest-sym)
@@ -73,12 +73,12 @@
 		    (cons (get-leaf val context)
 			  (repeat (get-leaf type context)
 				  (- (get-leaf num context) 1))))))
-  
-  (define × '×) ;; Denotes a repeated value in a pdef
-  (define » '») ;; Denotes a sustained value in a pdef
-  (define • '•) ;; Denotes a musical rest in a pdef
-  (define repeat-sym ×)
-  (define sustain-sym »)
-  (define rest-sym •)
 
+  (define repeat-sym '×)
+  (define sustain-sym '»)
+  (define rest-sym '•)
+  
+  (defpattern × '×) ;; Denotes a repeated value in a pdef
+  (defpattern » '») ;; Denotes a sustained value in a pdef
+  (defpattern • '•) ;; Denotes a musical rest in a pdef
   )

@@ -1,12 +1,8 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (pdef)
-  (export runtime-pdef pdef • » × !)
+  (export runtime-pdef pdef)
   (import (scheme) (utilities) (node-eval))
-
-  ;;------------------------------------------------------------------
-  ;; A special marker used by these macros
-  (define !) ;; Denotes a list that shouldn't be evaluated
 
   ;; Excluding all the musical symbols we want to use is hard
   ;; at compile time. This is a sketch of a function that evaluates
@@ -32,35 +28,5 @@
 		  (loop (cdr p) (if (unsafe-list? (car p))
 				    (cons (runtime-pdef (car p)) x)
 				    (cons (eval (car p) env) x))))))
-	def))
-
-  ;;-------------------------------------------------------------------
-  ;; The old macro pdef system. Currently exploring a more runtime/eval
-  ;; based solution, which can more accurately escape symbols in our
-  ;; notation through patterndef.
-  (define-syntax pdef
-    (lambda (x)
-      (syntax-case x (• » × !)
-
-	((m (× v n))
-	 (syntax (build-splicer '× v n)))
-
-	((m (» v n))
-	 (syntax (build-splicer '» v n)))
-
-	((m (• v ...))
-	 (syntax (pdef ('• v ...))))
-
-	((m (! v ...)) ;; ! escapes, don't evaluate
-	 (syntax (list (pdef v) ...)))
-	
-	((m (v q ...)) (identifier? (syntax v))
-	 (syntax (v q ...))) ;; evaluate as function
-	
-	((m (v ...))
-	 (syntax (pdef (! v ...))))
-
-	((m v)
-	 (syntax v)))))
-
+	(eval def env)))
   )
