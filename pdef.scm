@@ -1,9 +1,14 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (pdef)
-  (export runtime-pdef pdef)
+  (export pdef runtime-pdef)
   (import (scheme) (utilities) (node-eval))
 
+  (define-syntax pdef
+    (syntax-rules ()
+      ((_ lst)
+       (runtime-pdef 'lst))))
+  
   ;; Excluding all the musical symbols we want to use is hard
   ;; at compile time. This is a sketch of a function that evaluates
   ;; a pdef at runtime, checking symbols in the first position and

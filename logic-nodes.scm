@@ -28,7 +28,7 @@
        (to: key 1 def))
       
       ((_ key dur def)
-       (let ([p (runtime-pdef 'def)])
+       (let ([p (pdef def)])
 	 (lambda (context)
 	   (to:impl context dur p key))))))
 
@@ -41,7 +41,7 @@
        (to math-op key 1 def))
       
       ((_ math-op key dur def)
-       (let ([p (runtime-pdef 'def)])
+       (let ([p (pdef def)])
 	 (lambda (context)
 	   (to-math-impl math-op context dur p key))))))
   
@@ -62,7 +62,7 @@
        (in* 1 def))
 
       ((_ dur def (:to-key r ...) ...)
-       (let ([p (runtime-pdef 'def)])
+       (let ([p (pdef def)])
 	 (lambda (context)
 	   (let* ([c (in*impl context dur p)]
 		  [c ((to: :to-key r ...) c)] ...)
@@ -76,7 +76,7 @@
        (in: :key 1 def))
 
       ((_ :key dur def (:to-key r ...) ...)
-       (let ([p (runtime-pdef 'def)])
+       (let ([p (pdef def)])
 	 (lambda (context)
 	   (let* ([c (in:impl :key context dur p)]
 		  [c ((to: :to-key r ...) c)] ...)

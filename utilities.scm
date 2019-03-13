@@ -217,8 +217,9 @@
   ;; it possible to write much cleaner notation with almost no quoting.
   (define-syntax defpattern
     (syntax-rules ()
-      ((_ name value)
+      ((_ name rest ... value)
        (begin
+	 rest ...
 	 (set-top-level-value! 'name value)
 	 
 	 (let ([excepts 'pdef-fn-exceptions]

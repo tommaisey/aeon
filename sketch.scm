@@ -4,7 +4,7 @@
 (start)
 (pause)
 
-(define p1
+(defpattern p1
   (o->
     (in* 1 [[0 » 0 [0 × ×]] [0 × » [0 ×]]])
     (to: :scd 2 [V » » » IV » II »])
@@ -12,22 +12,20 @@
 	 (to+ :beat 1/8))
     (cp: (to: :octave -1)
 	 (to+ :beat 1/16))
-    (to: :attack 0.01)
-    (to* :sustain 0.2)
-    (to: :release 0.6)
-    (to: :amp 1/8 [0.4 0.2])
-    (to: :scale minor)
-    (to: :inst "swirly-keys")))
+    (to: :scale dorian)))
 
-;; First harmonic lick ever:
-(define p1
-  (let ([base (pdef [I × × » » IV (each 1 [V VI]) » III »])])
-    (o->
-      (in: :scale-degree 1 base)
-      (cp: (to: :chord-degree (pick [0 2 3 4]))
-	   (to+ :beat 3/64))
-      (in: :scale-degree 3/2 base)
-      (to: :octave 1/2 [-1 0 [0 -2]]))))
+;; First harmonic lick ever. Broke local bindings since trying
+;; runtime pdef evaluation! Bah... This works, although base
+;; is defined in global scope, not too good...
+(defpattern p1
+  (defpattern base
+    (pdef [I × × » » IV (each 1 [V VI]) » III »]))
+  (o->
+    (in: :scale-degree 1 base)
+    (cp: (to: :chord-degree (pick [0 2 3 4]))
+	 (to+ :beat 3/64))
+    (in: :scale-degree 3/2 base)
+    (to: :octave 1/2 [-1 0 [0 -2]])))
 
 ;; Er dunno, random messing about with a beat...
 (define p1
