@@ -42,13 +42,28 @@
 
 (send-synth
  sc3 "sampler"
- (letc ([:sample 0] [:attack 0.01] [:sustain 1] [:pan 0.5] [:speed 1] [:release 0.25] [:amp 0.3])
+ (letc ([:sample 0] [:attack 0.01] [:sustain 1] [:pan 0.5]
+	[:speed 1] [:release 0.25] [:amp 0.3])
    (let* ([rte (mul :speed (buf-rate-scale kr :sample))]
 	  [osc (play-buf 1 ar :sample rte 1 0 no-loop remove-synth)]
 	  [env (env-linen :attack :sustain :release 1 '(-4 -4 -4))]
 	  [env (env-gen kr 1 :amp 0 1 remove-synth env)])
      (out 0 (pan2 (mul env osc)
 		  (add (mul :pan 2) -1) 1)))))
+(send-synth
+ sc3 "swirly-keys"
+ (letc ([:freq 440] [:attack 0.4] [:sustain 1] [:release 1]
+	[:amp 0.2] [:pan 0.5] [:resonance 0.1])
+   (let* ([osc1 (lf-saw ar (add :freq -0.5) 0)]
+	  [osc2 (lf-saw ar (add :freq +1.5) 0.3)]
+	  [amp-env (env-linen :attack :sustain :release 1 (repeat 1 4))]
+	  [amp-env (env-gen kr 1 :amp 0 1 remove-synth amp-env)]
+	  [cut-env (env-linen :attack :sustain :release 1 (repeat 1 4))]
+	  [cut-env (env-gen kr 1 1 0 1 do-nothing cut-env)]
+	  [flt (moog-ff (add osc1 osc2) (add 300 (mul 2000 cut-env)) :resonance 0)])
+     (out 0 (pan2 (mul amp-env flt)
+		  (add (mul :pan 2) -1) 1)))))
+
 
 (define (add-sample path bufnum)
   (async sc3 (b-alloc-read bufnum path 0 0)))
@@ -59,7 +74,7 @@
 (define (sine-perc freq length)
   (play-now "sine-grain"
 	    (cons ":freq" freq)
-	    (cons ":length" length)))
+	    (cons ":sustain" length)))
 
 ;;-----------------------------------------------------------------
 ;; Plays a event at the right time in the future.
