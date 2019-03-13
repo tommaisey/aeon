@@ -24,7 +24,7 @@
 
   ;; Drops at least one value, more if the following values are sustains.
   ;; -> (values num-dropped new-lst)
-  (define (drop-stretched lst)
+  (define (drop-until-next lst)
     (let loop ([lst lst] [n 0])
       (if (and (not (null? lst))
 	       (or (zero? n)
@@ -54,7 +54,7 @@
 	   ((null? p) (loop t pdef #f out))
 	   ((>= t (context-end context)) out)
 	   (else
-	    (let-values ([[stretch-num next-p] (drop-stretched p)])		    
+	    (let-values ([[stretch-num next-p] (drop-until-next p)])		    
 	      (let* ([item (maybe-repeat (car p) last)]
 		     [next-t (+ t (* stretch-num dur))]
 		     [context (rearc context (make-arc t next-t))]

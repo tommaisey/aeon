@@ -2,23 +2,24 @@
 
 (library (harmony)
   (export
-   5th triad sus2 sus4 6th 7th 9th 11th 13th
-   minor major harmMinor pentNeutral pentMajor pentMinor
-   blues dorian phrygian lydian mixolydian locrian wholeTone
-   chromatic arabicA arabicB japanese ryukyu spanish
-   I II III IV V VI VII VIII IX X XI XII
-   Ab A A+ Bb B C C+ Db D D+ Eb E F F+ Gb G G+
+   ;; 5th triad sus2 sus4 6th 7th 9th 11th 13th
+   ;; minor major harmMinor pentNeutral pentMajor pentMinor
+   ;; blues dorian phrygian lydian mixolydian locrian wholeTone
+   ;; chromatic arabicA arabicB japanese ryukyu spanish
+   ;; I II III IV V VI VII VIII IX X XI XII
+   ;; Ab A A+ Bb B C C+ Db D D+ Eb E F F+ Gb G G+
 
    :tuning :octave
    :root :midinote
    :scale :scale-degree
    :chord-shape :chord-degree
+   :scd :chd :chs
 
    event-with-freq
    chord-semitone
    chord-shape)
 
-  (import (scheme) (utilities) (event))
+  (import (scheme) (event) (for (utilities) expand))
 
   (define (midicps midi freqA)
     (* freqA (expt 2 (/ (- midi 69) 12))))
@@ -34,10 +35,10 @@
       (else
        (alist-let
 	e ([oct :octave 0]
-	   [root :root C]
+	   [root :root 0]
 	   [scale :scale minor]
-	   [sc-deg :scale-degree I]
-	   [ch-deg :chord-degree I]
+	   [sc-deg :scale-degree 0]
+	   [ch-deg :chord-degree 0]
 	   [ch-shape :chord-shape triad])
 	(let* ([s (chord-semitone oct sc-deg ch-deg ch-shape scale)]
 	       [f (midicps (+ 60 root s) 440)])
@@ -78,53 +79,30 @@
   (define :chord-shape ':chord-shape)
   (define :scale-degree ':scale-degree)
   (define :chord-degree ':chord-degree)
-  (define :sc-deg :scale-degree)
-  (define :ch-deg :chord-degree)
-  (define :ch-shape :chord-shape)
+  (define :scd :scale-degree)
+  (define :chd :chord-degree)
+  (define :chs :chord-shape)
 
-  ;; Note name and scale numeral definitions
-  (define Gb -6)
-  (define G  -5)
-  (define G+ -4)
-  (define Ab -4)
-  (define A  -3)
-  (define A+ -2)
-  (define Bb -2)
-  (define B  -1)
-  (define C  0)
-  (define C+ 1)
-  (define Db 1)
-  (define D  2)
-  (define D+ 3)
-  (define Eb 3)
-  (define E  4)
-  (define F  5)
-  (define F+ 6)
-
-  (define I    0)
-  (define II   1)
-  (define III  2)
-  (define IV   3)
-  (define V    4)
-  (define VI   5)
-  (define VII  6)
-  (define VIII 7)
-  (define IX  8)
-  (define X    9)
-  (define XI   10)
-  (define XII  11)
-
+  ;;------------------------------------------------------
   ;; Used for chords and scales
   (define-record-type shape
     (fields (immutable name) ;; symbol
 	    (immutable degrees) ;; list
 	    (immutable len)))  ;; number
 
+  ;; Defaults used in this file, but replaced in top-level below.
+  (define triad (make-shape 'triad '(0 2 4) 3))
+  (define minor (make-shape 'minor '(0 2 4 5 7 8 10) 7))
+
   (define-syntax def-shape
     (syntax-rules ()
       ((_ name lst)
-       (define name (make-shape 'name 'lst (length 'lst))))))
+       (defpattern name (make-shape 'name 'lst (length 'lst))))))
 
+  ;;------------------------------------------------------
+  ;; These are added to the top-level environment so they can
+  ;; be distinguished from functions in a pdef. They must come
+  ;; last in this file.
   ;; Chord shape definitions (in degrees of current scale)
   (def-shape 5th   (0 4))
   (def-shape triad (0 2 4))
@@ -155,4 +133,36 @@
   (def-shape japanese    (0 4 6 7 11))
   (def-shape ryukyu      (0 4 5 7 11))
   (def-shape spanish     (0 1 3 4 5 6 8 10))
-  (def-shape chromatic   (0 1 2 3 4 5 6 7 8 9 10 11)))
+  (def-shape chromatic   (0 1 2 3 4 5 6 7 8 9 10 11))
+  
+  (defpattern Gb -6)
+  (defpattern G  -5)
+  (defpattern G+ -4)
+  (defpattern Ab -4)
+  (defpattern A  -3)
+  (defpattern A+ -2)
+  (defpattern Bb -2)
+  (defpattern B  -1)
+  (defpattern C  0)
+  (defpattern C+ 1)
+  (defpattern Db 1)
+  (defpattern D  2)
+  (defpattern D+ 3)
+  (defpattern Eb 3)
+  (defpattern E  4)
+  (defpattern F  5)
+  (defpattern F+ 6)
+
+  (defpattern I    0)
+  (defpattern II   1)
+  (defpattern III  2)
+  (defpattern IV   3)
+  (defpattern V    4)
+  (defpattern VI   5)
+  (defpattern VII  6)
+  (defpattern VIII 7)
+  (defpattern IX  8)
+  (defpattern X    9)
+  (defpattern XI   10)
+  (defpattern XII  11)
+  )

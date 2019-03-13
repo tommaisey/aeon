@@ -4,12 +4,21 @@
 (start)
 (pause)
 
+(define p1
+  (o->
+    (in* 1 [[0 » 0 [0 × ×]] [0 × » [0 ×]]])
+    (to: :scd 2 [! V » » » IV » II »])
+    (cp: (to: :chd 3/2 [! II V VI III])
+	 (to+ :beat 1/8))
+    (cp: (to: :octave -1)
+	 (to+ :beat 1/16))))
+
 ;; First harmonic lick ever:
 (define p1
   (let ([base (pdef [! I × × » » IV (each 1 [! V VI]) » III »])])
     (o->
       (in: :scale-degree 1 base)
-      (cp: (to: :chord-degree (pick [0 2 3 4 6]))
+      (cp: (to: :chord-degree (pick [0 2 3 4]))
 	   (to+ :beat 3/64))
       (in: :scale-degree 3/2 base)
       (to: :octave 1/2 [-1 0 [0 -2]]))))

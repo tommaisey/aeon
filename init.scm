@@ -154,7 +154,7 @@
 ;; Set up some inital drum samples
 (begin
   (define drum-dir
-  "/Users/tommaisey/Dropbox/Music Production/Samples & Patches/Drum Samples/")
+  "/Users/tom/Dropbox/Music Production/Samples & Patches/Drum Samples/")
   (define (drum-path file)
     (string-append drum-dir file))
   (define (tape-drum file)

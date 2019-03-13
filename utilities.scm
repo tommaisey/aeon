@@ -23,6 +23,7 @@
 	  unsafe-list?
 	  push-front
 	  alist-let
+	  defpattern
 	  check-type
 	  println)
 
@@ -203,6 +204,34 @@
 	 (set! found (append targets found))
 	 (let ([name (cdr (assq key found))] ...)
 	   body ...)))))
+
+  ;; This really just does a normal 'define', but also adds the
+  ;; name of the object to a global list of exceptions. This can
+  ;; be used to prevent evaluation of lists with these symbols at
+  ;; the front by pdef. This makes it possible to avoid using quoting
+  ;; in pdefs, which makes them easier to read by far.
+
+  ;; This is potentially a dirty bastard. Sets the top-level-value
+  ;; of 'name', and also adds it to a list of symbols that shouldn't
+  ;; be treated as functions by pdef. Very uncool Scheming, but makes
+  ;; it possible to write much cleaner notation with almost no quoting.
+  (define-syntax defpattern
+    (syntax-rules ()
+      ((_ name value)
+       (begin
+	 (set-top-level-value! 'name value)
+	 
+	 (let ([excepts 'pdef-fn-exceptions]
+	       [pdef-fn? 'pdef-fn? ]
+	       [t-set! set-top-level-value!]
+	       [t-get top-level-value])
+	   (if (top-level-bound? excepts)
+	       (t-set! excepts (cons 'name (t-get excepts)))
+	       (t-set! excepts (list 'name)))
+	   (when (not (top-level-bound? pdef-fn?))
+	     (t-set! pdef-fn?
+		     (lambda (sym)
+		       (not (exists (lambda (v) (eq? v sym)) (t-get excepts)))))))))))
 
   ;;------------------------------------------------------------------------
    ;; Throw an error if the wrong type is used

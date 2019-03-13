@@ -28,8 +28,9 @@
        (to: key 1 def))
       
       ((_ key dur def)
-       (lambda (context)
-	 (to:impl context dur (pdef def) key)))))
+       (let ([p (runtime-pdef 'def)])
+	 (lambda (context)
+	   (to:impl context dur p key))))))
 
   ;; A general 'to', taking a math op, a key and a def. The math
   ;; op is called with the value for key and the value returned by def.
@@ -40,8 +41,9 @@
        (to math-op key 1 def))
       
       ((_ math-op key dur def)
-       (lambda (context)
-	 (to-math-impl math-op context dur (pdef def) key)))))
+       (let ([p (runtime-pdef 'def)])
+	 (lambda (context)
+	   (to-math-impl math-op context dur p key))))))
   
   (define-syntax to+
     (syntax-rules () ((_ x ...) (to + x ...))))
@@ -60,10 +62,11 @@
        (in* 1 def))
 
       ((_ dur def (:to-key r ...) ...)
-       (lambda (context)
-	 (let* ([c (in*impl context dur (pdef def))]
-		[c ((to: :to-key r ...) c)] ...)
-	   (contexts-merge context c))))))
+       (let ([p (runtime-pdef 'def)])
+	 (lambda (context)
+	   (let* ([c (in*impl context dur p)]
+		  [c ((to: :to-key r ...) c)] ...)
+	     (contexts-merge context c)))))))
 
   ;; A node that adds events with a single specified property.
   (define-syntax in:
@@ -73,10 +76,11 @@
        (in: :key 1 def))
 
       ((_ :key dur def (:to-key r ...) ...)
-       (lambda (context)
-	 (let* ([c (in:impl :key context dur (pdef def))]
-		[c ((to: :to-key r ...) c)] ...)
-	   (contexts-merge context c))))))
+       (let ([p (runtime-pdef 'def)])
+	 (lambda (context)
+	   (let* ([c (in:impl :key context dur p)]
+		  [c ((to: :to-key r ...) c)] ...)
+	     (contexts-merge context c)))))))
 
   ;; The implementation of these could be a lot better, but this
   ;; should get things working (to an extent I can use).
