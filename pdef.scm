@@ -1,49 +1,55 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (pdef)
-  (export pdef • » × !)
+  (export pdef • » × pdef-node-tag)
   (import (scheme) (node-eval))
 
-  ;;------------------------------------------------------------------
-  ;; A special marker used by these macros
-  (define !) ;; Denotes a list that shouldn't be evaluated
-
   ;;-------------------------------------------------------------------
-  ;; Allows definition of nested lists without (quasi)quoting.
+  ;; Defines a nested pattern, with special symbols for rests, sustains
+  ;; and repeats of previous notes.
   ;;
-  ;; Lists not starting with an identifier are just a list.
-  ;; Lists starting with ! are just a list (prevents evaluation as a fn)
-  ;; Lists starting with any other identifier are evaluated as functions. 
+  ;; The tricky part about this is allowing embedded function/macro
+  ;; calls whilst not requiring users to understand quasiquoting.
   ;;
-  ;; (auto-quasi (1 "hi" (+ 2 2) (5 (+ 5 5)))) => (1 "hi" 4 (5 10))
-  ;; (define x 7)
-  ;; (auto-quasi (x 8 9)   => error, calls x as a fn
-  ;; (auto-quasi (! x y z) => (7 8 9)
-  ;; Some characters with special meaning in pdefs, namely • » ×
-  ;; which denote a rest, a sustain and a repeat respectively.
+  ;; We can detect at runtime whether a first-position identifier is
+  ;; a procedure, but for macros we must rely on them being tagged
+  ;; using Chez Scheme's define-property, which operates in the compile
+  ;; time environment. See:
+  ;; http://cisco.github.io/ChezScheme/csug9.5/syntax.html#./syntax:h4
+  ;;
+  ;; (pdef [1 "hi" (+ 2 2) (5 (+ 5 5))]) => (1 "hi" 4 (5 10))
+  ;; (pdef [0 (pick [2 3 •]) (rnd 0 3)]) => (0 <proc> <proc>)
   
   (define-syntax pdef
     (lambda (x)
-      (syntax-case x (• » × !)
+      (syntax-case x (• » ×)
 
-	((m (× v n))
+	((_ (× v n))
 	 (syntax (build-splicer '× v n)))
 
-	((m (» v n))
+	((_ (» v n))
 	 (syntax (build-splicer '» v n)))
 
-	((m (• v ...))
+	((_ (• v ...))
 	 (syntax (pdef ('• v ...))))
-
-	((m (! v ...)) ;; ! escapes, don't evaluate
+	
+	((_ (v q ...)) (identifier? (syntax v))
+	 (lambda (property-lookup)
+	   (if (property-lookup #'v #'pdef-node-tag)
+		 (syntax (v q ...))
+		 (syntax (if (procedure? v)
+			     (v q ...)
+			     (list (pdef v) (pdef q) ...))))))
+	
+	((_ (v ...))
 	 (syntax (list (pdef v) ...)))
-	
-	((m (v q ...)) (identifier? (syntax v))
-	 (syntax (v q ...))) ;; evaluate as function
-	
-	((m (v ...))
-	 (syntax (pdef (! v ...))))
 
-	((m v)
+	((_ v)
 	 (syntax v)))))
+
+  ;;------------------------------------------------------------------
+  ;; The identifier can be used to tag other identifiers using Chez
+  ;; Scheme's define-property. Primarily used to prevent 
+  (define pdef-node-tag)
+  
   )

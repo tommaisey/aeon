@@ -103,6 +103,11 @@
 		  [n (exact (truncate (/ t measures)))])
 	     (get-leaf (list-nth lst (modulo n len)) context)))))))
 
+  ;; Make sure that pdef recognises calls to these macros.
+  (define-property pick pdef-node-tag #t)
+  (define-property each pdef-node-tag #t)
+
+  ;;--------------------------------------------------------------------
   ;; Some leaves allow the user to specify which properties of the
   ;; context's current event are considered when contextualising. This
   ;; makes the implementation of that simpler.

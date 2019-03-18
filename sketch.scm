@@ -6,7 +6,7 @@
 
 ;; First harmonic lick ever:
 (define p1
-  (let ([base (pdef [! I × × » » IV (each 1 [! V VI]) » III »])])
+  (let ([base (pdef [I × × » » IV (each 1 [V VI]) » III »])])
     (o->
       (in: :scale-degree 1 base)
       (cp: (to: :chord-degree (pick [0 2 3 4 6]))
