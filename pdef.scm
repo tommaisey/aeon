@@ -1,8 +1,22 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (pdef)
-  (export pdef ! • » × pdef-node-tag)
+  (export pdef
+	  • » × !
+	  repeat-sym
+	  sustain-sym
+	  rest-sym
+	  tag-pdef-callable)
+  
   (import (scheme) (node-eval))
+
+  (define × '×) ;; Denotes a repeated value in a pdef
+  (define » '») ;; Denotes a sustained value in a pdef
+  (define • '•) ;; Denotes a musical rest in a pdef
+  (define ! '!) ;; Prevents a pdef from being evaluated
+  (define repeat-sym ×)
+  (define sustain-sym »)
+  (define rest-sym •)
 
   ;;-------------------------------------------------------------------
   ;; Defines a nested pattern, with special symbols for rests, sustains
@@ -19,6 +33,10 @@
   ;;
   ;; (pdef [1 "hi" (+ 2 2) (5 (+ 5 5))]) => (1 "hi" 4 (5 10))
   ;; (pdef [0 (pick [2 3 •]) (rnd 0 3)]) => (0 <proc> <proc>)
+  ;;
+  ;; Additionly there are still cases where we want to place a procedure
+  ;; in the first position but not have it evaluated. In this case it's
+  ;; necessary to 
   
   (define-syntax pdef
     (lambda (x)
@@ -35,7 +53,7 @@
 	
 	((_ (v q ...)) (identifier? (syntax v))
 	 (lambda (property-lookup)
-	   (if (property-lookup #'v #'pdef-node-tag)
+	   (if (property-lookup #'v #'pdef-call-tag)
 		 (syntax (v q ...))
 		 (syntax (if (procedure? v)
 			     (v q ...)
@@ -47,13 +65,14 @@
 	((_ v)
 	 (syntax v)))))
 
-  ;;------------------------------------------------------------------
-  ;; We tag certain identifiers with this using Chez Scheme's define-property.
-  ;; Primarily used to allow macro calls inside pdefs.
-  (define pdef-node-tag)
 
-  ;; This is used to 'escape' a pdef list, in the case where we want a list
-  ;; of procedures, rather than calling the procedure in the first position.
-  (define !)
+  ;;------------------------------------------------------------------
+  ;; Used for compile-time tagging, see comment to pdef.
+  (define pdef-call-tag)
+
+  (define-syntax tag-pdef-callable
+    (syntax-rules ()
+      ((_ id)
+       (define-property id pdef-call-tag #t))))
   
   )

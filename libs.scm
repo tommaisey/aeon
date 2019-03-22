@@ -35,8 +35,8 @@
 (recompile-import playback)
 
 ;;-----------------------------------------------------
-;; Stop a mutex in the innards of Chez from blocking on Emacs REPLs.
-;; This prevents our background thread from running in Emacs.
+;; Stop a mutex in the innards of Chez from blocking in Emacs REPLs,
+;; which prevents our background thread from running.
 (define (fix-emacs-repl)
   (let ([stdin (transcoded-port (standard-input-port)
 				(make-transcoder (utf-8-codec)))])

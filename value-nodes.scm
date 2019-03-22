@@ -90,6 +90,8 @@
 	 (lambda (context)
 	   (get-leaf (list-nth lst ((rnd 0 len key/keys) context)) context))))))
 
+  (tag-pdef-callable pick) ;; Tag so pdef recognises as a macro
+
   ;;--------------------------------------------------------------------
   ;; Rhythmic & sequencing operations.
   ;; Choose from a list according to the current measure
@@ -103,9 +105,7 @@
 		  [n (exact (truncate (/ t measures)))])
 	     (get-leaf (list-nth lst (modulo n len)) context)))))))
 
-  ;; Make sure that pdef recognises calls to these macros.
-  (define-property pick pdef-node-tag #t)
-  (define-property each pdef-node-tag #t)
+  (tag-pdef-callable each) ;; Tag so pdef recognises as a macro
 
   ;;--------------------------------------------------------------------
   ;; Some leaves allow the user to specify which properties of the

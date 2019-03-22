@@ -4,6 +4,20 @@
 (start)
 (pause)
 
+;; Little simple chord prog
+(define p1
+  (o->
+    (o->
+      (in: :scd 2 [! I » » » » » VII » » » IV » » » III »])
+      
+      (cp: (to: :chd 3/2 [! V IV III II])
+	   (to: :pan (rnd 0.2 0.8)))
+      (cp: (to: :octave -1))
+      (to: :attack 0.01)
+      (to: :inst "swirly-keys"))
+    (o->
+      (in: :sample 1 [! bd sn [! bd bd] sn]))))
+
 ;; First harmonic lick ever:
 (define p1
   (let ([base (pdef [I × × » » IV (each 1 [V VI]) » III »])])
@@ -11,7 +25,7 @@
       (in: :scd 1 base)
       (cp: (to: :chd (pick [0 2 3 4 6]))
 	   (to+ :beat 3/64))
-      (in: :scale-degree 3/2 base)
+      (in: :scd 3/2 base)
       (to: :octave 1/2 [-1 0 [0 -2]]))))
 
 ;; Er dunno, random messing about with a beat...

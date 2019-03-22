@@ -13,6 +13,7 @@
    :root :midinote
    :scale :scale-degree
    :chord-shape :chord-degree
+   :scd :chd :chs
 
    event-with-freq
    chord-semitone
@@ -78,9 +79,9 @@
   (define :chord-shape ':chord-shape)
   (define :scale-degree ':scale-degree)
   (define :chord-degree ':chord-degree)
-  (define :sc-deg :scale-degree)
-  (define :ch-deg :chord-degree)
-  (define :ch-shape :chord-shape)
+  (define :scd :scale-degree)
+  (define :chd :chord-degree)
+  (define :chs :chord-shape)
 
   ;; Note name and scale numeral definitions
   (define Gb -6)

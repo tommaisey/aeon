@@ -2,7 +2,7 @@
 
 (library (subdivide)
   (export in*impl in:impl to:impl to-math-impl)
-  (import (scheme) (utilities) (event) (context) (node-eval))
+  (import (scheme) (utilities) (event) (context) (node-eval) (pdef))
 
   (define :sustain ':sustain)
 
@@ -76,9 +76,9 @@
       (cond
        ((is-rest? val) '())
        ((context? val)
-	(reverse (context-events-next val)))
+	    (reverse (context-events-next val)))
        ((not (number? val))
-	(raise (format "pattern error: got '~A', expecting a number" val)))
+	    (raise (format "pattern error: got '~A', expecting a number" val)))
        (else (maker val context)))))
 
   ;; Adds blank events to the context with a subdividing pattern (pdef)
