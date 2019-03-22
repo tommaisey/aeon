@@ -10,8 +10,9 @@
 ;; ------------------------------------------------------------
 (library (logic-nodes)
   (export
-   in* in: to: to+ to- to* to/ to? cp: cp? is?
-   any-of all-of none-of phrase)
+   in* in: to: to+ to- to* to/ to?
+   tr: tr? cp: cp? ch:
+   is? any-of all-of none-of phrase)
 
   (import
     (chezscheme)
@@ -78,25 +79,39 @@
 		[c ((to: to-key r ...) c)] ...)
 	   (contexts-merge context c))))))
 
-  ;; The implementation of these could be a lot better, but this
-  ;; should get things working (to an extent I can use).
+  ;; Transforms each event and returns the transformed copies only.
+  ;; Needed? Really just a thin wrapper around x->
+  (define (tr: . cnodes)
+    (lambda (context)
+      (context-trim (render (apply x-> cnodes) context))))
+
+  ;; Same as tr:, but only events matching pred are returned.
+  (define (tr? pred . cnodes)
+    (lambda (context)
+      ((apply tr: cnodes) (context-filter pred context))))
+  
+  ;; Same as tr:, but returns both the copies and the originals.
   (define (cp: . cnodes)
     (lambda (context)
-      (let ([changed (render (apply x-> cnodes) context)])
-	(contexts-merge context (context-trim changed)))))
-  
+      (contexts-merge context ((apply tr: cnodes) context))))
+
+  ;; Same as tr?, but returns both the filtered copies and the originals.
   (define (cp? pred . cnodes)
     (lambda (context)
-      (let* ([filtered (context-filter pred context)]
-	     [changed (render (apply x-> cnodes) filtered)])
-	(contexts-merge context (context-trim changed)))))
+      (contexts-merge context ((apply tr? pred cnodes) context))))
 
+  ;; Applies each op to the original context independently, and returns
+  ;; all the results as well as the originals. Works best with tr, tr?
+  (define (ch: . ops)
+    (lambda (context)
+      (fold-left (lambda (c o) (contexts-merge c (o context))) context ops)))
+
+  ;; Like cm?, but merges via the predicate. The returned list contains
+  ;; unaltered notes
   (define (to? pred . cnodes)
     (lambda (context)
-      (let* ([unfiltered (context-filter (lambda (c) (not (pred c))) context)]
-	     [filtered (context-filter pred context)]
-	     [changed (render (apply x-> cnodes) filtered)])
-	(contexts-merge unfiltered (context-trim changed)))))
+      (let* ([unfiltered (context-filter (lambda (c) (not (pred c))) context)])
+	(contexts-merge unfiltered ((apply tr? pred cnodes) context)))))
   
   ;;---------------------------------------------------------
   ;; Predicates & filtering.

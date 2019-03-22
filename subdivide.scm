@@ -61,13 +61,13 @@
 		     [new (if (unsafe-list? item)
 			      (subdiv context dur item perform)
 			      (perform context item))])
-		(loop next-t next-p item (append new out)))))))))))
+		(loop next-t next-p item (append out new)))))))))))
 
   ;; Just wraps the subdiv call, building a new context.
   (define (apply-subdiv-to-context context pdur pdef perform-fn)
     (context-trim
      (context-with-events
-      context (reverse (subdiv context pdur pdef perform-fn)))))
+      context (subdiv context pdur pdef perform-fn))))
 
   ;; Helper for 'in' impls below to get a value from a leaf node,
   ;; and to use it to add a new note/notes to the context.
@@ -76,9 +76,9 @@
       (cond
        ((is-rest? val) '())
        ((context? val)
-	    (reverse (context-events-next val)))
+	(context-events-next val))
        ((not (number? val))
-	    (raise (format "pattern error: got '~A', expecting a number" val)))
+	(raise (format "pattern error: got '~A', expecting a number" val)))
        (else (maker val context)))))
 
   ;; Adds blank events to the context with a subdividing pattern (pdef)
@@ -93,7 +93,7 @@
 		[dur (/ (context-length context) num)]
 		[start (context-start context)])
 	   (define (make i) (make-event (+ start (* i dur)) (:sustain dur)))
-	   (map make (reverse (iota num)))))
+	   (map make (iota num))))
        context leaf))
     (apply-subdiv-to-context context pdur pdef perform))
 
