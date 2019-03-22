@@ -29,8 +29,8 @@
      e ([freq ':freq #f]
 	[midi :midinote #f])
      (cond
-      (freq freq)
-      (midi (midicps midi 440))
+      (freq e)
+      (midi (event-set e ':freq (midicps midi 440)))
       (else
        (alist-let
 	e ([oct :octave 0]

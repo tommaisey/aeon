@@ -8,8 +8,8 @@
 (define p1
   (let ([base (pdef [I × × » » IV (each 1 [V VI]) » III »])])
     (o->
-      (in: :scale-degree 1 base)
-      (cp: (to: :chord-degree (pick [0 2 3 4 6]))
+      (in: :scd 1 base)
+      (cp: (to: :chd (pick [0 2 3 4 6]))
 	   (to+ :beat 3/64))
       (in: :scale-degree 3/2 base)
       (to: :octave 1/2 [-1 0 [0 -2]]))))
@@ -19,21 +19,23 @@
   (let ([bd1 (in* 1 [4 2 [1 •] 1])]
 	[bd2 (in* 1 [1 2 [2 •] 1])])
     (o->
-      (in: 2 [! bd2 bd1]
+      (in* 2 [! bd2 bd1]
 	(:sample bd)
-	(:amp 1/2 [0.25 (rnd 0.01 0.1) (rnd 0.01 0.1) (rnd 0.01 0.1)]))
+	(:amp 1/2 [0.25 (rnd 0.01 0.1) (rnd 0.01 0.1) (rnd 0.01 0.1)])
+	(:speed 1))
      
-      (in: 1 [1 4 (pick [• 2 4 3]) 1]
+      (in* 1 [1 4 (pick [• 2 4 3]) 1]
 	(:sample hh)
 	(:amp 1/2 [0.1 0.1 0.25 0.1])
 	(:speed (rnd 0.95 1.05))
 	(:pan (rnd 0.6 0.8)))
       
-      (in: 1 [• 1 • 1]
+      (in* 1 [• 1 • 1]
 	(:sample sn)
-	(:pan 0.45))
+	(:pan 0.45)
+	(:speed 1))
 
-      (in: 1 [•
+      (in* 1 [•
 	      [(pick [3 2 4 •]) (pick [2 4 •])]
 	      (pick [• 1 3])
 	      [• (pick [• 1 2])]]
@@ -41,8 +43,10 @@
 	(:amp 1/2 [0.15 (rnd 0.1 0.4) (rnd 0.15 0.4) 0.15])
 	(:speed (rnd 0.8 0.85))
 	(:pan (rnd 0.2 0.8)))
+
+      (to* :speed 1/4 [• 1.5])
      
-      (to! :inst "sampler"))))
+      (to: :inst "sampler"))))
 
 ;; Test in:
 (define p1 (o-> p1 (in: :freq 1 [880 440 990 770])))
@@ -75,12 +79,12 @@
   (o->
     (in* 1 [2 (pick [• 1 3]) (pick [1 3 •]) 2]
       (:sample bd)
-      (:inst "sampler-mono")
+      (:inst "sampler")
       (:amp 1/2 [0.3 0.05 (rnd 0.1 0.15)]))
 
     (in* 1 [• 1 • 1]
       (:sample sn)
-      (:inst "sampler-mono")
+      (:inst "sampler")
       (:amp 0.4)
       (:sustain 0.1)
       (:release 0.15))
@@ -88,7 +92,7 @@
    (o->
      (in* 2 [• • (pick [• 1]) • [• 1] (pick [• 1 2]) • •]
        (:sample sn)
-       (:inst "sampler-mono")
+       (:inst "sampler")
        (:amp 0.1)
        (:sustain 0.05)
        (:release 0.05))
@@ -96,7 +100,7 @@
 
    (in* 1/4 [1 (rnd 0 1) 1 (rnd 0 3)]
      (:sample hh)
-     (:inst "sampler-mono")
+     (:inst "sampler")
      (:amp 1/3 [0.05 0.1])
      (:pan (rnd 0.0 1.0)))
 
@@ -125,14 +129,14 @@
       (:freq 3/2 [• [• 440]]))
 
     (in* 1/2 [• 1]
-      (:inst "sampler-mono")
+      (:inst "sampler")
       (:sample sn))
 
     (in* 1 [1 • [(rnd 0 1) • • (rnd 0 4)] (rnd 0 2)]
-      (:inst "sampler-mono")
+      (:inst "sampler")
       (:sample bd))
 
     (in* 1/2 [• (rnd 1 6) • 1]
-      (:inst "sampler-mono")
+      (:inst "sampler")
       (:amp 1/2 [0.15 0.2])
       (:sample hh))))

@@ -58,11 +58,9 @@
 	      (let* ([item (maybe-repeat (car p) last)]
 		     [next-t (+ t (* stretch-num dur))]
 		     [context (rearc context (make-arc t next-t))]
-		     [new (cond
-			   ((is-rest? item) '())
-			   ((unsafe-list? item)
-			    (subdiv context dur item perform))
-			   (else (perform context item)))])
+		     [new (if (unsafe-list? item)
+			      (subdiv context dur item perform)
+			      (perform context item))])
 		(loop next-t next-p item (append new out)))))))))))
 
   ;; Just wraps the subdiv call, building a new context.
@@ -71,18 +69,17 @@
      (context-with-events
       context (reverse (subdiv context pdur pdef perform-fn)))))
 
-  ;; Used by the 'in' impls below to get a value from a leaf node,
+  ;; Helper for 'in' impls below to get a value from a leaf node,
   ;; and to use it to add a new note/notes to the context.
   (define (in-adder maker context leaf)
     (let ([val (get-leaf-early leaf (context-start context) context)])
-	(cond
-	 ((context? val)
-	  (reverse (context-events-next val)))
-	 ((is-rest? val)
-	  '())
-	 ((not (number? val))
-	  (raise (format "pattern error: got '~A', expecting a number" val)))
-	 (else (maker val context)))))
+      (cond
+       ((is-rest? val) '())
+       ((context? val)
+	(reverse (context-events-next val)))
+       ((not (number? val))
+	(raise (format "pattern error: got '~A', expecting a number" val)))
+       (else (maker val context)))))
 
   ;; Adds blank events to the context with a subdividing pattern (pdef)
   ;; A pdef value of 1 gives one event.
@@ -111,23 +108,29 @@
        context leaf))
     (apply-subdiv-to-context context pdur pdef perform))
 
+  ;; Helper for 'to' forms below.
+  (define (set-or-rest c leaf key val-transform)
+    (let ([val (get-leaf leaf c)])
+      (if (is-rest? val)
+	  (context-event c)
+	  (event-set (context-event c) key (val-transform val)))))
+
   ;; Takes a pdef template and a context, and returns a new context with the
   ;; values in the pdef applied to any events in the context.
   (define (to:impl context pdur pdef key)
     (define (perform context leaf)
       (define (morpher c)
-	(event-set (context-event c) key (get-leaf leaf c)))
+	(set-or-rest c leaf key (lambda (v) v)))
       (context-events-next (context-map morpher (context-trim context))))
     (apply-subdiv-to-context context pdur pdef perform))
   
   (define (to-math-impl math-fn context pdur pdef key)
     (define (perform context leaf)
       (define (morpher c)
-	(let* ([event (context-event c)]
-	       [current (event-get event key #f)])
+	(let ([current (event-get (context-event c) key #f)])
 	  (if (eqv? current #f)
-	      event
-	      (event-set event key (math-fn current (get-leaf leaf c))))))
+	      (context-event c)
+	      (set-or-rest c leaf key (lambda (v) (math-fn current v))))))
       (context-events-next (context-map morpher (context-trim context))))
     (apply-subdiv-to-context context pdur pdef perform))
   
