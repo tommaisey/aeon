@@ -78,6 +78,8 @@
 	(cond
 	 ((context? val)
 	  (reverse (context-events-next val)))
+	 ((is-rest? val)
+	  '())
 	 ((not (number? val))
 	  (raise (format "pattern error: got '~A', expecting a number" val)))
 	 (else (maker val context)))))

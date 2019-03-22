@@ -59,23 +59,23 @@
       ((_ def)
        (in* 1 def))
 
-      ((_ dur def (:to-key r ...) ...)
+      ((_ dur def (to-key r ...) ...)
        (lambda (context)
 	 (let* ([c (in*impl context dur (pdef def))]
-		[c ((to: :to-key r ...) c)] ...)
+		[c ((to: to-key r ...) c)] ...)
 	   (contexts-merge context c))))))
 
   ;; A node that adds events with a single specified property.
   (define-syntax in:
     (syntax-rules ()
 
-      ((_ :key def)
-       (in: :key 1 def))
+      ((_ key def)
+       (in: key 1 def))
 
-      ((_ :key dur def (:to-key r ...) ...)
+      ((_ key dur def (to-key r ...) ...)
        (lambda (context)
-	 (let* ([c (in:impl :key context dur (pdef def))]
-		[c ((to: :to-key r ...) c)] ...)
+	 (let* ([c (in:impl key context dur (pdef def))]
+		[c ((to: to-key r ...) c)] ...)
 	   (contexts-merge context c))))))
 
   ;; The implementation of these could be a lot better, but this

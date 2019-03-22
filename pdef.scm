@@ -1,7 +1,7 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (pdef)
-  (export pdef • » × pdef-node-tag)
+  (export pdef ! • » × pdef-node-tag)
   (import (scheme) (node-eval))
 
   ;;-------------------------------------------------------------------
@@ -22,7 +22,7 @@
   
   (define-syntax pdef
     (lambda (x)
-      (syntax-case x (• » ×)
+      (syntax-case x (! » ×)
 
 	((_ (× v n))
 	 (syntax (build-splicer '× v n)))
@@ -30,8 +30,8 @@
 	((_ (» v n))
 	 (syntax (build-splicer '» v n)))
 
-	((_ (• v ...))
-	 (syntax (pdef ('• v ...))))
+	((_ (! v ...))
+	 (syntax (list (pdef v) ...)))
 	
 	((_ (v q ...)) (identifier? (syntax v))
 	 (lambda (property-lookup)
@@ -48,8 +48,12 @@
 	 (syntax v)))))
 
   ;;------------------------------------------------------------------
-  ;; The identifier can be used to tag other identifiers using Chez
-  ;; Scheme's define-property. Primarily used to prevent 
+  ;; We tag certain identifiers with this using Chez Scheme's define-property.
+  ;; Primarily used to allow macro calls inside pdefs.
   (define pdef-node-tag)
+
+  ;; This is used to 'escape' a pdef list, in the case where we want a list
+  ;; of procedures, rather than calling the procedure in the first position.
+  (define !)
   
   )
