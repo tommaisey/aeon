@@ -11,7 +11,7 @@
 (library (logic-nodes)
   (export
    in* in: to: to+ to- to* to/ to?
-   tr: tr? cp: cp? ch:
+   rp: tr: tr? cp: cp? ch:
    is? any-of all-of none-of phrase)
 
   (import
@@ -79,13 +79,29 @@
 		[c ((to: to-key r ...) c)] ...)
 	   (contexts-merge context c))))))
 
+  ;; A node that replaces the input with the result of applying
+  ;; it to each pattern member, which must all be functional nodes.
+  (define-syntax rp:
+    (syntax-rules ()
+
+      ((_ def)
+       (rp: 1 def))
+
+      ((_ dur def)
+       (lambda (context)
+	 (rp:impl context dur (pdef def))))))
+
+  ;;---------------------------------------------------------------
+  ;; Composite chaining operators. Starting to get the feeling that
+  
   ;; Transforms each event and returns the transformed copies only.
-  ;; Needed? Really just a thin wrapper around x->
   (define (tr: . cnodes)
     (lambda (context)
-      (context-trim (render (apply x-> cnodes) context))))
+      (render (apply x-> cnodes) context)))
 
   ;; Same as tr:, but only events matching pred are returned.
+  ;; Confusing? People may expact this to replace only events
+  ;; matching pred, and to let the others through.
   (define (tr? pred . cnodes)
     (lambda (context)
       ((apply tr: cnodes) (context-filter pred context))))
@@ -104,7 +120,7 @@
   ;; all the results as well as the originals. Works best with tr, tr?
   (define (ch: . ops)
     (lambda (context)
-      (fold-left (lambda (c o) (contexts-merge c (o context))) context ops)))
+      (fold-left (lambda (c op) (contexts-merge c ((tr: op) context))) context ops)))
 
   ;; Like cm?, but merges via the predicate. The returned list contains
   ;; unaltered notes

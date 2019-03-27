@@ -1,7 +1,7 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (subdivide)
-  (export in*impl in:impl to:impl to-math-impl)
+  (export in*impl in:impl to:impl to-math-impl rp:impl)
   (import (scheme) (utilities) (event) (context) (node-eval) (pdef))
 
   (define :sustain ':sustain)
@@ -132,6 +132,14 @@
 	      (context-event c)
 	      (set-or-rest c leaf key (lambda (v) (math-fn current v))))))
       (context-events-next (context-map morpher (context-trim context))))
+    (apply-subdiv-to-context context pdur pdef perform))
+
+  (define (rp:impl context pdur pdef)
+    (define (perform context leaf)
+      (let ([result (get-leaf leaf context)])
+	(if (not (context? result))
+	    (raise (format "pattern error: got '~A', rp: expects a procedure" result))
+	    (context-events-next result))))
     (apply-subdiv-to-context context pdur pdef perform))
   
   )

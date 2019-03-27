@@ -19,13 +19,15 @@
   (import (scheme) (utilities) (event) (context))
 
   ;;--------------------------------------------------------------
-  ;; Call on the root of a tree to fill a context with events. 
-  (define (render p context)
-    (if (arc-mover? p)
-	(let ([code (arc-mover-logic p)]
-	      [top-arc ((arc-mover-move p) (context-arc context))])
-	  (code (context-with-arc context top-arc)))
-	(p context)))
+  ;; Call on the root of a tree to fill a context with events.
+  (define (render item context)
+    (cond
+     ((arc-mover? item)
+      (let ([code (arc-mover-logic item)]
+	    [top-arc ((arc-mover-move item) (context-arc context))])
+	(context-trim (code (context-with-arc context top-arc)))))
+     
+     (else (item context))))
 
   (define (render-arc p arc)
     (render p (make-context arc)))
@@ -42,17 +44,14 @@
   ;; The event doesn't yet exist, so e.g. next/prev and seeding would be broken.
   ;; In this case, add an empty event to the context before evaluating.
   (define (get-leaf-early leaf time-to-add context)
-    (let ([proc? (procedure? leaf)]
-	  [arcb? (arc-mover? leaf)])
-      (if (or proc? arcb?)
-	  (let ([dummy-ctx (context-insert context (make-event time-to-add))])
-	    (if proc?
-		(leaf dummy-ctx)
-		(render (arc-mover-logic leaf) dummy-ctx)))
-	  leaf)))
+    (if (or (procedure? leaf)
+	    (arc-mover? leaf))
+	(get-leaf leaf (context-insert context (make-event time-to-add)))
+	leaf))
 
-  ;; A special type that denotes a context-function which wants to mutate
-  ;; the context it receives as input to get a given output.
+  ;; A special type that denotes a context-function which wants to
+  ;; shift the arc of the context it receives as input. This is so
+  ;; that it can base its decisions now on something in the past/future.
   (define-record-type arc-mover
     (fields (immutable logic)
 	    (immutable move)))
@@ -69,6 +68,6 @@
     (make-splicer (lambda (context)
 		    (cons (get-leaf val context)
 			  (repeat (get-leaf type context)
-				  (- (get-leaf num context) 1))))))
+				  (get-leaf num context))))))
 
   )
