@@ -12,14 +12,13 @@
    :tuning :octave
    :root :midinote
    :scale :scale-degree
-   :chord-shape :chord-degree
+   :chord-degree
    :scd :chd :chs
 
    event-with-freq
-   chord-semitone
-   chord-shape)
+   chord-offset)
 
-  (import (scheme) (utilities) (event))
+  (import (scheme) (utilities) (event) (chain-nodes) (logic-nodes))
 
   (define (midicps midi freqA)
     (* freqA (expt 2 (/ (- midi 69) 12))))
@@ -38,37 +37,27 @@
 	   [root :root C]
 	   [scale :scale minor]
 	   [sc-deg :scale-degree I]
-	   [ch-deg :chord-degree I]
-	   [ch-shape :chord-shape triad])
-	(let* ([s (chord-semitone oct sc-deg ch-deg ch-shape scale)]
+	   [ch-deg :chord-degree I])
+	(let* ([s (chord-offset oct sc-deg ch-deg scale)]
 	       [f (midicps (+ 60 root s) 440)])
 	  (event-remove-multi (event-set e ':freq f)
 			      (list :scale :chord-shape :octave :root))))))))
 
-  ;; Gets the semitone of a chord with a particular root (scale-degree),
-  ;; chord shape, scale shape and octave. Semitone is normalised to 0 = middle C.
-  (define (chord-semitone octave root-scale-deg chord-deg shape scale)
+  ;; Gets the semitone offset of a single note in a chord, computed
+  ;; from the desired octave offset, scale degree, chord degree and scale.
+  ;; The result is just an offset from the root's midinote, not a real midinote itself.
+  (define (chord-offset octave root-scale-deg chord-deg scale)
     (let* ([sc-len (shape-len scale)]
-	   [sh-len (shape-len shape)]
 	   [scale  (shape-degrees scale)]
-	   [shape  (shape-degrees shape)]
-	   [sh-idx (mod chord-deg sh-len)]
-	   [sh-deg (list-nth shape sh-idx)]
-	   [sc-deg (+ root-scale-deg sh-deg)]
+	   [sc-deg (+ root-scale-deg chord-deg)]
 	   [sc-idx (mod sc-deg sc-len)]
-	   [oct-overflow (+ (exact (truncate (/ chord-deg sh-len)))
-			    (exact (truncate (/ sc-deg sc-len))))]
-	   [semitone (list-nth scale sc-idx)])
-      ;; (println (format "sh-idx: ~A, sh-deg: ~A, shape: ~A" sh-idx sh-deg shape))
+	   [oct-overflow (exact (truncate (/ sc-deg sc-len)))]
+	   [semitone-offset (list-nth scale sc-idx)])
       ;; (println (format "sc-idx: ~A, sc-deg: ~A, scale: ~A, semitone: ~A" sc-idx sc-deg scale semitone))
       ;; (println (format "oct-overflow: ~A" oct-overflow))
-      (+ semitone
+      (+ semitone-offset
 	 (* oct-overflow 12)
 	 (* octave 12))))
-
-  (define (chord-shape root-scale-deg shape scale)
-    (map (lambda (deg) (chord-semitone 0 root-scale-deg deg shape scale))
-	 (iota (length (cadr shape)))))
   
   ;; Event key definitions
   (define :octave ':octave)
@@ -123,8 +112,10 @@
 
   (define-syntax def-shape
     (syntax-rules ()
-      ((_ name lst)
-       (define name (make-shape 'name 'lst (length 'lst))))))
+      ((_ name (a b ...))
+       (define name
+	 (+-> (to: :chd a)
+	      (to: :chd b) ...)))))
 
   ;; Chord shape definitions (in degrees of current scale)
   (def-shape 5th   (0 4))
@@ -137,23 +128,28 @@
   (def-shape 11th  (0 2 4 10))
   (def-shape 13th  (0 2 4 12))
 
+  (define-syntax def-scale
+    (syntax-rules ()
+      ((_ name lst)
+       (define name (make-shape 'name 'lst (length 'lst))))))
+
   ;; Scale shape definitions
-  (def-shape major       (0 2 4 5 7 9 11))
-  (def-shape minor       (0 2 4 5 7 8 10))
-  (def-shape harmMinor   (0 2 4 5 7 8 11))
-  (def-shape pentNeutral (0 2 5 7 10))
-  (def-shape pentMajor   (0 2 4 7 9))
-  (def-shape pentMinor   (0 3 5 7 10))
-  (def-shape blues       (0 3 5 6 7 10))
-  (def-shape dorian      (0 2 3 5 7 9 10))
-  (def-shape phrygian    (0 1 3 5 7 8 10))
-  (def-shape lydian      (0 2 4 6 7 9 11))
-  (def-shape mixolydian  (0 2 4 5 7 9 10))
-  (def-shape locrian     (0 1 3 5 6 8 10))
-  (def-shape wholeTone   (0 2 4 6 8 10))
-  (def-shape arabicA     (0 2 3 5 6 8 9 11))
-  (def-shape arabicB     (0 2 4 5 6 8 10))
-  (def-shape japanese    (0 4 6 7 11))
-  (def-shape ryukyu      (0 4 5 7 11))
-  (def-shape spanish     (0 1 3 4 5 6 8 10))
-  (def-shape chromatic   (0 1 2 3 4 5 6 7 8 9 10 11)))
+  (def-scale major       (0 2 4 5 7 9 11))
+  (def-scale minor       (0 2 4 5 7 8 10))
+  (def-scale harmMinor   (0 2 4 5 7 8 11))
+  (def-scale pentNeutral (0 2 5 7 10))
+  (def-scale pentMajor   (0 2 4 7 9))
+  (def-scale pentMinor   (0 3 5 7 10))
+  (def-scale blues       (0 3 5 6 7 10))
+  (def-scale dorian      (0 2 3 5 7 9 10))
+  (def-scale phrygian    (0 1 3 5 7 8 10))
+  (def-scale lydian      (0 2 4 6 7 9 11))
+  (def-scale mixolydian  (0 2 4 5 7 9 10))
+  (def-scale locrian     (0 1 3 5 6 8 10))
+  (def-scale wholeTone   (0 2 4 6 8 10))
+  (def-scale arabicA     (0 2 3 5 6 8 9 11))
+  (def-scale arabicB     (0 2 4 5 6 8 10))
+  (def-scale japanese    (0 4 6 7 11))
+  (def-scale ryukyu      (0 4 5 7 11))
+  (def-scale spanish     (0 1 3 4 5 6 8 10))
+  (def-scale chromatic   (0 1 2 3 4 5 6 7 8 9 10 11)))

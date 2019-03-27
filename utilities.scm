@@ -3,7 +3,7 @@
 ;; Fundamental utilities
 ;; ---------------------------------------------------------
 (library (utilities)
-  (export round-down-f pseudo-rand
+  (export round-down-f pseudo-rand inc dec
 	  nearly-divisible divisible on-each
 	  above below between between-each
 	  equal nearly-equal
@@ -45,6 +45,9 @@
 		 (* len ((random-source-make-reals pseudo-rand-src)))))))
 
   ;; Some 'english sounding' math operators.
+  (define (inc val) (+ val 1))
+  (define (dec val) (- val 1))
+  
   (define (nearly-divisible val div error)
     (let* ([remain (/ val div)]
 	   [truncated (truncate remain)])

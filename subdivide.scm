@@ -6,6 +6,9 @@
 
   (define :sustain ':sustain)
 
+  (define pattern-error-in "pattern error: got '~A', in: expects a number")
+  (define pattern-error-rp "pattern error: got '~A', rp: expects a procedure")
+
   ;; Evaluates any splicers to build the final pdef, plus extra info:
   ;; -> (values expanded-pdef, pdef-len, start-beat, slice-dur)
   (define (pdef-splice-expand pdef pdur context)
@@ -22,21 +25,25 @@
 			  (list v))])
 	      (loop (cdr p) (append x out) (+ len (length x))))))))
 
+  ;; Some helpers for dealing with repeat, rest and sustain symbols.
+  (define (maybe-repeat item last)
+    (if (eq? repeat-sym item) last item))
+
+  (define (is-rest? item)
+    (eq? item rest-sym))
+
+  (define (is-sustain? item)
+    (eq? item sustain-sym))
+
   ;; Drops at least one value, more if the following values are sustains.
   ;; -> (values num-dropped new-lst)
   (define (drop-stretched lst)
     (let loop ([lst lst] [n 0])
       (if (and (not (null? lst))
 	       (or (zero? n)
-		   (eq? sustain-sym (car lst))))
+		   (is-sustain? (car lst))))
 	  (loop (cdr lst) (+ n 1))
 	  (values n lst))))
-
-  (define (maybe-repeat item last)
-    (if (eq? repeat-sym item) last item))
-
-  (define (is-rest? item)
-    (eq? item rest-sym))
 
   ;; Implements the recursive subdivision of an input pdef into equal-sized
   ;; elements. An add-fn is supplied, which returns a list of events for each
@@ -71,14 +78,12 @@
 
   ;; Helper for 'in' impls below to get a value from a leaf node,
   ;; and to use it to add a new note/notes to the context.
-  (define (in-adder maker context leaf)
+  (define (make-notes maker context leaf)
     (let ([val (get-leaf-early leaf (context-start context) context)])
       (cond
        ((is-rest? val) '())
-       ((context? val)
-	(context-events-next val))
-       ((not (number? val))
-	(raise (format "pattern error: got '~A', expecting a number" val)))
+       ((context? val) (context-events-next val))
+       ((not (number? val)) (raise (format pattern-error-in val)))
        (else (maker val context)))))
 
   ;; Adds blank events to the context with a subdividing pattern (pdef)
@@ -87,7 +92,7 @@
   ;; The symbol ~ creates a rest.
   (define (in*impl context pdur pdef)
     (define (perform context leaf)
-      (in-adder
+      (make-notes
        (lambda (val context)
 	 (let* ([num (max 1 val)]
 		[dur (/ (context-length context) num)]
@@ -100,7 +105,7 @@
   ;; Adds events with a certain property filled in by a subdivding pattern.
   (define (in:impl key context pdur pdef)
     (define (perform context leaf)
-      (in-adder
+      (make-notes
        (lambda (val context)
 	 (let ([dur (context-length context)]
 	       [start (context-start context)])
@@ -138,7 +143,7 @@
     (define (perform context leaf)
       (let ([result (get-leaf leaf context)])
 	(if (not (context? result))
-	    (raise (format "pattern error: got '~A', rp: expects a procedure" result))
+	    (raise (format pattern-error-rp result))
 	    (context-events-next result))))
     (apply-subdiv-to-context context pdur pdef perform))
   

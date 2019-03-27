@@ -32,8 +32,8 @@
        (lambda (context)
 	 (to:impl context dur (pdef def) key)))))
 
-  ;; A general 'to', taking a math op, a key and a def. The math
-  ;; op is called with the value for key and the value returned by def.
+  ;; A general 'to', taking a math op, a key and a def. The math op is
+  ;; called with the current value for key and the value returned by def.
   (define-syntax to
     (syntax-rules ()
 

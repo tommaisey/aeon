@@ -21,13 +21,14 @@
   ;;--------------------------------------------------------------
   ;; Call on the root of a tree to fill a context with events.
   (define (render item context)
-    (cond
-     ((arc-mover? item)
-      (let ([code (arc-mover-logic item)]
-	    [top-arc ((arc-mover-move item) (context-arc context))])
-	(context-trim (code (context-with-arc context top-arc)))))
-     
-     (else (item context))))
+    (context-trim
+     (cond
+      ((arc-mover? item)
+       (let ([code (arc-mover-logic item)]
+	     [top-arc ((arc-mover-move item) (context-arc context))])
+	 (code (context-with-arc context top-arc))))
+      
+      (else (item context)))))
 
   (define (render-arc p arc)
     (render p (make-context arc)))
@@ -68,6 +69,6 @@
     (make-splicer (lambda (context)
 		    (cons (get-leaf val context)
 			  (repeat (get-leaf type context)
-				  (get-leaf num context))))))
+				  (- (get-leaf num context) 1))))))
 
   )

@@ -114,14 +114,14 @@
 (send-synth
  sc3 "swirly-keys"
  (letc ([:freq 440] [:attack 0.4] [:sustain 1] [:release 1]
-	[:amp 0.2] [:pan 0.5] [:resonance 0.1])
+	[:amp 0.2] [:pan 0.5] [:resonance 0.1] [:cutoff 3] [:verb-amt 0.1])
    
    (let* ([osc1 (lf-saw ar (add :freq -0.5) 0)]
 	  [osc2 (lf-saw ar (add :freq +1.5) 0.3)]
 	  [amp-env (make-linen :amp :attack :sustain :release -4)]
-	  [cut-env (make-linen 1 :attack :sustain :release 2 do-nothing)]
-	  [flt (moog-ff (add osc1 osc2) (add 300 (mul 2000 cut-env)) :resonance 0)])
-     (out 0 (pan2 (mul amp-env flt)
+	  [cut-env (make-linen :cutoff :attack :sustain :release 2 do-nothing)]
+	  [flt (moog-ff (add osc1 osc2) (add :freq (mul :freq cut-env)) :resonance 0.0)])
+     (out 0 (pan2 (mul amp-env flt) 
 		  (mul-add :pan 2 -1) 1)))))
 
 (send-synth

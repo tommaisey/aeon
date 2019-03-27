@@ -4,69 +4,31 @@
 (start)
 (pause)
 
-(define ch1
-  (+-> (x->
-	 (to: :octave -1)
-	 (to* :sustain 2))
-       (x->
-	 (to: :chd 2))
-       (x->
-	 (to: :chd 4)
-	 (to* :sustain 2))))
-
-(define ch2
-  (+-> (x->
-	 (to: :octave -2)
-	 (to* :sustain 4))
-       (x->
-	 (to: :chd 3))
-       (x->
-	 (to: :chd 6)
-	 (to: :octave -1)
-	 (to* :sustain 2))))
-
-(define p1
-  (o->
-    (in: :scd 1 [I II [V III]])
-    (to: :scale dorian)
-    
-    (rp: 6/2 [! ch1 ch2])))
-
-
-(define p1
-  (o->
-    (in: :scd 1/2 [I VI [I I]])
-
-    (cp: (to: :chd (pick [II II IV])))
-    
-    (in: :scd 1 [(× V 3) III [VI VIII] III]
-	 (:attack 0.01)
-	 (:sustain 0)
-	 (:octave -1)
-	 (:amp 0.1))
-
-    (in: :sample 1/3 [• (× hh 3)]
-	 (:amp 0.15)
-	 (:pan (rnd 0.1 0.7)))
-    (in* 2/3 [(rnd 1 3) 1 [1 1] 1]
-      (:sample bd))
-    (in: :sample 1 [• xt • sn]
-	 (:amp 0.2))))
 
 ;; Little simple chord prog
 (define p1
   (o->
-      (in: :scd 2 [I » » » » » VII » » » IV » » » III »])
-
-      (ch: (tr: (to: :chd 2 [II III])
-		(to: :pan (rnd 0.1 0.5)))
-	   (tr: (to: :chd 3/2 [V IV III II])
-		(to: :pan (rnd 0.5 0.9)))
-	   (tr: (to: :octave -1)))
+    (o->
+      (in: :scd 2 [VII » » » IV » » » III » I » » » » »])
       
-      (to: :attack 0.01)
-      (to* :sustain 3/4)
-      (to: :inst "swirly-keys")))
+      (cp: (to: :chd 3/2 [! V IV III II])
+	   (to: :pan (rnd 0.2 0.8)))
+      (cp: (to: :octave -1))
+      (to: :attack 0.1)
+      (to: :release 2)
+      (to: :sustain 0.1)
+      (to: :amp 0.1)
+      (to: :inst "swirly-keys"))
+
+    (let ([base (pdef [I × × » » IV (each 1 [V VI]) » III » × ×])])
+      (o->
+	(in: :scd 2 base)
+	(cp: (to: :chd (pick [0 2 3 4 6]))
+	     (to+ :beat 3/64))
+	(in: :scd 6/2 base)
+	(to: :octave 1/2 [-1 0 [0 -2]])))
+
+    b1))
 
 ;; First harmonic lick ever:
 (define p1
@@ -82,7 +44,7 @@
       (to: :sustain 0))))
 
 ;; Er dunno, random messing about with a beat...
-(define p1
+(define b1
   (let ([bd1 (in* 1 [4 2 [1 •] 1])]
 	[bd2 (in* 1 [1 2 [2 •] 1])])
     (o->
@@ -111,7 +73,7 @@
 	(:speed (rnd 0.8 0.85))
 	(:pan (rnd 0.2 0.8)))
 
-      (to* :speed 1/4 [• 1.5])
+      (to* :speed 1 [• 2])
      
       (to: :inst "sampler"))))
 
