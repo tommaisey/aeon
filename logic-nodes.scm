@@ -16,7 +16,6 @@
 
   (import
     (chezscheme)
-    (for (pdef) expand)
     (for (subdivide) expand)
     (utilities) (event) (context) (node-eval)
     (chain-nodes) (value-nodes) (srfi s26 cut))
@@ -24,25 +23,21 @@
   ;; A node that sets a property of events according to a subdividing pattern.
   (define-syntax to:
     (syntax-rules ()
-
-      ((_ key def)
-       (to: key 1 def))
       
-      ((_ key dur def)
+      ((_ key pdef rest ...)
        (lambda (context)
-	 (to:impl context dur (pdef def) key)))))
+	 ((to: rest ...) (dispatch-pdef pdef context (to:impl key)))))
+
+      ((_) (lambda (c) c)))) ;; base case
 
   ;; A general 'to', taking a math op, a key and a def. The math op is
   ;; called with the current value for key and the value returned by def.
   (define-syntax to
     (syntax-rules ()
-
-      ((_ math-op key def)
-       (to math-op key 1 def))
       
-      ((_ math-op key dur def)
+      ((_ math-op key pdef)
        (lambda (context)
-	 (to-math-impl math-op context dur (pdef def) key)))))
+	 (dispatch-pdef pdef context (to-math-impl math-op key))))))
   
   (define-syntax to+
     (syntax-rules () ((_ x ...) (to + x ...))))
@@ -57,26 +52,20 @@
   (define-syntax in*
     (syntax-rules ()
 
-      ((_ def)
-       (in* 1 def))
-
-      ((_ dur def (to-key r ...) ...)
+      ((_ pdef (op x ...) ...)
        (lambda (context)
-	 (let* ([c (in*impl context dur (pdef def))]
-		[c ((to: to-key r ...) c)] ...)
+	 (let* ([c (dispatch-pdef pdef context in*impl)]
+		[c ((op x ...) c)] ...)
 	   (contexts-merge context c))))))
 
   ;; A node that adds events with a single specified property.
   (define-syntax in:
     (syntax-rules ()
 
-      ((_ key def)
-       (in: key 1 def))
-
-      ((_ key dur def (to-key r ...) ...)
+      ((_ key pdef (op x ...) ...)
        (lambda (context)
-	 (let* ([c (in:impl key context dur (pdef def))]
-		[c ((to: to-key r ...) c)] ...)
+	 (let* ([c (dispatch-pdef pdef context (in:impl key))]
+		[c ((op x ...) c)] ...)
 	   (contexts-merge context c))))))
 
   ;; A node that replaces the input with the result of applying
@@ -84,12 +73,9 @@
   (define-syntax rp:
     (syntax-rules ()
 
-      ((_ def)
-       (rp: 1 def))
-
-      ((_ dur def)
+      ((_ pdef)
        (lambda (context)
-	 (rp:impl context dur (pdef def))))))
+	 (dispatch-pdef pdef context rp:impl)))))
 
   ;;---------------------------------------------------------------
   ;; Composite chaining operators. Starting to get the feeling that

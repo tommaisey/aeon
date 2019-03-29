@@ -1,14 +1,124 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (subdivide)
-  (export in*impl in:impl to:impl to-math-impl rp:impl)
-  (import (scheme) (utilities) (event) (context) (node-eval) (pdef))
+  (export /- dispatch-pdef
+	  in*impl
+	  in:impl
+	  to:impl
+	  to-math-impl
+	  rp:impl)
+  
+  (import (scheme)
+	  (utilities)
+	  (event)
+	  (context)
+	  (node-eval)
+	  (for (pdef) expand))
 
   (define :sustain ':sustain)
 
   (define pattern-error-in "pattern error: got '~A', in: expects a number")
   (define pattern-error-rp "pattern error: got '~A', rp: expects a procedure")
 
+  (define-record-type pdef
+    (fields
+     dur  ;; Length of the pattern represented here, in beats
+     data ;; List of values/procedures created by make-pdef-data
+
+     ;; A procedure that interprets a pdef as a series of time chunks,
+     ;; and calls a 'performing' function for each of those chunks with
+     ;; the corresponding value.
+     time-chunker))
+
+  (define-syntax /-
+    (syntax-rules ()
+      ((_ def) (/- 1 def))
+
+      ((_ dur def)
+       (make-pdef dur (make-pdef-data def) subdiv))))
+
+  ;; Executes the time-chunker of a pdef, which will call the
+  ;; perform-fn for each chunk of the context as it sees fit.
+  (define (dispatch-pdef pdef context perform-fn)
+    (derecord pdef ([fn  pdef-time-chunker]
+		    [dur pdef-dur]
+		    [def pdef-data])
+      (let ([events (fn context dur def perform-fn)])
+	(context-trim (context-with-events context events)))))
+
+  ;;-----------------------------------------------------------------------
+  ;; Implementations for specific ops. These don't have a concept of how to
+  ;; apply themselves to different time regions - that's handled by the
+  ;; pdef-time-chunker.
+
+  (define (rp:impl context leaf)
+    (let ([result (get-leaf leaf context)])
+      (if (not (context? result))
+	  (raise (format pattern-error-rp result))
+	  (context-events-next result))))
+
+  ;; Helper for 'in' impls to get a value from a leaf node,
+  ;; and to use it to add a new note/notes to the context.
+  (define (make-events maker context leaf)
+    (let ([val (get-leaf-early leaf (context-start context) context)])
+      (cond
+       ((is-rest? val) '())
+       ((context? val) (context-events-next val))
+       ((not (number? val)) (raise (format pattern-error-in val)))
+       (else (maker val context)))))
+
+  ;; Adds blank events to the context with a subdividing pattern (pdef)
+  ;; A pdef value of 1 gives one event.
+  ;; For values > 1, creates N subdivided values.
+  ;; The symbol ~ creates a rest.
+  (define (in*impl context leaf)
+    (make-events
+     (lambda (val context)
+       (let* ([num (max 1 val)]
+	      [dur (/ (context-length context) num)]
+	      [start (context-start context)])
+	 (define (make i) (make-event (+ start (* i dur)) (:sustain dur)))
+	 (map make (iota num))))
+     context leaf))
+
+  ;; Adds events with a certain property
+  (define (in:impl key)
+    (lambda (context leaf)
+      (make-events
+       (lambda (val context)
+	 (let ([dur (context-length context)]
+	       [start (context-start context)])
+	   (list (event-set (make-event start (:sustain dur)) key val))))
+       context leaf)))
+
+  ;; Helper for 'to' forms below.
+  (define (set-or-rest c leaf key val-transform)
+    (let ([val (get-leaf leaf c)])
+      (if (is-rest? val)
+	  (context-event c)
+	  (event-set (context-event c) key (val-transform val)))))
+
+  ;; Takes a pdef template and a context, and returns a new context with the
+  ;; values in the pdef applied to any events in the context.
+  (define (to:impl key)
+    (lambda (context leaf)
+      (define (map-fn c)
+	(set-or-rest c leaf key (lambda (v) v)))
+      (context-events-next (context-map map-fn (context-trim context)))))
+  
+  (define (to-math-impl math-fn key)
+    (lambda (context leaf)
+      (define (map-fn c)
+	(let ([current (event-get (context-event c) key #f)])
+	  (if (not current)
+	      (context-event c)
+	      (set-or-rest c leaf key (lambda (v) (math-fn current v))))))
+      (context-events-next (context-map map-fn (context-trim context)))))
+
+  ;;-----------------------------------------------------------------------
+  ;; General helpers for main time-chunking routines like subdiv (which -/
+  ;; implements the /- pattern style).
+  
   ;; Evaluates any splicers to build the final pdef, plus extra info:
   ;; -> (values expanded-pdef, pdef-len, start-beat, slice-dur)
   (define (pdef-splice-expand pdef pdur context)
@@ -45,8 +155,9 @@
 	  (loop (cdr lst) (+ n 1))
 	  (values n lst))))
 
+  ;;-----------------------------------------------------------------------
   ;; Implements the recursive subdivision of an input pdef into equal-sized
-  ;; elements. An add-fn is supplied, which returns a list of events for each
+  ;; elements. A perform fn is supplied, which returns a list of events for each
   ;; leaf in the pdef.
   ;; -> (list note ...)
   (define (subdiv context pdur pdef perform)
@@ -61,7 +172,7 @@
 	   ((null? p) (loop t pdef #f out))
 	   ((>= t (context-end context)) out)
 	   (else
-	    (let-values ([[stretch-num next-p] (drop-stretched p)])		    
+	    (let-values ([[stretch-num next-p] (drop-stretched p)])		   
 	      (let* ([item (maybe-repeat (car p) last)]
 		     [next-t (+ t (* stretch-num dur))]
 		     [context (rearc context (make-arc t next-t))]
@@ -69,82 +180,5 @@
 			      (subdiv context dur item perform)
 			      (perform context item))])
 		(loop next-t next-p item (append out new)))))))))))
-
-  ;; Just wraps the subdiv call, building a new context.
-  (define (apply-subdiv-to-context context pdur pdef perform-fn)
-    (context-trim
-     (context-with-events
-      context (subdiv context pdur pdef perform-fn))))
-
-  ;; Helper for 'in' impls below to get a value from a leaf node,
-  ;; and to use it to add a new note/notes to the context.
-  (define (make-notes maker context leaf)
-    (let ([val (get-leaf-early leaf (context-start context) context)])
-      (cond
-       ((is-rest? val) '())
-       ((context? val) (context-events-next val))
-       ((not (number? val)) (raise (format pattern-error-in val)))
-       (else (maker val context)))))
-
-  ;; Adds blank events to the context with a subdividing pattern (pdef)
-  ;; A pdef value of 1 gives one event.
-  ;; For values > 1, creates N subdivided values.
-  ;; The symbol ~ creates a rest.
-  (define (in*impl context pdur pdef)
-    (define (perform context leaf)
-      (make-notes
-       (lambda (val context)
-	 (let* ([num (max 1 val)]
-		[dur (/ (context-length context) num)]
-		[start (context-start context)])
-	   (define (make i) (make-event (+ start (* i dur)) (:sustain dur)))
-	   (map make (iota num))))
-       context leaf))
-    (apply-subdiv-to-context context pdur pdef perform))
-
-  ;; Adds events with a certain property filled in by a subdivding pattern.
-  (define (in:impl key context pdur pdef)
-    (define (perform context leaf)
-      (make-notes
-       (lambda (val context)
-	 (let ([dur (context-length context)]
-	       [start (context-start context)])
-	   (list (event-set (make-event start (:sustain dur)) key val))))
-       context leaf))
-    (apply-subdiv-to-context context pdur pdef perform))
-
-  ;; Helper for 'to' forms below.
-  (define (set-or-rest c leaf key val-transform)
-    (let ([val (get-leaf leaf c)])
-      (if (is-rest? val)
-	  (context-event c)
-	  (event-set (context-event c) key (val-transform val)))))
-
-  ;; Takes a pdef template and a context, and returns a new context with the
-  ;; values in the pdef applied to any events in the context.
-  (define (to:impl context pdur pdef key)
-    (define (perform context leaf)
-      (define (morpher c)
-	(set-or-rest c leaf key (lambda (v) v)))
-      (context-events-next (context-map morpher (context-trim context))))
-    (apply-subdiv-to-context context pdur pdef perform))
-  
-  (define (to-math-impl math-fn context pdur pdef key)
-    (define (perform context leaf)
-      (define (morpher c)
-	(let ([current (event-get (context-event c) key #f)])
-	  (if (eqv? current #f)
-	      (context-event c)
-	      (set-or-rest c leaf key (lambda (v) (math-fn current v))))))
-      (context-events-next (context-map morpher (context-trim context))))
-    (apply-subdiv-to-context context pdur pdef perform))
-
-  (define (rp:impl context pdur pdef)
-    (define (perform context leaf)
-      (let ([result (get-leaf leaf context)])
-	(if (not (context? result))
-	    (raise (format pattern-error-rp result))
-	    (context-events-next result))))
-    (apply-subdiv-to-context context pdur pdef perform))
   
   )

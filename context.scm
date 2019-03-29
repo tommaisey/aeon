@@ -120,13 +120,21 @@
 
   ;;----------------------------------------------------------------------
   ;; Transformations.
-  ;;
-  ;; Takes a lambda taking a context, returning a event.
+
+  ;; Used in context-map and context-filter
+  (define (context-transform context build-events-fn)
+    (let loop ([c context] [output '()])
+      (if (context-it-end? c)
+	  (context-with-events c (reverse output))
+	  (loop (context-move1-fwd c)
+		(build-events-fn c output)))))
+
+  ;; (context -> event), context -> context
   (define (context-map new-event-fn context)
     (context-transform
      context (lambda (c output) (cons (new-event-fn c) output))))
 
-  ;; Takes a lambda taking a context, returning bool.
+  ;; (context -> bool), context -> context
   (define (context-filter pred context)
     (context-transform
      context (lambda (c output)
@@ -135,7 +143,9 @@
   ;; Removes events from the context that don't fall within arc.
   (define (context-trim context)
     (define (pred c)
-      (between (event-beat (context-event c)) (context-start c) (context-end c)))
+      (between (event-beat (context-event c))
+	       (context-start c)
+	       (context-end c)))
     (context-filter pred context))
 
   (define (contexts-merge c1 c2)
@@ -222,15 +232,6 @@
   (define (context-next-unchecked c) (cadr (context-events-next c)))
   (define (context-prev-unchecked c) (car (context-events-prev c)))
   (define (delta t event) (- t (event-get event time-key +inf.0)))
-
-  ;; Used in context-map and context-filter
-  (define (context-transform context build-events-fn)
-    (let loop ([c context]
-	       [output '()])
-      (if (context-it-end? c)
-	  (context-with-events c (reverse output))
-	  (loop (context-move1-fwd c)
-		(build-events-fn c output)))))
 
   ;; Inserts the new event in a sorted fashion into the context, leaving the
   ;; context pointing to the new event, not the original one.

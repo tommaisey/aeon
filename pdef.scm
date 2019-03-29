@@ -1,7 +1,7 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (pdef)
-  (export pdef
+  (export make-pdef-data
 	  • » × !
 	  repeat-sym
 	  sustain-sym
@@ -38,7 +38,7 @@
   ;; in the first position but not have it evaluated. In this case it's
   ;; necessary to 
   
-  (define-syntax pdef
+  (define-syntax make-pdef-data
     (lambda (x)
       (syntax-case x (! » ×)
 
@@ -49,7 +49,7 @@
 	 (syntax (build-splicer '» v n)))
 
 	((_ (! v ...))
-	 (syntax (list (pdef v) ...)))
+	 (syntax (list (make-pdef-data v) ...)))
 	
 	((_ (v q ...)) (identifier? (syntax v))
 	 (lambda (property-lookup)
@@ -57,10 +57,11 @@
 		 (syntax (v q ...))
 		 (syntax (if (procedure? v)
 			     (v q ...)
-			     (list (pdef v) (pdef q) ...))))))
+			     (list (make-pdef-data v)
+				   (make-pdef-data q) ...))))))
 	
 	((_ (v ...))
-	 (syntax (list (pdef v) ...)))
+	 (syntax (make-pdef-data (! v ...))))
 
 	((_ v)
 	 (syntax v)))))

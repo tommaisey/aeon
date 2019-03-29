@@ -23,6 +23,7 @@
 	  unsafe-list?
 	  push-front
 	  alist-let
+	  derecord
 	  check-type
 	  println)
 
@@ -206,6 +207,13 @@
 	 (set! found (append targets found))
 	 (let ([name (cdr (assq key found))] ...)
 	   body ...)))))
+
+  ;; Useful for destructuring records
+  (define-syntax derecord
+    (syntax-rules ()
+      ((_ rec ([name record-accessor] ...) body-forms ...)
+       (let ([name (record-accessor rec)] ...)
+	 body-forms ...))))
 
   ;;------------------------------------------------------------------------
    ;; Throw an error if the wrong type is used
