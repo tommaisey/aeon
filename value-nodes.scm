@@ -17,7 +17,8 @@
   (export
    this next nearest
    c+ c- c* c/
-   rnd pick each snap)
+   rnd pick each snap
+   sine)
   
   (import
     (chezscheme) (utilities) (context) (node-eval) (event)
@@ -106,6 +107,14 @@
 	     (get-leaf (list-nth lst (modulo n len)) context)))))))
 
   (tag-pdef-callable each) ;; Tag so pdef recognises as a macro
+
+  (define (sine freq lo hi)
+    (lambda (context)
+      (let ([pi 3.141592653589793]
+	    [f (get-leaf freq context)]
+	    [l (get-leaf lo context)]
+	    [h (get-leaf hi context)])
+	(+ l (* (- h l) 0.5 (+ 1 (sin (/ (* 2 pi (context-now context)) f))))))))
 
   ;;--------------------------------------------------------------------
   ;; Some leaves allow the user to specify which properties of the
