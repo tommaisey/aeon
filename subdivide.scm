@@ -20,6 +20,7 @@
   (define pattern-error-in "pattern error: got '~A', in: expects a number")
   (define pattern-error-rp "pattern error: got '~A', rp: expects a procedure")
 
+  ;;-------------------------------------------------------------------
   (define-record-type pdef
     (fields
      dur  ;; Length of the pattern represented here, in beats
@@ -39,12 +40,13 @@
 
   ;; Executes the time-chunker of a pdef, which will call the
   ;; perform-fn for each chunk of the context as it sees fit.
-  (define (dispatch-pdef pdef context perform-fn)
-    (derecord pdef ([fn  pdef-time-chunker]
-		    [dur pdef-dur]
-		    [def pdef-data])
-      (let ([events (fn context dur def perform-fn)])
-	(context-trim (context-with-events context events)))))
+  (define (dispatch-pdef def context perform-fn)
+    (let ([def (if (pdef? def) def (/- def))])
+      (derecord def ([fn  pdef-time-chunker]
+		     [dur pdef-dur]
+		     [def pdef-data])
+		(let ([events (fn context dur def perform-fn)])
+		  (context-trim (context-with-events context events))))))
 
   ;;-----------------------------------------------------------------------
   ;; Implementations for specific ops. These don't have a concept of how to
@@ -120,14 +122,14 @@
   ;; implements the /- pattern style).
   
   ;; Evaluates any splicers to build the final pdef, plus extra info:
-  ;; -> (values expanded-pdef, pdef-len, start-beat, slice-dur)
-  (define (pdef-splice-expand pdef pdur context)
-    (let* ([basic-len (length pdef)]
-	   [basic-dur (/ pdur basic-len)]
-	   [start (round-down-f (context-start context) pdur)])
-      (let loop ([p pdef] [out '()] [len 0])
+  ;; -> (values expanded-def, def-len, start-beat, slice-dur)
+  (define (splice-expand def dur context)
+    (let* ([basic-len (length def)]
+	   [basic-dur (/ dur basic-len)]
+	   [start (round-down-f (context-start context) dur)])
+      (let loop ([p def] [out '()] [len 0])
 	(if (null? p)
-	    (values (reverse out) len start (/ pdur len))
+	    (values (reverse out) len start (/ dur len))
 	    (let* ([v (car p)]
 		   [end (+ start (* len basic-dur))]
 		   [x (if (splicer? v)
@@ -156,20 +158,20 @@
 	  (values n lst))))
 
   ;;-----------------------------------------------------------------------
-  ;; Implements the recursive subdivision of an input pdef into equal-sized
+  ;; Implements the recursive subdivision of an input pdef list into equal-sized
   ;; elements. A perform fn is supplied, which returns a list of events for each
-  ;; leaf in the pdef.
-  ;; -> (list note ...)
-  (define (subdiv context pdur pdef perform)
+  ;; leaf in the pdef list.
+  ;; -> (list event ...)
+  (define (subdiv context dur def perform)
     (cond
-     ((null? pdef) '())
-     ((not (unsafe-list? pdef)) (subdiv context pdur (list pdef) perform))
+     ((null? def) '())
+     ((not (unsafe-list? def)) (subdiv context dur (list def) perform))
      (else
-      (let-values ([[pdef len start dur]
-		    (pdef-splice-expand pdef pdur context)])
-	(let loop ([t start] [p pdef] [last #f] [out '()])
+      (let-values ([[def len start dur]
+		    (splice-expand def dur context)])
+	(let loop ([t start] [p def] [last #f] [out '()])
 	  (cond
-	   ((null? p) (loop t pdef #f out))
+	   ((null? p) (loop t def #f out))
 	   ((>= t (context-end context)) out)
 	   (else
 	    (let-values ([[stretch-num next-p] (drop-stretched p)])		   

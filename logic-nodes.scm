@@ -10,7 +10,7 @@
 ;; ------------------------------------------------------------
 (library (logic-nodes)
   (export
-   in* in: to: to+ to- to* to/ to?
+   /- in* in: to: to+ to- to* to/ to?
    rp: tr: tr? cp: cp? ch:
    is? any-of all-of none-of phrase)
 

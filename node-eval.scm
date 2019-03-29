@@ -30,8 +30,8 @@
       
       (else (item context)))))
 
-  (define (render-arc p arc)
-    (render p (make-context arc)))
+  (define (render-arc p start end)
+    (render p (make-context (make-arc start end))))
 
   ;; Evaluate a leaf. It might be a plain value, a naked context
   ;; procedure or an arc-moving-branch.

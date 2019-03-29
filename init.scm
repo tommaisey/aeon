@@ -49,7 +49,7 @@
 ;;-----------------------------------------------------------------
 ;; A thread that wakes up every playback-chunk beats to call (process-chunk)
 ;; This essentially controls playback for now.
-(define bpm 93)
+(define bpm 100)
 (define playback-thread #f)
 (define playback-chunk 1/4) ; 1 quarter measure for now
 (define playback-thread-semaphore (make-semaphore))
@@ -61,7 +61,7 @@
   (guard (x [else (handle-error x)])
     (let* ([t1 playback-time]
 	   [t2 (+ t1 playback-chunk)]
-	   [c (render-arc p1 (make-arc t1 t2))]
+	   [c (render-arc p1 t1 t2)]
 	   [events (context-events-next c)])
       (for-each (lambda (n) (play-event n t1)) events)
       (set! playback-time t2))))
