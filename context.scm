@@ -18,6 +18,10 @@
    context-clear-events
    context-with-arc rearc
    context-add-arc
+   context-with-chain
+   context-append-chain
+   context-pop-chain
+   context-resolve
    context-length
    context-move
    context-to-closest-event
@@ -35,19 +39,25 @@
   ;; remaining events (starting with 'this' event) and prev-events
   ;; contains the previous events in reverse, starting with the one
   ;; preceding 'this'.
+  ;; 
+  ;; The 'chain' is a list of context-lambdas. Calling the first one
+  ;; should render the context - it does so by calling the second one,
+  ;; etc. This 'inversion of control' allows each of the lambdas to call
+  ;; their ancestors with different time chunks, to acheive lookahead.
   (define-record-type context
     (fields (immutable events-next)
 	    (immutable events-prev)
-	    (immutable arc))
+	    (immutable arc)
+	    (immutable chain))
     (protocol
      (lambda (new)
        (case-lambda ; events-prev is optional in ctor
-	 ((events-next events-prev arc)
-	  (new events-next events-prev arc))
+	 ((events-next events-prev arc chain)
+	  (new events-next events-prev arc chain))
 	 ((events-next arc)
-	  (new events-next '() arc))
+	  (new events-next '() arc '()))
 	 ((arc)
-	  (new '() '() arc))))))
+	  (new '() '() arc '()))))))
 
   (define (make-empty-context start end)
     (make-context (make-arc start end)))
@@ -77,22 +87,46 @@
   (define context-with-events
     (case-lambda
       ((c nxt) (context-with-events c nxt '()))
-      ((c nxt prv) (make-context nxt prv (context-arc c)))))
+      ((c nxt prv) (make-context nxt prv (context-arc c) (context-chain c)))))
 
   (define (context-clear-events c)
     (context-with-events c '()))
 
-  (define (context-with-arc c a)
-    (make-context (context-events-next c)
-		  (context-events-prev c) a))
-  (define (context-add-arc c a)
+  (define (context-with-arc c new-arc)
     (make-context (context-events-next c)
 		  (context-events-prev c)
-		  (arc-add (context-arc c) a)))
+		  new-arc
+		  (context-chain c)))
+  (define (context-add-arc c arc-to-add)
+    (make-context (context-events-next c)
+		  (context-events-prev c)
+		  (arc-add (context-arc c) arc-to-add)
+		  (context-chain c)))
   (define rearc context-with-arc) ; alias
 
   (define (context-length c)
     (arc-length (context-arc c)))
+
+  (define (context-with-chain c chain)
+    (make-context (context-events-next c)
+		  (context-events-prev c)
+		  (context-arc c)
+		  chain))
+  
+  (define (context-append-chain c chain)
+    (context-with-chain c (append chain (context-chain c))))
+
+  ;; Pop the top lambda off the chain.
+  (define (context-pop-chain c)
+    (let ([ch (context-chain c)])
+      (context-with-chain c (if (null? ch) ch (cdr ch)))))
+  
+  ;; Pop the top lambda off the context's chain, and call it
+  ;; with the context itself. This will be done recursively
+  ;; up the chain.
+  (define (context-resolve c)
+    (let ([ch (context-chain c)])
+      (if (null? ch) c ((car ch) (context-pop-chain c)))))
 
   ;;--------------------------------------------------------------------
   ;; Iteration. A context has a list of previous and next events - these
@@ -154,8 +188,10 @@
       (make-context (merge-sorted (context-events-next c1)
 				  (context-events-next c2)
 				  event-before?)
+		    '()
 		    (make-arc (min (context-start c1) (context-start c2))
-			      (max (context-end c1) (context-end c2))))))
+			      (max (context-end c1) (context-end c2)))
+		    (context-chain c2))))
 
   ;;---------------------------------------------------------------------
   ;; Helpers used in public iteration functions.

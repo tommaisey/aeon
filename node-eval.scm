@@ -1,12 +1,5 @@
-#!chezscheme ;; Needed for the extra symbols like »
-
 (library (node-eval)
   (export
-   arc-mover
-   arc-mover?
-   arc-mover-logic
-   arc-mover-move
-   make-arc-mover
    splicer
    splicer?
    splicer-logic
@@ -21,14 +14,7 @@
   ;;--------------------------------------------------------------
   ;; Call on the root of a tree to fill a context with events.
   (define (render item context)
-    (context-trim
-     (cond
-      ((arc-mover? item)
-       (let ([code (arc-mover-logic item)]
-	     [top-arc ((arc-mover-move item) (context-arc context))])
-	 (code (context-with-arc context top-arc))))
-      
-      (else (item context)))))
+    (context-trim (item context)))
 
   (define (render-arc p start end)
     (render p (make-context (make-arc start end))))
@@ -37,25 +23,16 @@
   ;; procedure or an arc-moving-branch.
   (define (get-leaf leaf context)
     (cond
-	((procedure? leaf) (leaf context))
-	((arc-mover? leaf) (render (arc-mover-logic leaf) context))
-	(else leaf)))
+     ((procedure? leaf) (leaf context))
+     (else leaf)))
 
   ;; If we must eval a leaf before adding a new event, the context will look wrong.
   ;; The event doesn't yet exist, so e.g. next/prev and seeding would be broken.
   ;; In this case, add an empty event to the context before evaluating.
   (define (get-leaf-early leaf time-to-add context)
-    (if (or (procedure? leaf)
-	    (arc-mover? leaf))
+    (if (procedure? leaf)
 	(get-leaf leaf (context-insert context (make-event time-to-add)))
 	leaf))
-
-  ;; A special type that denotes a context-function which wants to
-  ;; shift the arc of the context it receives as input. This is so
-  ;; that it can base its decisions now on something in the past/future.
-  (define-record-type arc-mover
-    (fields (immutable logic)
-	    (immutable move)))
 
   ;; A special type that denotes a function that can return a list
   ;; to be spliced into the containing pdef list. This must be evaluated

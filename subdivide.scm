@@ -36,7 +36,7 @@
       ((_ def) (/- 1 def))
 
       ((_ dur def)
-       (make-pdef dur (make-pdef-data def) subdiv))))
+       (make-pdef dur (make-pdef-data def) subdiv-chunker))))
 
   ;; Executes the time-chunker of a pdef, which will call the
   ;; perform-fn for each chunk of the context as it sees fit.
@@ -45,8 +45,8 @@
       (derecord def ([fn  pdef-time-chunker]
 		     [dur pdef-dur]
 		     [def pdef-data])
-		(let ([events (fn context dur def perform-fn)])
-		  (context-trim (context-with-events context events))))))
+	(let ([events (fn context dur def perform-fn)])
+	  (context-trim (context-with-events context events))))))
 
   ;;-----------------------------------------------------------------------
   ;; Implementations for specific ops. These don't have a concept of how to
@@ -54,7 +54,7 @@
   ;; pdef-time-chunker.
 
   (define (rp:impl context leaf)
-    (let ([result (get-leaf leaf context)])
+    (let ([result (get-leaf leaf (context-resolve context))])
       (if (not (context? result))
 	  (raise (format pattern-error-rp result))
 	  (context-events-next result))))
@@ -78,8 +78,8 @@
      (lambda (val context)
        (let* ([num (max 1 val)]
 	      [dur (/ (context-length context) num)]
-	      [start (context-start context)])
-	 (define (make i) (make-event (+ start (* i dur)) (:sustain dur)))
+	      [start (context-start context)]
+	      [make (lambda (i) (make-event (+ start (* i dur)) (:sustain dur)))])
 	 (map make (iota num))))
      context leaf))
 
@@ -106,7 +106,7 @@
     (lambda (context leaf)
       (define (map-fn c)
 	(set-or-rest c leaf key (lambda (v) v)))
-      (context-events-next (context-map map-fn (context-trim context)))))
+      (context-events-next (context-map map-fn (context-resolve context)))))
   
   (define (to-math-impl math-fn key)
     (lambda (context leaf)
@@ -115,10 +115,10 @@
 	  (if (not current)
 	      (context-event c)
 	      (set-or-rest c leaf key (lambda (v) (math-fn current v))))))
-      (context-events-next (context-map map-fn (context-trim context)))))
+      (context-events-next (context-map map-fn (context-resolve context)))))
 
   ;;-----------------------------------------------------------------------
-  ;; General helpers for main time-chunking routines like subdiv (which -/
+  ;; General helpers for main time-chunking routines like subdiv-chunker (which -/
   ;; implements the /- pattern style).
   
   ;; Evaluates any splicers to build the final pdef, plus extra info:
@@ -162,10 +162,10 @@
   ;; elements. A perform fn is supplied, which returns a list of events for each
   ;; leaf in the pdef list.
   ;; -> (list event ...)
-  (define (subdiv context dur def perform)
+  (define (subdiv-chunker context dur def perform)
     (cond
      ((null? def) '())
-     ((not (unsafe-list? def)) (subdiv context dur (list def) perform))
+     ((not (unsafe-list? def)) (subdiv-chunker context dur (list def) perform))
      (else
       (let-values ([[def len start dur]
 		    (splice-expand def dur context)])
@@ -179,7 +179,7 @@
 		     [next-t (+ t (* stretch-num dur))]
 		     [context (rearc context (make-arc t next-t))]
 		     [new (if (unsafe-list? item)
-			      (subdiv context dur item perform)
+			      (subdiv-chunker context dur item perform)
 			      (perform context item))])
 		(loop next-t next-p item (append out new)))))))))))
   

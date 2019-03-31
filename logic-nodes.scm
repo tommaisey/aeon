@@ -53,20 +53,18 @@
     (syntax-rules ()
 
       ((_ pdef (op x ...) ...)
-       (lambda (context)
-	 (let* ([c (dispatch-pdef pdef context in*impl)]
-		[c ((op x ...) c)] ...)
-	   (contexts-merge context c))))))
+       (o->
+	 (lambda (c) (dispatch-pdef pdef c in*impl))
+	 (op x ...) ...))))
 
   ;; A node that adds events with a single specified property.
   (define-syntax in:
     (syntax-rules ()
 
       ((_ key pdef (op x ...) ...)
-       (lambda (context)
-	 (let* ([c (dispatch-pdef pdef context (in:impl key))]
-		[c ((op x ...) c)] ...)
-	   (contexts-merge context c))))))
+       (o->
+	 (lambda (c) (dispatch-pdef pdef c (in:impl key)))
+	 (op x ...) ...))))
 
   ;; A node that replaces the input with the result of applying
   ;; it to each pattern member, which must all be functional nodes.
