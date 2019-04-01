@@ -23,15 +23,16 @@
 	   :attack 0.005
 	   :sustain 0
 	   :release (/- [2 1 1 4]))
-      (to* :release 0.3))
 
-    (o-> ;; Drums
-      (in: :sample (/- 1/3 [• (× hh 3)])
-	   (to: :amp 0.1
-		:pan (rnd 0.1 0.7)))
+      (to* :release 0.3)
       
-      (in* (/- 2 [(rnd 1 3) 1 [1 1] 1])
-	   (to: :sample bd))
-      
-      (in: :sample (/- 1 [• sn • sn])
-	   (to: :amp 0.2)))))
+      (o-> ;; Drums
+	(in: :sample (/- 1/3 [• (× hh 3)])
+	     (to: :amp 0.1
+		  :pan (rnd 0.1 0.7)))
+	
+	(in* (/- 2 [(rnd 1 3) 1 [1 1] 1])
+	     (to: :sample bd))
+	
+	(in: :sample (/- 1 [• sn • sn])
+	     (to: :amp 0.2))))))

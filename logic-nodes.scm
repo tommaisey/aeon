@@ -11,7 +11,7 @@
 (library (logic-nodes)
   (export
    /- in* in: to: to+ to- to* to/ to?
-   rp: tr: tr? cp: cp? ch:
+   rp: tr: tr? cp: cp?
    is? any-of all-of none-of phrase)
 
   (import
@@ -20,101 +20,73 @@
     (utilities) (event) (context) (node-eval)
     (chain-nodes) (value-nodes) (srfi s26 cut))
   
-  ;; A node that sets a property of events according to a subdividing pattern.
-  (define-syntax to:
-    (syntax-rules ()
-      
-      ((_ key pdef rest ...)
-       (lambda (context)
-	 ((to: rest ...) (dispatch-pdef pdef context (to:impl key)))))
-
-      ((_) (lambda (c) c)))) ;; base case
+  ;; A node that sets a property of events according to the pattern.
+  ;; key value ... -> (context -> context)
+  (define (to: . key-val-pairs)
+    (apply x-> (kv-pairs-to-nodes key-val-pairs to:impl)))
 
   ;; A general 'to', taking a math op, a key and a def. The math op is
   ;; called with the current value for key and the value returned by def.
-  (define-syntax to
-    (syntax-rules ()
-      
-      ((_ math-op key pdef)
-       (lambda (context)
-	 (dispatch-pdef pdef context (to-math-impl math-op key))))))
-  
-  (define-syntax to+
-    (syntax-rules () ((_ x ...) (to + x ...))))
-  (define-syntax to-
-    (syntax-rules () ((_ x ...) (to - x ...))))
-  (define-syntax to*
-    (syntax-rules () ((_ x ...) (to * x ...))))
-  (define-syntax to/
-    (syntax-rules () ((_ x ...) (to + x ...))))
+  (define (to math-op . key-val-pairs)
+    (apply x-> (kv-pairs-to-nodes key-val-pairs (lambda (key) (to-math-impl math-op key)))))
 
-  ;; A node that adds blank events according to a subdividing pattern. 
-  (define-syntax in*
-    (syntax-rules ()
+  (define (to+ . kv-pairs) (apply to + kv-pairs))
+  (define (to- . kv-pairs) (apply to - kv-pairs))
+  (define (to* . kv-pairs) (apply to * kv-pairs))
+  (define (to/ . kv-pairs) (apply to / kv-pairs))
 
-      ((_ pdef (op x ...) ...)
-       (o->
-	 (lambda (c) (dispatch-pdef pdef c in*impl))
-	 (op x ...) ...))))
+  ;; A node that adds blank events according to a subdividing pattern.
+  (define (in* pdef . ops)
+    (apply o-> (lambda (c) (dispatch-pdef pdef c in*impl)) ops))
 
   ;; A node that adds events with a single specified property.
-  (define-syntax in:
-    (syntax-rules ()
-
-      ((_ key pdef (op x ...) ...)
-       (o->
-	 (lambda (c) (dispatch-pdef pdef c (in:impl key)))
-	 (op x ...) ...))))
+  (define (in: key pdef . ops)
+    (apply o-> (lambda (c) (dispatch-pdef pdef c (in:impl key))) ops))
 
   ;; A node that replaces the input with the result of applying
   ;; it to each pattern member, which must all be functional nodes.
-  (define-syntax rp:
-    (syntax-rules ()
-
-      ((_ pdef)
-       (lambda (context)
-	 (dispatch-pdef pdef context rp:impl)))))
+  (define (rp: pdef)
+    (lambda (context)
+      (dispatch-pdef pdef context rp:impl)))
 
   ;;---------------------------------------------------------------
   ;; Composite chaining operators. Starting to get the feeling that
   
   ;; Transforms each event and returns the transformed copies only.
-  (define (tr: . cnodes)
+  (define (tr: . nodes)
     (lambda (context)
-      (render (apply x-> cnodes) context)))
+      (render (apply x-> nodes) context)))
 
   ;; Same as tr:, but only events matching pred are returned.
   ;; Confusing? People may expact this to replace only events
   ;; matching pred, and to let the others through.
-  (define (tr? pred . cnodes)
+  (define (tr? pred . nodes)
     (lambda (context)
-      ((apply tr: cnodes) (context-filter pred context))))
+      (context-filter pred ((apply tr: nodes) context))))
   
   ;; Same as tr:, but returns both the copies and the originals.
-  (define (cp: . cnodes)
+  (define (cp: . nodes)
     (lambda (context)
-      (contexts-merge context ((apply tr: cnodes) context))))
+      (contexts-merge ((apply tr: nodes) context)
+		      (context-resolve context))))
 
   ;; Same as tr?, but returns both the filtered copies and the originals.
-  (define (cp? pred . cnodes)
+  (define (cp? pred . nodes)
     (lambda (context)
-      (contexts-merge context ((apply tr? pred cnodes) context))))
-
-  ;; Applies each op to the original context independently, and returns
-  ;; all the results as well as the originals. Works best with tr, tr?
-  (define (ch: . ops)
-    (lambda (context)
-      (fold-left (lambda (c op) (contexts-merge c ((tr: op) context))) context ops)))
+      (contexts-merge ((apply tr? pred nodes) context)
+		      (context-resolve context))))
 
   ;; Like cm?, but merges via the predicate. The returned list contains
   ;; unaltered notes
-  (define (to? pred . cnodes)
+  (define (to? pred . nodes)
     (lambda (context)
-      (let* ([unfiltered (context-filter (lambda (c) (not (pred c))) context)])
-	(contexts-merge unfiltered ((apply tr? pred cnodes) context)))))
+      (let* ([resolved (context-resolve context)]
+	     [unfiltered (context-filter (lambda (c) (not (pred c))) resolved)])
+	(contexts-merge unfiltered ((apply tr? pred nodes) context)))))
   
   ;;---------------------------------------------------------
-  ;; Predicates & filtering.
+  ;; Predicates & filtering. WARNING: This is all quite dated,
+  ;; may need to change as it hasn't been tested in a while.
 
   ;; Takes either a key (shorthand for (this key #f)) or a c-val.
   ;; WARNING: what if we want to check for values of #f?
@@ -155,4 +127,20 @@
     (lambda [events]
       (concatenate (map (cut <> events) filters))))
 
-  ) ; end module 'cnodes'
+  ;; Helper for building nodes from pairs of keys and values,
+  ;; used in the implementation of the to: family of ops above.
+  ;; (key value ...), (key -> impl) -> (context -> context) 
+  (define (kv-pairs-to-nodes pairs impl)
+    (define (make-node key val)
+      (lambda (c) (dispatch-pdef val c (impl key))))
+    (if (zero? (mod (length pairs) 2))
+	(let loop ([pairs pairs] [out '()])
+	  (if (null? pairs)
+	      (reverse out)
+	      (loop (cddr pairs)
+		    (cons (make-node (car pairs) (cadr pairs)) out))))
+	(raise (string-append
+		"'to' family operators must have an even number of arguments, "
+		"made up of alternating keys and patterns."))))
+
+  ) ; end module 'logic-nodes'

@@ -1,6 +1,5 @@
 ;; After loading init.scm, play around in this file.
 ;; Ctrl-C-C re-evaluates the definition you're in.
-
 (start)
 (pause)
 

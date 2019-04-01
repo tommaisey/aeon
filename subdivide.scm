@@ -54,7 +54,7 @@
   ;; pdef-time-chunker.
 
   (define (rp:impl context leaf)
-    (let ([result (get-leaf leaf (context-resolve context))])
+    (let ([result (get-leaf leaf context)])
       (if (not (context? result))
 	  (raise (format pattern-error-rp result))
 	  (context-events-next result))))
