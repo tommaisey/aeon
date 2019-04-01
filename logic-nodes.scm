@@ -10,7 +10,10 @@
 ;; ------------------------------------------------------------
 (library (logic-nodes)
   (export
-   /- in* in: to: to+ to- to* to/ to?
+   /-
+   in* in:
+   to: to+ to- to* to/ to?
+   mv+ mv- mv* mv/
    rp: tr: tr? cp: cp?
    is? any-of all-of none-of phrase)
 
@@ -19,21 +22,6 @@
     (for (subdivide) expand)
     (utilities) (event) (context) (node-eval)
     (chain-nodes) (value-nodes) (srfi s26 cut))
-  
-  ;; A node that sets a property of events according to the pattern.
-  ;; key value ... -> (context -> context)
-  (define (to: . key-val-pairs)
-    (apply x-> (kv-pairs-to-nodes key-val-pairs to:impl)))
-
-  ;; A general 'to', taking a math op, a key and a def. The math op is
-  ;; called with the current value for key and the value returned by def.
-  (define (to math-op . key-val-pairs)
-    (apply x-> (kv-pairs-to-nodes key-val-pairs (lambda (key) (to-math-impl math-op key)))))
-
-  (define (to+ . kv-pairs) (apply to + kv-pairs))
-  (define (to- . kv-pairs) (apply to - kv-pairs))
-  (define (to* . kv-pairs) (apply to * kv-pairs))
-  (define (to/ . kv-pairs) (apply to / kv-pairs))
 
   ;; A node that adds blank events according to a subdividing pattern.
   (define (in* pdef . ops)
@@ -48,6 +36,33 @@
   (define (rp: pdef)
     (lambda (context)
       (dispatch-pdef pdef context rp:impl)))
+  
+  ;; A node that sets a property of events according to the pattern.
+  ;; key value ... -> (context -> context)
+  (define (to: . kv-pairs)
+    (apply x-> (kv-pairs-to-nodes kv-pairs to:impl)))
+
+  ;; A general 'to', taking a math op, a key and a def. The math op is
+  ;; called with the current value for key and the value returned by def.
+  (define (to math-op . kv-pairs)
+    (apply x-> (kv-pairs-to-nodes kv-pairs (lambda (key) (to-math-impl math-op key)))))
+
+  (define (to+ . kv-pairs) (apply to + kv-pairs))
+  (define (to- . kv-pairs) (apply to - kv-pairs))
+  (define (to* . kv-pairs) (apply to * kv-pairs))
+  (define (to/ . kv-pairs) (apply to / kv-pairs))
+
+  ;; A general 'mv', taking a math op and a def. The math op is
+  ;; called with each segment's current time and the value returned by
+  ;; def. The input context is resolved with a different arc, in effect
+  ;; shifting it in time.
+  (define (mv math-op inv-math-op . pdefs)
+    (apply x-> (pdefs-to-nodes pdefs (mv-math-impl math-op inv-math-op))))
+
+  (define (mv+ . pdefs) (apply mv + - pdefs))
+  (define (mv- . pdefs) (apply mv - + pdefs))
+  (define (mv* . pdefs) (apply mv * / pdefs))
+  (define (mv/ . pdefs) (apply mv / * pdefs))
 
   ;;---------------------------------------------------------------
   ;; Composite chaining operators. Starting to get the feeling that
@@ -127,9 +142,15 @@
     (lambda [events]
       (concatenate (map (cut <> events) filters))))
 
-  ;; Helper for building nodes from pairs of keys and values,
+  ;;-------------------------------------------------------------------
+  ;; Helper for building nodes from a list of pdefs
+  ;; (pdef ...), impl -> ((context -> context) ...)
+  (define (pdefs-to-nodes pdefs impl)
+    (map (lambda (p) (lambda (c) (dispatch-pdef p c impl))) pdefs))
+
+  ;; Helper for building a list of nodes from pairs of keys and values,
   ;; used in the implementation of the to: family of ops above.
-  ;; (key value ...), (key -> impl) -> (context -> context) 
+  ;; (key value ...), (key -> impl) -> ((context -> context) ...)
   (define (kv-pairs-to-nodes pairs impl)
     (define (make-node key val)
       (lambda (c) (dispatch-pdef val c (impl key))))

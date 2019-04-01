@@ -2,11 +2,12 @@
 
 (library (subdivide)
   (export /- dispatch-pdef
+	  rp:impl
 	  in*impl
 	  in:impl
 	  to:impl
 	  to-math-impl
-	  rp:impl)
+	  mv-math-impl)
   
   (import (scheme)
 	  (utilities)
@@ -17,8 +18,8 @@
 
   (define :sustain ':sustain)
 
-  (define pattern-error-in "pattern error: got '~A', in: expects a number")
-  (define pattern-error-rp "pattern error: got '~A', rp: expects a procedure")
+  (define (pattern-error name type val)
+    (format "pattern error: got '~A', ~A expects a ~A" val name type))
 
   ;;-------------------------------------------------------------------
   (define-record-type pdef
@@ -56,7 +57,7 @@
   (define (rp:impl context leaf)
     (let ([result (get-leaf leaf context)])
       (if (not (context? result))
-	  (raise (format pattern-error-rp result))
+	  (raise (pattern-error "'rp'" "procedure" result))
 	  (context-events-next result))))
 
   ;; Helper for 'in' impls to get a value from a leaf node,
@@ -66,11 +67,11 @@
       (cond
        ((is-rest? val) '())
        ((context? val) (context-events-next val))
-       ((not (number? val)) (raise (format pattern-error-in val)))
+       ((not (number? val)) (raise (pattern-error "'in'" "number" val)))
        (else (maker val context)))))
 
-  ;; Adds blank events to the context with a subdividing pattern (pdef)
-  ;; A pdef value of 1 gives one event.
+  ;; Adds blank events to the context with a subdividing pattern.
+  ;; A leaf value of 1 gives one event.
   ;; For values > 1, creates N subdivided values.
   ;; The symbol ~ creates a rest.
   (define (in*impl context leaf)
@@ -83,7 +84,7 @@
 	 (map make (iota num))))
      context leaf))
 
-  ;; Adds events with a certain property
+  ;; Adds events with a property defined by 'key'.
   (define (in:impl key)
     (lambda (context leaf)
       (make-events
@@ -99,15 +100,16 @@
       (if (is-rest? val)
 	  (context-event c)
 	  (event-set (context-event c) key (val-transform val)))))
-
-  ;; Takes a pdef template and a context, and returns a new context with the
-  ;; values in the pdef applied to any events in the context.
+  
+  ;; Sets the property 'key' on all events in the context.
   (define (to:impl key)
     (lambda (context leaf)
       (define (map-fn c)
 	(set-or-rest c leaf key (lambda (v) v)))
       (context-events-next (context-map map-fn (context-resolve context)))))
-  
+
+  ;; Sets the property 'key' by doing some math on the old
+  ;; value together with leaf.
   (define (to-math-impl math-fn key)
     (lambda (context leaf)
       (define (map-fn c)
@@ -116,6 +118,28 @@
 	      (context-event c)
 	      (set-or-rest c leaf key (lambda (v) (math-fn current v))))))
       (context-events-next (context-map map-fn (context-resolve context)))))
+
+  ;; Resolves input context with an arc shifted by leaf, effectively
+  ;; moving this slice of time.
+  (define (mv-math-impl math-fn inv-math-fn)
+    (define (mapper new-val)
+      (lambda (context)
+	(event-move (context-event context) new-val math-fn)))
+    (lambda (context leaf)
+      (derecord context ([old-start context-start]
+			 [old-end context-end])
+	(context-events-next
+	 (let ([val (get-leaf-early leaf old-start context)])
+	   (cond
+	    ((is-rest? val) (context-resolve context))
+	    ((not (number? val)) (raise (pattern-error "'mv'" "number" val)))
+	    (else
+	     (let* ([new-start (inv-math-fn old-start val)]
+		    [new-end (inv-math-fn old-end val)]
+		    [shifted (rearc context (make-arc new-start new-end))])
+	       (context-map (mapper val) (context-resolve shifted))))))))))
+
+  ;; Takes a pdef template and an context, and 
 
   ;;-----------------------------------------------------------------------
   ;; General helpers for main time-chunking routines like subdiv-chunker (which -/

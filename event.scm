@@ -25,6 +25,7 @@
    
    event-beat
    event-before?
+   event-move
    print-event
    print-events
    make-events-with-times
@@ -64,8 +65,10 @@
     (cons (cons key value) event))
   (define (event-update event key update-fn default)
     (event-set event key (update-fn (event-get event key default))))
-  (define (event-beat n)
-    (event-get n time-key 0))
+  (define (event-beat event)
+    (event-get event time-key 0))
+  (define (event-move e n math-fn)
+    (event-update e time-key (lambda (beat) (math-fn beat n)) 0))
   (define (event-before? n1 n2)
     (< (event-beat n1) (event-beat n2)))
   ;; Checks there is an item at the key and that it
