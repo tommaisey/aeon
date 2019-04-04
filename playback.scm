@@ -4,10 +4,8 @@
 ;; pushes them on to our sound engine back-ends (e.g. OSC , MIDI).
 (library (playback)
   (export
-   add-pattern
-   remove-pattern
    bpm->mps bpm->spm
-   secs-until
+   measures->secs secs-until
    semaphore semaphore? make-semaphore
    semaphore-val semaphore-mutex semaphore-cond
    start-waiting stop-waiting
@@ -17,23 +15,15 @@
 	  (except (scheme) reset random)
 	  (only (srfi s1 lists) alist-cons alist-delete))
 
-  (define running-patterns '()) ; alist
-
-  ;; A pattern being a function that takes and returns a context.
-  ;; This will only play if `start-playback` has been called.
-  (define (add-pattern pattern uid)
-    (set! running-patterns
-      (alist-cons uid pattern (alist-delete uid running-patterns))))
-
-  (define (remove-pattern uid)
-    (set! running-patterns (alist-delete uid running-patterns)))
-
   ;;------------------------------------------------
   ;; Some useful functions for dealing with musical time.
-  ;; Its useful to convert bpm to measures per second (mps)
-  ;; and also to seconds per measure.
-  (define (bpm->mps bpm) (/ bpm 4 60)) 
+  
+  ;; Convert bpm to measures per second (mps)
+  (define (bpm->mps bpm) (/ bpm 4 60))
+  ;; Convert bpm to seconds per measure
   (define (bpm->spm bpm) (/ 1 (bpm->mps bpm)))
+  ;; Convert a value in measures to seconds
+  (define (measures->secs m bpm) (* m (bpm->spm bpm)))
   
   (define (secs-until beat current-beat bpm)
     (/ (- beat current-beat) (bpm->mps bpm)))

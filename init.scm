@@ -1,19 +1,51 @@
 ;; -*- geiser-scheme-implementation: chez-*-
 (load "libs.scm")
 
+;; A default test pattern. Redefine for fun and profit!
+(define p1 (in* 1))
+(define (reset-p1) (set! p1 (in* 1)))
+
+;; Adds custom priting of contexts.
+(record-writer (type-descriptor context) context-print)
+
 ;;-----------------------------------------------------------------
 ;; Some SuperCollider setup: a default server, synthdef & event sender.
 ;; TODO: blocks if SuperCollider isn't running!! 
 (define sc3 (udp:open "127.0.0.1" 57110))
-(send sc3 (g-new1 1 add-to-tail 0))
+(define main-group 1)
+(send sc3 (g-new1 main-group add-to-tail 0))
 
-(define (play-when name t . arg-pairs)
-  (let ([args (list (s-new0 name -1 add-to-tail 1)
+;; Groups other than main-group can be used to control
+;; groups of voices after they have started.
+(define (play-when name t group arg-pairs)
+  (let ([args (list (s-new0 name -1 add-to-tail group)
 		    (n-set -1 arg-pairs))])
     (send sc3 (bundle t args))))
 
+(define (control-when t group arg-pairs)
+  (let ([args (list (n-set group arg-pairs))])
+    (send sc3 (bundle t args))))
+
 (define (play-now name . arg-pairs)
-  (apply play-when name (utc) arg-pairs))
+  (play-when name (utc) main-group arg-pairs))
+
+;; We keep a list of all the groups that have been created so we don't
+;; spam new group commands to SC.
+(define known-groups (list))
+(define (known-group? id) (member id known-groups))
+
+(define (create-group id)
+  (when (and (number? id)
+	     (not (<= id 1))
+	     (not (known-group? id)))
+    (set! known-group (cons id known-groups))
+    (send sc3 (g-new1 id add-to-tail 0))))
+
+(define group-id-counter 1)
+
+(define (make-unused-group-id)
+  (set! group-id-counter (+ group-id-counter 1))
+  group-id-counter)
 
 (load "synthdefs.scm")
 
@@ -23,28 +55,44 @@
 (define (play-event event current-beat)
   (define (entry-convert pair)
     (cons (symbol->string (car pair)) (cdr pair)))
-  (let* ([event (preprocess-event event)]
-	 [inst (event-get event :inst "sine-grain")]
-	 [beat (event-beat event)]
-	 [until (secs-until beat current-beat bpm)]
-	 [t (+ (utc) until playback-latency)])
-    (apply play-when inst t (map entry-convert (event-clean event)))))
+  
+  (let ([event (preprocess-event event)])
+    (alist-let event ([beat    :beat 0]
+		      [inst    :inst "sine-grain"]
+		      [group   :group 1]
+		      [control :control #f]
+		      [sustain :sustain #f])
+      (let* ([until (secs-until beat current-beat bpm)]
+	     [time (+ (utc) until playback-latency)]
+	     [args (map entry-convert (event-clean event))])
+	(create-group group)
+	(if control
+	    (if (or (not (number? group)) (<= group 1))
+		(println "Error: control event didn't specify a valid group.")
+		(control-when time group args))
+	    (play-when inst time group args))))))
 
 ;; Preprocess an event. Computes frequency for events using the harmony
 ;; system. Gives sampler instrument to events with samples. 
 (define (preprocess-event event)
-  (cond
-   ((event-get event :sample #f)
-    (event-set event :inst (event-get event :inst "sampler")))
-   (else
-    (event-with-freq event))))
+  (process-times (process-inst event)))
 
-;; Our test pattern for the moment. Redefine for fun and profit!
-(define p1 (in* 1))
-(define (reset-p1) (define-top-level-value 'p1 (in* 1)))
+;; If it looks like a sampler event, sets the right inst if it's
+;; missing. If it looks like a freq event, computes freq.
+(define (process-inst event)
+    (if (event-get event :sample #f)
+	(event-set event :inst (event-get event :inst "sampler"))
+	(event-with-freq event)))
 
-;; Adds custom priting of contexts.
-(record-writer (type-descriptor context) context-print) 
+;; Converts any key found in the 'tempo-dependent-keys' alist
+;; from measures to seconds, for prior to sending to SC.
+(define (process-times event)
+  (define (convert event entry)
+    (if (cdr entry)
+	(event-set event (car entry) (measures->secs (cdr entry) bpm))
+	event))
+  (let ([vals (event-get-multi event tempo-dependent-keys)])
+    (fold-left convert event vals)))
 
 ;;-----------------------------------------------------------------
 ;; A thread that wakes up every playback-chunk beats to call (process-chunk)

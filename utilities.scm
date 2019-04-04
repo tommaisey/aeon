@@ -22,6 +22,7 @@
 	  remove-list
 	  unsafe-list?
 	  push-front
+	  alist-get-multi
 	  alist-let
 	  derecord
 	  check-type
@@ -190,23 +191,28 @@
   (define (push-front val list)
     ((if (unsafe-list? val) append cons) val list))
 
-  ;; A helpful macro to bind to multiple values in an alist.
+  ;; Get multiple alist values in one go. Returns a new alist
+  ;; containing only the key/value pairs requested.
   ;; More efficient than searching seperately for each value.
+  (define (alist-get-multi alist key-default-pairs)
+    (let* ([targets key-default-pairs]
+	   [found '()]
+	   [setter (lambda (entry)
+		     (let ([t (assq (car entry) targets)])
+		       (when t
+			 (set! found (cons entry found))
+			 (set! targets (remq t targets)))))])
+      (for-each setter alist)
+      (append found targets))) ;; Add defaults for those not found.
+
+  ;; A helpful macro to bind to multiple values in an alist.
   (define-syntax alist-let
     (syntax-rules ()
       ((_ alist ([name key default] ...)
 	  body ...)
-       (let* ([targets (list (cons key default) ...)]
-	      [found '()]
-	      [setter (lambda (entry)
-			(let ([t (assq (car entry) targets)])
-			  (when t
-			    (set! found (cons entry found))
-			    (set! targets (remq t targets)))))])
-	 (for-each setter alist)
-	 (set! found (append targets found))
-	 (let ([name (cdr (assq key found))] ...)
-	   body ...)))))
+       (let* ([found (alist-get-multi alist (list (cons key default) ...))]
+	      [name (cdr (assq key found))] ...)
+	  body ...))))
 
   ;; Useful for destructuring records
   (define-syntax derecord

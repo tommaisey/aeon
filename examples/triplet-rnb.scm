@@ -20,9 +20,9 @@
 
       (to: :scale dorian
 	   :inst "swirly-keys"
-	   :attack 0.005
+	   :attack 0.002
 	   :sustain 0
-	   :release (/- [2 1 1 4]))
+	   :release (/- [1 0.5 0.5 2]))
 
       (to* :release 0.3)
       
@@ -35,4 +35,6 @@
 	     (to: :sample bd))
 	
 	(in: :sample (/- 1 [• sn • sn])
-	     (to: :amp 0.2))))))
+	     (to: :amp 0.2))
+	(mv+ (/- 1/4 (rnd 0.0 0.011)))
+	(to: :speed (rnd 0.975 1.0))))))

@@ -9,39 +9,39 @@
 ;; returns a new list, the old one remains untouched.
 ;; ------------------------------------------------------------
 (library (event)
-  (export
-   :beat
-   time-key
-   priority-keys
-   make-event
-   event-get
-   event-set
-   event-update
-   event-check
-   event-clean
-   event-optimise
-   event-prioritise
-   event-remove-multi
+  (export :beat
+	  time-key
+	  priority-keys
+	  make-event
+	  event-get
+	  event-set
+	  event-update
+	  event-check
+	  event-clean
+	  event-optimise
+	  event-prioritise
+	  event-get-multi
+	  event-remove-multi
+	  
+	  event-beat
+	  event-before?
+	  event-move
+	  print-event
+	  print-events
+	  make-events-with-times
+	  make-events-regular
    
-   event-beat
-   event-before?
-   event-move
-   print-event
-   print-events
-   make-events-with-times
-   make-events-regular
-   
-   arc arc?
-   make-arc
-   arc-with-start
-   arc-with-end
-   arc-start
-   arc-end
-   arc-length
-   arc-negate
-   arc-add
-   arc-valid?
-   within-arc?)
+	  arc arc?
+	  make-arc
+	  arc-with-start
+	  arc-with-end
+	  arc-start
+	  arc-end
+	  arc-length
+	  arc-negate
+	  arc-add
+	  arc-valid?
+	  within-arc?)
 
   (import (chezscheme) (utilities) (srfi s26 cut)
 	  (only (srfi s1 lists) delete-duplicates lset-difference))
@@ -81,8 +81,7 @@
   ;; accelerating future searches for them.
   (define (event-prioritise event key)
     (let ([result (event-get event key #f)])
-      (if (not result) event
-	  (event-set event key result))))
+      (if result (event-set event key result) event)))
 
   ;; Remove the 'history' of the alist. One entry per key.
   (define (event-clean event)
@@ -93,6 +92,9 @@
     (let ([n (fold-left (cut event-prioritise <> <>) event priority-keys)])
       (event-clean n)))
 
+  (define (event-get-multi event key-default-pairs)
+    (alist-get-multi event key-default-pairs))
+  
   (define (event-remove-multi event key-list)
     (lset-difference (lambda (entry k) (eq? k (car entry))) event key-list))
 
