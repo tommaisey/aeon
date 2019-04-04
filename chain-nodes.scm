@@ -10,7 +10,8 @@
   ;; Replace the input.
   (define (x-> . nodes)
     (lambda (context)
-      (context-resolve (context-append-chain context (reverse nodes)))))
+      (let ([added (context-append-chain context (reverse nodes))])
+	(context-resolve added))))
 
   ;; Apply each node successively to a blank context.
   ;; Merge result with the input.

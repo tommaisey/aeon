@@ -7,7 +7,8 @@
 	  in:impl
 	  to:impl
 	  to-math-impl
-	  mv-math-impl)
+	  mv-math-impl
+	  echo-impl)
   
   (import (scheme)
 	  (utilities)
@@ -119,8 +120,8 @@
 	      (set-or-rest c leaf key (lambda (v) (math-fn current v))))))
       (context-events-next (context-map map-fn (context-resolve context)))))
 
-  ;; Resolves input context with an arc shifted by leaf, effectively
-  ;; moving this slice of time.
+  ;; Resolves input context with an arc shifted by leaf,
+  ;; effectively moving a different slice of time into this one.
   (define (mv-math-impl math-fn inv-math-fn)
     (define (mapper new-val)
       (lambda (context)
@@ -139,31 +140,16 @@
 		    [shifted (rearc context (make-arc new-start new-end))])
 	       (context-map (mapper val) (context-resolve shifted))))))))))
 
-  ;; Takes a pdef template and an context, and 
+  (define (echo-impl num-taps iterative-nodes)
+    (lambda (context division-leaf)
+      '()))
 
   ;;-----------------------------------------------------------------------
-  ;; General helpers for main time-chunking routines like subdiv-chunker (which -/
-  ;; implements the /- pattern style).
-  
-  ;; Evaluates any splicers to build the final pdef, plus extra info:
-  ;; -> (values expanded-def, def-len, start-beat, slice-dur)
-  (define (splice-expand def dur context)
-    (let* ([basic-len (length def)]
-	   [basic-dur (/ dur basic-len)]
-	   [start (round-down-f (context-start context) dur)])
-      (let loop ([p def] [out '()] [len 0])
-	(if (null? p)
-	    (values (reverse out) len start (/ dur len))
-	    (let* ([v (car p)]
-		   [end (+ start (* len basic-dur))]
-		   [x (if (splicer? v)
-			  (reverse ((splicer-logic v) (make-empty-context start end)))
-			  (list v))])
-	      (loop (cdr p) (append x out) (+ len (length x))))))))
+  ;; General helpers for main time-chunking routines like subdiv-chunker.
 
   ;; Some helpers for dealing with repeat, rest and sustain symbols.
-  (define (maybe-repeat item last)
-    (if (eq? repeat-sym item) last item))
+  (define (maybe-repeat next last)
+    (if (eq? repeat-sym next) last next))
 
   (define (is-rest? item)
     (eq? item rest-sym))
@@ -181,6 +167,13 @@
 	  (loop (cdr lst) (+ n 1))
 	  (values n lst))))
 
+  ;; -> (values def-len, start-beat, slice-dur)
+  (define (pdef-info def dur context)
+    (let* ([len (length def)]
+	   [slice-dur (/ dur len)]
+	   [start (round-down-f (context-start context) dur)])
+      (values len start slice-dur)))
+
   ;;-----------------------------------------------------------------------
   ;; Implements the recursive subdivision of an input pdef list into equal-sized
   ;; elements. A perform fn is supplied, which returns a list of events for each
@@ -188,22 +181,26 @@
   ;; -> (list event ...)
   (define (subdiv-chunker context dur def perform)
     (cond
-     ((null? def) '())
-     ((not (unsafe-list? def)) (subdiv-chunker context dur (list def) perform))
+     ((null? def)
+      '())
+     ((not (unsafe-list? def))
+      (subdiv-chunker context dur (list def) perform))
      (else
-      (let-values ([[def len start dur]
-		    (splice-expand def dur context)])
-	(let loop ([t start] [p def] [last #f] [out '()])
+      (let-values (([len start slice-dur] (pdef-info def dur context)))
+	(let loop ([t start]
+		   [next def]
+		   [prev #f]
+		   [out '()])
 	  (cond
-	   ((null? p) (loop t def #f out))
+	   ((null? next) (loop t def #f out))
 	   ((>= t (context-end context)) out)
 	   (else
-	    (let-values ([[stretch-num next-p] (drop-stretched p)])		   
-	      (let* ([item (maybe-repeat (car p) last)]
-		     [next-t (+ t (* stretch-num dur))]
+	    (let-values ([[num-slices next-p] (drop-stretched next)])		   
+	      (let* ([item (maybe-repeat (car next) prev)]
+		     [next-t (+ t (* num-slices slice-dur))]
 		     [context (rearc context (make-arc t next-t))]
 		     [new (if (unsafe-list? item)
-			      (subdiv-chunker context dur item perform)
+			      (subdiv-chunker context slice-dur item perform)
 			      (perform context item))])
 		(loop next-t next-p item (append out new)))))))))))
   

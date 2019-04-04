@@ -10,8 +10,7 @@
 ;; ------------------------------------------------------------
 (library (logic-nodes)
   (export
-   /-
-   in* in:
+   /- in* in:
    to: to+ to- to* to/ to?
    mv+ mv- mv* mv/
    rp: tr: tr? cp: cp?
@@ -91,13 +90,24 @@
       (contexts-merge ((apply tr? pred nodes) context)
 		      (context-resolve context))))
 
-  ;; Like cm?, but merges via the predicate. The returned list contains
-  ;; unaltered notes
+  ;; Like cm?, but merges via the predicate. Returns unaltered
+  ;; those events which fail the predicate.
   (define (to? pred . nodes)
     (lambda (context)
       (let* ([resolved (context-resolve context)]
 	     [unfiltered (context-filter (lambda (c) (not (pred c))) resolved)])
 	(contexts-merge unfiltered ((apply tr? pred nodes) context)))))
+
+  ;; Produces a 'delay line', though a stateless one (i.e. changing
+  ;; the source affects the line instantly).
+  ;; Both beats-per-tap and num-taps may be pdefs.
+  ;; iterative-nodes are successivly applied to the taps.
+
+  ;; Hmm, fuck, old dispatch-pdef may not fit!
+  (define (echo beats-per-tap num-taps . iterative-nodes)
+    (lambda (context)
+      (let ([impl (echo-impl num-taps iterative-nodes)])
+	(dispatch-pdef beats-per-tap context impl))))
   
   ;;---------------------------------------------------------
   ;; Predicates & filtering. WARNING: This is all quite dated,

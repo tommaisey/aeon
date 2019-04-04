@@ -40,18 +40,15 @@
   
   (define-syntax make-pdef-data
     (lambda (x)
-      (syntax-case x (! » ×)
+      (syntax-case x (! • » ×)
 
-	((_ (× v n))
-	 (syntax (build-splicer '× v n)))
-
-	((_ (» v n))
-	 (syntax (build-splicer '» v n)))
-
-	((_ (! v ...))
-	 (syntax (list (make-pdef-data v) ...)))
+	((_ (! v ...)) (syntax (list (make-pdef-data v) ...)))
+	((_ (• v ...)) (syntax (make-pdef-data (! • v ...))))
+	((_ (» v ...)) (syntax (make-pdef-data (! » v ...))))
+	((_ (× v ...)) (syntax (make-pdef-data (! × v ...))))
 	
-	((_ (v q ...)) (identifier? (syntax v))
+	((_ (v q ...))
+	 (identifier? (syntax v))
 	 (lambda (property-lookup)
 	   (if (property-lookup #'v #'pdef-call-tag)
 		 (syntax (v q ...))

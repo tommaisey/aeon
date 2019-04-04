@@ -27,7 +27,7 @@
       (to* :release 0.3)
       
       (o-> ;; Drums
-	(in: :sample (/- 1/3 [• (× hh 3)])
+	(in: :sample (/- 1/3 [• hh × ×])
 	     (to: :amp 0.1
 		  :pan (rnd 0.1 0.7)))
 	

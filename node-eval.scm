@@ -1,9 +1,5 @@
 (library (node-eval)
   (export
-   splicer
-   splicer?
-   splicer-logic
-   build-splicer
    get-leaf
    get-leaf-early
    render
@@ -33,19 +29,5 @@
     (if (procedure? leaf)
 	(get-leaf leaf (context-insert context (make-event time-to-add)))
 	leaf))
-
-  ;; A special type that denotes a function that can return a list
-  ;; to be spliced into the containing pdef list. This must be evaluated
-  ;; greedily while we work out the number of events in the pattern.
-  ;; "type" can be either '& (repeating) or '_ (length).
-  (define-record-type splicer
-    (fields (immutable logic)))
-
-  ;; Returns a splicer that repeats something or lengthens it.
-  (define (build-splicer type val num)
-    (make-splicer (lambda (context)
-		    (cons (get-leaf val context)
-			  (repeat (get-leaf type context)
-				  (- (get-leaf num context) 1))))))
 
   )
