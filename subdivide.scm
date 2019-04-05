@@ -190,18 +190,21 @@
 	(let loop ([t start]
 		   [next def]
 		   [prev #f]
-		   [out '()])
+		   [events '()])
 	  (cond
-	   ((null? next) (loop t def #f out))
-	   ((>= t (context-end context)) out)
+	   ((null? next) (loop t def #f events))
+	   ((>= t (context-end context)) events)
 	   (else
-	    (let-values ([[num-slices next-p] (drop-stretched next)])		   
+	    (let-values ([[num-slices next-p] (drop-stretched next)])		  
 	      (let* ([item (maybe-repeat (car next) prev)]
 		     [next-t (+ t (* num-slices slice-dur))]
-		     [context (rearc context (make-arc t next-t))]
-		     [new (if (unsafe-list? item)
-			      (subdiv-chunker context slice-dur item perform)
-			      (perform context item))])
-		(loop next-t next-p item (append out new)))))))))))
+		     [subctxt (rearc context (make-arc t next-t))]
+		     [new-events (if (arcs-overlap? (context-arc context)
+						    (context-arc subctxt))
+				     (if (unsafe-list? item)
+					 (subdiv-chunker subctxt slice-dur item perform)
+					 (perform subctxt item))
+				     '())])
+		(loop next-t next-p item (append events new-events)))))))))))
   
   )

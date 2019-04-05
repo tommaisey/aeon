@@ -29,8 +29,8 @@
 (define (play-now name . arg-pairs)
   (play-when name (utc) main-group arg-pairs))
 
-;; We keep a list of all the groups that have been created so we don't
-;; spam new group commands to SC.
+;; We keep a list of all the groups that have been created so
+;; we don't spam new group commands to SC.
 (define known-groups (list))
 (define (known-group? id) (member id known-groups))
 

@@ -5,7 +5,8 @@
 (library (utilities)
   (export round-down-f pseudo-rand inc dec
 	  nearly-divisible divisible on-each
-	  above below between between-each
+	  above below
+	  between between-inclusive between-each
 	  equal nearly-equal
 	  pair first rest
 	  merge-columns
@@ -79,6 +80,9 @@
 
   (define (between x lower upper)
     (and (>= x lower) (< x upper)))
+
+  (define (between-inclusive x lower upper)
+    (and (>= x lower) (<= x upper)))
 
   (define (between-each x lower upper each)
     (let ([m (mod x each)])

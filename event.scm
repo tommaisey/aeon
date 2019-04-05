@@ -41,7 +41,8 @@
 	  arc-negate
 	  arc-add
 	  arc-valid?
-	  within-arc?)
+	  within-arc?
+	  arcs-overlap?)
 
   (import (chezscheme) (utilities) (srfi s26 cut)
 	  (only (srfi s1 lists) delete-duplicates lset-difference))
@@ -141,7 +142,12 @@
   (define (arc-valid? a)
     (< (arc-start a) (arc-end a)))
   (define (within-arc? a t)
-    (between t (arc-start a) (arc-end a)))
+    (between-inclusive t (arc-start a) (arc-end a)))
+  (define (arcs-overlap? a b)
+    (or (within-arc? b (arc-start a))
+	(within-arc? b (arc-end a))
+	(within-arc? a (arc-start b))
+	(within-arc? a (arc-end b))))
   (define (arc-length a)
     (- (arc-end a) (arc-start a)))
   (define (arc-negate a)
