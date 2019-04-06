@@ -25,7 +25,9 @@
 	  push-front
 	  alist-get-multi
 	  alist-let
+	  make-alist
 	  derecord
+	  declare-keyword
 	  check-type
 	  println)
 
@@ -120,12 +122,12 @@
 
   ;; Check if a list is sorted or not.
   (define (sorted? less? l)
-    (let recur ([l (cdr l)] [prev (car l)])
+    (let loop ([l (cdr l)] [prev (car l)])
       (cond
        ((null? l) #t)
        ((or (less? prev (car l))
 	    (not (less? (car l) prev)))
-	(recur (cdr l) (car l)))
+	(loop (cdr l) (car l)))
        (else #f))))
 
   ;; Stable merges to lists according to less?. Lifted from
@@ -216,7 +218,14 @@
 	  body ...)
        (let* ([found (alist-get-multi alist (list (cons key default) ...))]
 	      [name (cdr (assq key found))] ...)
-	  body ...))))
+	 body ...))))
+
+  (define (make-alist . kv-pairs)
+    (if (even? (length kv-pairs))
+	(do ([pairs kv-pairs (cddr pairs)]
+	     [alist '() (cons (cons (car pairs) (cadr pairs)) alist)])
+	    ((null? pairs) (reverse alist)))
+	(raise "make-alist requires an even list of keys and values.")))
 
   ;; Useful for destructuring records
   (define-syntax derecord
@@ -224,6 +233,10 @@
       ((_ rec ([name record-accessor] ...) body-forms ...)
        (let ([name (record-accessor rec)] ...)
 	 body-forms ...))))
+
+  (define-syntax declare-keyword
+    (syntax-rules ()
+      ((_ name) (define name 'name))))
 
   ;;------------------------------------------------------------------------
    ;; Throw an error if the wrong type is used

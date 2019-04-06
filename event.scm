@@ -101,12 +101,14 @@
 
   ;; Some event convenience functions
   (define (print-event event port)
+    (define (format-val v)
+      (format "~[~,2F~:;~S~]" (if (and (number? v) (inexact? v)) 0 1) v))
     (display "[" port)
     (for-each
      (lambda (kv)
        (display (car kv) port)
        (display ": " port)
-       (display (cdr kv) port)
+       (display (format-val (cdr kv)) port)
        (display " " port))
      (event-optimise event))
     (display "]" port)

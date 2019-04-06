@@ -38,7 +38,7 @@
       ((_ def) (/- 1 def))
 
       ((_ dur def)
-       (make-pdef dur (make-pdef-data def) subdiv-chunker))))
+       (make-pdef dur (make-pdef-data def) subdivider))))
 
   ;; Executes the time-chunker of a pdef, which will call the
   ;; perform-fn for each chunk of the context as it sees fit.
@@ -145,7 +145,7 @@
       '()))
 
   ;;-----------------------------------------------------------------------
-  ;; General helpers for main time-chunking routines like subdiv-chunker.
+  ;; General helpers for main time-chunking routines like subdivider.
 
   ;; Some helpers for dealing with repeat, rest and sustain symbols.
   (define (maybe-repeat next last)
@@ -179,14 +179,22 @@
   ;; elements. A perform fn is supplied, which returns a list of events for each
   ;; leaf in the pdef list.
   ;; -> (list event ...)
-  (define (subdiv-chunker context dur def perform)
+  (define (subdivider context dur def perform)
+    
+    (define (build-events item subctxt slice-dur)
+      (if (arcs-overlap? (context-arc context)
+			 (context-arc subctxt))
+	  (if (unsafe-list? item)
+	      (subdivider subctxt slice-dur item perform)
+	      (perform subctxt item))
+	  (list)))
     (cond
-     ((null? def)
-      '())
+     ((null? def) (list))
      ((not (unsafe-list? def))
-      (subdiv-chunker context dur (list def) perform))
+      (subdivider context dur (list def) perform))
      (else
-      (let-values (([len start slice-dur] (pdef-info def dur context)))
+      (let-values (([len start slice-dur]
+		    (pdef-info def dur context)))
 	(let loop ([t start]
 		   [next def]
 		   [prev #f]
@@ -199,12 +207,7 @@
 	      (let* ([item (maybe-repeat (car next) prev)]
 		     [next-t (+ t (* num-slices slice-dur))]
 		     [subctxt (rearc context (make-arc t next-t))]
-		     [new-events (if (arcs-overlap? (context-arc context)
-						    (context-arc subctxt))
-				     (if (unsafe-list? item)
-					 (subdiv-chunker subctxt slice-dur item perform)
-					 (perform subctxt item))
-				     '())])
+		     [new-events (build-events item subctxt slice-dur)])
 		(loop next-t next-p item (append events new-events)))))))))))
   
   )

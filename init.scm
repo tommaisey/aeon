@@ -10,42 +10,60 @@
 
 ;;-----------------------------------------------------------------
 ;; Some SuperCollider setup: a default server, synthdef & event sender.
-;; TODO: blocks if SuperCollider isn't running!! 
+;; TODO: this blocks if SuperCollider isn't running!! 
 (define sc3 (udp:open "127.0.0.1" 57110))
-(define main-group 1)
-(send sc3 (g-new1 main-group add-to-tail 0))
+
+;; Helper for sending timestamped OSC bundles
+(define (send-bundle t args)
+  (send sc3 (bundle t args)))
 
 ;; Groups other than main-group can be used to control
 ;; groups of voices after they have started.
 (define (play-when name t group arg-pairs)
-  (let ([args (list (s-new0 name -1 add-to-tail group)
-		    (n-set -1 arg-pairs))])
-    (send sc3 (bundle t args))))
+  (send-bundle t (list (s-new0 name -1 add-to-head group)
+		       (n-set -1 arg-pairs))))
 
-(define (control-when t group arg-pairs)
-  (let ([args (list (n-set group arg-pairs))])
-    (send sc3 (bundle t args))))
-
+;; Useful for quick testing of synthdefs
 (define (play-now name . arg-pairs)
   (play-when name (utc) main-group arg-pairs))
+
+;; Sends a control change to all the voices in group.
+(define (control-when t group arg-pairs)
+  (send-bundle t (list (n-set group arg-pairs))))
+
+;; Much like play-when, but adds to tail
+(define (start-bus-effect name . arg-pairs)
+  (send-bundle (+ (utc) 0.25) ;; Avoid confusing 'late' messages
+	       (list (s-new0 name -1 add-to-tail bus-effect-group)
+		     (n-set -1 arg-pairs))))
 
 ;; We keep a list of all the groups that have been created so
 ;; we don't spam new group commands to SC.
 (define known-groups (list))
 (define (known-group? id) (member id known-groups))
 
-(define (create-group id)
-  (when (and (number? id)
-	     (not (<= id 1))
-	     (not (known-group? id)))
-    (set! known-group (cons id known-groups))
-    (send sc3 (g-new1 id add-to-tail 0))))
-
-(define group-id-counter 1)
+(define default-group 1) ;; See SC docs on default_group
+(define group-id-counter default-group)
 
 (define (make-unused-group-id)
   (set! group-id-counter (+ group-id-counter 1))
   group-id-counter)
+
+(define (create-group id order target)
+  (when (and (number? id)
+	     (not (< id 1))
+	     (not (known-group? id)))
+    (set! known-groups (cons id known-groups))
+    (send sc3 (g-new1 id order default-group))))
+
+;; n.b. SC docs seem to imply that the default_group is
+;; automatically created if SC is started from its GUI, not
+;; if it's started from cmd-line? Check that.
+(define standard-group (make-unused-group-id))
+(define bus-effect-group (make-unused-group-id))
+;; (create-group default-group add-after 0)
+(create-group standard-group add-to-head default-group)
+(create-group bus-effect-group add-to-tail default-group)
 
 (load "synthdefs.scm")
 
@@ -59,13 +77,13 @@
   (let ([event (preprocess-event event)])
     (alist-let event ([beat    :beat 0]
 		      [inst    :inst "sine-grain"]
-		      [group   :group 1]
+		      [group   :group default-group]
 		      [control :control #f]
 		      [sustain :sustain #f])
       (let* ([until (secs-until beat current-beat bpm)]
 	     [time (+ (utc) until playback-latency)]
 	     [args (map entry-convert (event-clean event))])
-	(create-group group)
+	(create-group group add-before default-group)
 	(if control
 	    (if (or (not (number? group)) (<= group 1))
 		(println "Error: control event didn't specify a valid group.")
@@ -131,6 +149,15 @@
 (define (stop)
   (pause)
   (set! playback-time 0))
+
+(define (set-bpm! n)
+  (set! bpm n)
+  (let ([e (make-event 0 (:tempo (bpm->mps n))
+		         (:control "tempo")
+		         (:group bus-effect-group))])
+    (play-event e 0)))
+
+(set-bpm! bpm) ;; Ensure fx synths have tempo
 
 (define (handle-error condition)
   (let ([p (console-output-port)])
