@@ -161,10 +161,10 @@
     
     (let* ([rate (mul :speed (buf-rate-scale kr :sample))]
 	   [osc  (play-buf 1 ar :sample rate 1 0 no-loop remove-synth)]
-	   [env  (make-asr 1 :attack :sustain :release -4)]
+	   [env  (make-asr :amp :attack :sustain :release -4)]
 	   [sig (mul env osc)])
       (make-outputs sig :pan
-		    (pair 0 :amp)
+		    (pair 0 1)
 		    (pair (private-bus :bus1) :bus1-amt)
 		    (pair (private-bus :bus2) :bus2-amt)))))
 

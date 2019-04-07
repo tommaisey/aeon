@@ -5,7 +5,7 @@
 (library (playback)
   (export
    bpm->mps bpm->spm
-   measures->secs secs-until
+   measures->secs secs->measures secs-until
    semaphore semaphore? make-semaphore
    semaphore-val semaphore-mutex semaphore-cond
    start-waiting stop-waiting
@@ -19,11 +19,13 @@
   ;; Some useful functions for dealing with musical time.
   
   ;; Convert bpm to measures per second (mps)
-  (define (bpm->mps bpm) (/ bpm 4 60))
+  (define (bpm->mps bpm) (/ bpm 60 4))
   ;; Convert bpm to seconds per measure
   (define (bpm->spm bpm) (/ 1 (bpm->mps bpm)))
   ;; Convert a value in measures to seconds
   (define (measures->secs m bpm) (* m (bpm->spm bpm)))
+  ;; Convert a value in seconds to measures
+  (define (secs->measures s bpm) (* s (bpm->mps bpm)))
   
   (define (secs-until beat current-beat bpm)
     (/ (- beat current-beat) (bpm->mps bpm)))

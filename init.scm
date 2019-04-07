@@ -69,26 +69,29 @@
 
 ;;-----------------------------------------------------------------
 ;; Plays a event at the right time in the future.
-;; TODO: adjust latency based on frame jitter
-(define (play-event event current-beat)
-  (define (entry-convert pair)
-    (cons (symbol->string (car pair)) (cdr pair)))
-  
-  (let ([event (preprocess-event event)])
-    (alist-let event ([beat    :beat 0]
-		      [inst    :inst "sine-grain"]
-		      [group   :group default-group]
-		      [control :control #f]
-		      [sustain :sustain #f])
-      (let* ([until (secs-until beat current-beat bpm)]
-	     [time (+ (utc) until playback-latency)]
-	     [args (map entry-convert (event-clean event))])
-	(create-group group add-before default-group)
-	(if control
-	    (if (or (not (number? group)) (<= group 1))
-		(println "Error: control event didn't specify a valid group.")
-		(control-when time group args))
-	    (play-when inst time group args))))))
+;; To allow for sample accurate playback you must supply
+;; a consistent current time for all events dispatched at
+;; the same time.
+(define play-event
+  (case-lambda
+    ((evt beat) (play-event evt beat (utc)))
+    
+    ((event current-beat current-time)
+     (let ([event (preprocess-event event)])
+       (alist-let event ([beat    :beat 0]
+			 [inst    :inst "sine-grain"]
+			 [group   :group default-group]
+			 [control :control #f]
+			 [sustain :sustain #f])
+	 (let* ([delay (secs-until beat current-beat bpm)]
+		[time (+ current-time delay playback-latency)]
+		[args (map make-synth-arg (event-clean event))])
+	   (create-group group add-before default-group)
+	   (if control
+	       (if (or (not (number? group)) (<= group 1))
+		   (println "Error: control event didn't specify a valid group.")
+		   (control-when time group args))
+	       (play-when inst time group args))))))))
 
 ;; Preprocess an event. Computes frequency for events using the harmony
 ;; system. Gives sampler instrument to events with samples. 
@@ -112,6 +115,9 @@
   (let ([vals (event-get-multi event tempo-dependent-keys)])
     (fold-left convert event vals)))
 
+(define (make-synth-arg kv-pair)
+  (cons (symbol->string (car kv-pair)) (cdr kv-pair)))
+
 ;;-----------------------------------------------------------------
 ;; A thread that wakes up every playback-chunk beats to call (process-chunk)
 ;; This essentially controls playback for now.
@@ -119,18 +125,44 @@
 (define playback-thread #f)
 (define playback-chunk 1/4) ; 1 quarter measure for now
 (define playback-thread-semaphore (make-semaphore))
-(define playback-time 0)
 (define playback-latency 0.2)
+(define playhead 0)
 
-;; Called each chunk of time by the playback thread.  
+;; State used to mitigate timing jitter in callbacks:
+(define jitter-overlap 1/32) ;; extra time to render each block
+(define last-cb-time #f)     ;; time of last callback
+(define rendered-point #f)   ;; 
+
+;; Called regularly by the playback thread. It renders events in
+;; chunks whose length are determined by playback-chunk, plus a
+;; little extra ('jitter-overlap') to allow for the callback to
+;; happen late.
 (define (process-chunk)
-  (guard (x [else (handle-error x)])
-    (let* ([t1 playback-time]
-	   [t2 (+ t1 playback-chunk)]
-	   [c (render-arc p1 t1 t2)]
-	   [events (context-events-next c)])
-      (for-each (lambda (n) (play-event n t1)) events)
-      (set! playback-time t2))))
+  (let ([t (utc)])
+    ;; Returns the difference from the expected callback
+    ;; time, in musical measures.
+    (define (get-jitter)
+      (let ([elapsed (if last-cb-time
+			 (secs->measures (- t last-cb-time) bpm)
+			 playback-chunk)])
+	(begin
+	  (set! last-cb-time t)
+	  (- elapsed playback-chunk))))
+
+    ;; Dispatches all the events that were rendered.
+    (define (play-chunk now-beat context)
+      (for-each (lambda (e) (play-event e now-beat t))
+		(context-events-next context)))
+    
+    (guard (x [else (handle-error x)])
+      (let* ([jitter (get-jitter)]
+	     [now (+ playhead jitter)]
+	     [start (or rendered-point playhead)]
+	     [end (+ now playback-chunk jitter-overlap)]
+	     [c (render-arc p1 start end)])
+	(play-chunk now c)	
+	(set! rendered-point end)
+	(set! playhead (+ now playback-chunk))))))
 
 ;; Only creates new thread if one isn't already in playback-thread.
 (define (start-thread sem)
@@ -144,11 +176,13 @@
   (stop-waiting playback-thread-semaphore))
 
 (define (pause)
-  (start-waiting playback-thread-semaphore))
+  (start-waiting playback-thread-semaphore)
+  (set! rendered-point #f)
+  (set! last-cb-time #f))
 
 (define (stop)
   (pause)
-  (set! playback-time 0))
+  (set! playhead 0))
 
 (define (set-bpm! n)
   (set! bpm n)
