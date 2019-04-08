@@ -63,13 +63,17 @@
 
   ;; Helper for 'in' impls to get a value from a leaf node,
   ;; and to use it to add a new note/notes to the context.
-  (define (make-events maker context leaf)
-    (let ([val (get-leaf-early leaf (context-start context) context)])
+  (define (make-events maker context leaf performer)
+    (let* ([c context]
+	   [val (get-leaf-early leaf (context-start c) c)])
       (cond
-       ((is-rest? val) '())
+       ((is-rest? val) (list))
        ((context? val) (context-events-next val))
-       ((not (number? val)) (raise (pattern-error "'in'" "number" val)))
-       (else (maker val context)))))
+       ((unsafe-list? val)
+	(subdivider c (context-length c) val performer))
+       ((not (number? val))
+	(raise (pattern-error "'in'" "number" val)))
+       (else (maker val)))))
 
   ;; Adds blank events to the context with a subdividing pattern.
   ;; A leaf value of 1 gives one event.
@@ -77,23 +81,24 @@
   ;; The symbol ~ creates a rest.
   (define (in*impl context leaf)
     (make-events
-     (lambda (val context)
+     (lambda (val)
        (let* ([num (max 1 val)]
 	      [dur (/ (context-length context) num)]
 	      [start (context-start context)]
-	      [make (lambda (i) (make-event (+ start (* i dur)) (:sustain dur)))])
+	      [make (lambda (i) (make-event (+ start (* i dur))
+				       (:sustain dur)))])
 	 (map make (iota num))))
-     context leaf))
+     context leaf in*impl))
 
   ;; Adds events with a property defined by 'key'.
   (define (in:impl key)
     (lambda (context leaf)
       (make-events
-       (lambda (val context)
+       (lambda (val)
 	 (let ([dur (context-length context)]
 	       [start (context-start context)])
-	   (list (event-set (make-event start (:sustain dur)) key val))))
-       context leaf)))
+	   (list (make-event start (:sustain dur) (key val)))))
+       context leaf (in:impl key))))
 
   ;; Helper for 'to' forms below.
   (define (set-or-rest c leaf key val-transform)

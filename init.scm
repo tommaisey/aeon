@@ -54,7 +54,7 @@
 	     (not (< id 1))
 	     (not (known-group? id)))
     (set! known-groups (cons id known-groups))
-    (send sc3 (g-new1 id order default-group))))
+    (send sc3 (g-new1 id order target))))
 
 ;; n.b. SC docs seem to imply that the default_group is
 ;; automatically created if SC is started from its GUI, not
@@ -80,13 +80,13 @@
      (let ([event (preprocess-event event)])
        (alist-let event ([beat    :beat 0]
 			 [inst    :inst "sine-grain"]
-			 [group   :group default-group]
+			 [group   :group standard-group]
 			 [control :control #f]
 			 [sustain :sustain #f])
 	 (let* ([delay (secs-until beat current-beat bpm)]
 		[time (+ current-time delay playback-latency)]
 		[args (map make-synth-arg (event-clean event))])
-	   (create-group group add-before default-group)
+	   (create-group group add-to-head default-group)
 	   (if control
 	       (if (or (not (number? group)) (<= group 1))
 		   (println "Error: control event didn't specify a valid group.")
