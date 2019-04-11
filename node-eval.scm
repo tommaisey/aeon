@@ -2,25 +2,24 @@
   (export
    get-leaf
    get-leaf-early
-   render
-   render-arc)
+   render)
   
   (import (scheme) (utilities) (event) (context))
 
   ;;--------------------------------------------------------------
   ;; Call on the root of a tree to fill a context with events.
-  (define (render item context)
+  (define (render p start end)
+    (render-ctxt p (make-context (make-arc start end))))
+  
+  (define (render-ctxt item context)
     (context-trim (item context)))
-
-  (define (render-arc p start end)
-    (render p (make-context (make-arc start end))))
 
   ;; Evaluate a leaf. It might be a plain value, a naked context
   ;; procedure or an arc-moving-branch.
   (define (get-leaf leaf context)
-    (cond
-     ((procedure? leaf) (leaf context))
-     (else leaf)))
+    (if (procedure? leaf)
+	(get-leaf (leaf context) context)
+	leaf))
 
   ;; If we must eval a leaf before adding a new event, the context will look wrong.
   ;; The event doesn't yet exist, so e.g. next/prev and seeding would be broken.

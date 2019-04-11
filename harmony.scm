@@ -18,7 +18,9 @@
    event-with-freq
    chord-offset)
 
-  (import (scheme) (utilities) (event) (chain-nodes) (logic-nodes))
+  (import (scheme) (utilities) (event)
+	  (chain-nodes)
+	  (basic-nodes))
 
   (define (midicps midi freqA)
     (* freqA (expt 2 (/ (- midi 69) 12))))

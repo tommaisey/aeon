@@ -2,12 +2,6 @@
 
 (define grp1 (make-unused-group-id))
 
-(define (cutoff-control key grp pdef res offset)
-  (in: key pdef
-       (to: :resonance res
-	    :group grp :control "cutoff")
-       (mv+ offset)))
-
 (define p1
   (o->
       (in* (/- 2 1)
@@ -25,13 +19,15 @@
 		:pan (/- 1/2 [0.4 0.6])
 		:group grp1 :control "pitchbend"))
 
-      (cutoff-control :cutoff1 grp1
-		      (/- 1/4 (rnd 4.0 12.0))
-		      (rnd 0.3 1.8) 0)
-      (cutoff-control :cutoff2 grp1
-		      (/- 1/8 (rnd 1.0 3.0))
-		      (rnd 0.1 0.8)
-		      (/- 1/4 (pick [0 0 1/16 1/8])))
+      (in: :cutoff1 (/- 1/4 (rnd 4.0 12.0))
+	   (to: :resonance (rnd 0.3 1.8)
+		:group grp1 :control "cutoff")
+	   (mv+ 0))
+
+      (in: :cutoff2 (/- 1/8 (rnd 1.0 3.0))
+	   (to: :resonance (rnd 0.1 0.8)
+		:group grp1 :control "cutoff")
+	   (mv+ (/- 1/4 (pick [0 0 1/16 1/8]))))
 
       (to: :root -5
 	   :scale minor)))

@@ -29,9 +29,12 @@
 	  derecord
 	  declare-keyword
 	  check-type
-	  println)
+	  println
+	  define/optional)
 
-  (import (chezscheme) (srfi s27 random-bits))
+  (import (chezscheme)
+	  (srfi s27 random-bits)
+	  (thunder-utils))
 
   ;; Find the nearest whole multiple of divisor that's <= x.
   (define (round-down-f x divisor)
@@ -233,7 +236,7 @@
       ((_ rec ([name record-accessor] ...) body-forms ...)
        (let ([name (record-accessor rec)] ...)
 	 body-forms ...))))
-
+  
   (define-syntax declare-keyword
     (syntax-rules ()
       ((_ name) (define name 'name))))

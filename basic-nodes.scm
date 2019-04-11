@@ -8,19 +8,20 @@
 ;; The cnodes can be chained and combined with fns in @trunk.
 ;; The 'leaves' of our system are described in @leaf.
 ;; ------------------------------------------------------------
-(library (logic-nodes)
+(library (basic-nodes)
   (export
-   /- in* in:
+   /- /+ in* in:
    to: to+ to- to* to/ to?
-   mv+ mv- mv* mv/
    rp: tr: tr? cp: cp?
    is? any-of all-of none-of phrase)
 
   (import
-    (chezscheme)
-    (for (subdivide) expand)
-    (utilities) (event) (context) (node-eval)
-    (chain-nodes) (value-nodes) (srfi s26 cut))
+    (chezscheme) (srfi s26 cut)
+    (utilities) (event) (context)
+    (chunking)
+    (node-eval)
+    (chain-nodes)
+    (value-nodes))
 
   ;; A node that adds blank events according to a subdividing pattern.
   (define (in* pdef . ops)
@@ -50,18 +51,6 @@
   (define (to- . kv-pairs) (apply to - kv-pairs))
   (define (to* . kv-pairs) (apply to * kv-pairs))
   (define (to/ . kv-pairs) (apply to / kv-pairs))
-
-  ;; A general 'mv', taking a math op and a def. The math op is
-  ;; called with each segment's current time and the value returned by
-  ;; def. The input context is resolved with a different arc, in effect
-  ;; shifting it in time.
-  (define (mv math-op inv-math-op . pdefs)
-    (apply x-> (pdefs-to-nodes pdefs (mv-math-impl math-op inv-math-op))))
-
-  (define (mv+ . pdefs) (apply mv + - pdefs))
-  (define (mv- . pdefs) (apply mv - + pdefs))
-  (define (mv* . pdefs) (apply mv * / pdefs))
-  (define (mv/ . pdefs) (apply mv / * pdefs))
 
   ;;---------------------------------------------------------------
   ;; Composite chaining operators. Starting to get the feeling that
@@ -97,17 +86,6 @@
       (let* ([resolved (context-resolve context)]
 	     [unfiltered (context-filter (lambda (c) (not (pred c))) resolved)])
 	(contexts-merge unfiltered ((apply tr? pred nodes) context)))))
-
-  ;; Produces a 'delay line', though a stateless one (i.e. changing
-  ;; the source affects the line instantly).
-  ;; Both beats-per-tap and num-taps may be pdefs.
-  ;; iterative-nodes are successivly applied to the taps.
-
-  ;; Hmm, fuck, old dispatch-pdef may not fit!
-  (define (echo beats-per-tap num-taps . iterative-nodes)
-    (lambda (context)
-      (let ([impl (echo-impl num-taps iterative-nodes)])
-	(dispatch-pdef beats-per-tap context impl))))
   
   ;;---------------------------------------------------------
   ;; Predicates & filtering. WARNING: This is all quite dated,
@@ -153,11 +131,81 @@
       (concatenate (map (cut <> events) filters))))
 
   ;;-------------------------------------------------------------------
-  ;; Helper for building nodes from a list of pdefs
-  ;; (pdef ...), impl -> ((context -> context) ...)
-  (define (pdefs-to-nodes pdefs impl)
-    (map (lambda (p) (lambda (c) (dispatch-pdef p c impl))) pdefs))
+  ;; Implementation functions to be supplied to a chunking algorithm.
 
+  (define (rp:impl context leaf)
+    (let ([result (get-leaf leaf context)])
+      (if (not (context? result))
+	  (raise (pattern-error "'rp'" "procedure" result))
+	  (context-events-next result))))
+  
+  ;; Helper for 'in' impls to get a value from a leaf node,
+  ;; and to use it to add a new note/notes to the context.
+  (define (make-events maker context leaf performer)
+    (let* ([c context]
+	   [val (get-leaf-early leaf (context-start c) c)])
+      (cond
+       ((is-rest? val) (list))
+       ((context? val) (context-events-next val))
+       ((unsafe-list? val)
+	(subdivider c (context-length c) val performer))
+       ((not (number? val))
+	(raise (pattern-error "'in'" "number" val)))
+       (else (maker val)))))
+
+  (define :sustain ':sustain)
+
+  ;; Adds blank events to the context with a subdividing pattern.
+  ;; A leaf value of 1 gives one event.
+  ;; For values > 1, creates N subdivided values.
+  ;; The symbol ~ creates a rest.
+  (define (in*impl context leaf)
+    (make-events
+     (lambda (val)
+       (let* ([num (max 1 val)]
+	      [dur (/ (context-length context) num)]
+	      [start (context-start context)]
+	      [make (lambda (i) (make-event (+ start (* i dur))
+				       (:sustain dur)))])
+	 (map make (iota num))))
+     context leaf in*impl))
+
+  ;; Adds events with a property defined by 'key'.
+  (define (in:impl key)
+    (lambda (context leaf)
+      (make-events
+       (lambda (val)
+	 (let ([dur (context-length context)]
+	       [start (context-start context)])
+	   (list (make-event start (:sustain dur) (key val)))))
+       context leaf (in:impl key))))
+
+  ;; Helper for 'to' forms below.
+  (define (set-or-rest c leaf key val-transform)
+    (let ([val (get-leaf leaf c)])
+      (if (is-rest? val)
+	  (context-event c)
+	  (event-set (context-event c) key (val-transform val)))))
+  
+  ;; Sets the property 'key' on all events in the context.
+  (define (to:impl key)
+    (lambda (context leaf)
+      (define (map-fn c)
+	(set-or-rest c leaf key (lambda (v) v)))
+      (context-events-next (context-map map-fn (context-resolve context)))))
+
+  ;; Sets the property 'key' by doing some math on the old
+  ;; value together with leaf.
+  (define (to-math-impl math-fn key)
+    (lambda (context leaf)
+      (define (map-fn c)
+	(let ([current (event-get (context-event c) key #f)])
+	  (if (not current)
+	      (context-event c)
+	      (set-or-rest c leaf key (lambda (v) (math-fn current v))))))
+      (context-events-next (context-map map-fn (context-resolve context)))))
+
+  ;;-------------------------------------------------------------------
   ;; Helper for building a list of nodes from pairs of keys and values,
   ;; used in the implementation of the to: family of ops above.
   ;; (key value ...), (key -> impl) -> ((context -> context) ...)

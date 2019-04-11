@@ -13,6 +13,8 @@
 ;; TODO: this blocks if SuperCollider isn't running!! 
 (define sc3 (udp:open "127.0.0.1" 57110))
 
+(reset sc3) ;; Make sure we start with a blank server
+
 ;; Helper for sending timestamped OSC bundles
 (define (send-bundle t args)
   (send sc3 (bundle t args)))
@@ -159,7 +161,7 @@
 	     [now (+ playhead jitter)]
 	     [start (or rendered-point playhead)]
 	     [end (+ now playback-chunk jitter-overlap)]
-	     [c (render-arc p1 start end)])
+	     [c (render p1 start end)])
 	(play-chunk now c)	
 	(set! rendered-point end)
 	(set! playhead (+ now playback-chunk))))))

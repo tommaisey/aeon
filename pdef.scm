@@ -2,7 +2,7 @@
 
 (library (pdef)
   (export make-pdef-data
-	  • » × !
+	  ~ » × !
 	  repeat-sym
 	  sustain-sym
 	  rest-sym
@@ -12,11 +12,11 @@
 
   (define × '×) ;; Denotes a repeated value in a pdef
   (define » '») ;; Denotes a sustained value in a pdef
-  (define • '•) ;; Denotes a musical rest in a pdef
+  (define ~ '~) ;; Denotes a musical rest in a pdef
   (define ! '!) ;; Prevents a pdef from being evaluated
   (define repeat-sym ×)
   (define sustain-sym »)
-  (define rest-sym •)
+  (define rest-sym ~)
 
   ;;-------------------------------------------------------------------
   ;; Defines a nested pattern, with special symbols for rests, sustains
@@ -32,7 +32,7 @@
   ;; http://cisco.github.io/ChezScheme/csug9.5/syntax.html#./syntax:h4
   ;;
   ;; (pdef [1 "hi" (+ 2 2) (5 (+ 5 5))]) => (1 "hi" 4 (5 10))
-  ;; (pdef [0 (pick [2 3 •]) (rnd 0 3)]) => (0 <proc> <proc>)
+  ;; (pdef [0 (pick [2 3 ~]) (rnd 0 3)]) => (0 <proc> <proc>)
   ;;
   ;; Additionly there are still cases where we want to place a procedure
   ;; in the first position but not have it evaluated. In this case it's
@@ -40,10 +40,10 @@
   
   (define-syntax make-pdef-data
     (lambda (x)
-      (syntax-case x (! • » ×)
+      (syntax-case x (! ~ » ×)
 
 	((_ (! v ...)) (syntax (list (make-pdef-data v) ...)))
-	((_ (• v ...)) (syntax (make-pdef-data (! • v ...))))
+	((_ (~ v ...)) (syntax (make-pdef-data (! ~ v ...))))
 	((_ (» v ...)) (syntax (make-pdef-data (! » v ...))))
 	((_ (× v ...)) (syntax (make-pdef-data (! × v ...))))
 	

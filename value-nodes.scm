@@ -11,7 +11,7 @@
 ;; event in the context, unless passed one or more extra keys to look at.
 ;;
 ;; Others of these functions don't really need a context - but may want to
-;; treat their arguments as callable leaves.
+;; treat their arguments as callable leaves (which *may* need a context).
 ;;----------------------------------------------------------------------
 (library (value-nodes)
   (export

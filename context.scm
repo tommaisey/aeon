@@ -17,7 +17,6 @@
    context-with-events
    context-clear-events
    context-with-arc rearc
-   context-add-arc
    context-with-chain
    context-append-chain
    context-pop-chain
@@ -30,6 +29,7 @@
    context-map
    context-filter
    context-trim
+   context-sort
    context-empty?
    contexts-merge)
   (import (chezscheme) (utilities) (event))
@@ -97,11 +97,6 @@
 		  (context-events-prev c)
 		  new-arc
 		  (context-chain c)))
-  (define (context-add-arc c arc-to-add)
-    (make-context (context-events-next c)
-		  (context-events-prev c)
-		  (arc-add (context-arc c) arc-to-add)
-		  (context-chain c)))
   (define rearc context-with-arc) ; alias
 
   (define (context-length c)
@@ -166,7 +161,9 @@
   ;; (context -> event), context -> context
   (define (context-map new-event-fn context)
     (context-transform
-     context (lambda (c output) (cons (new-event-fn c) output))))
+     context (lambda (c output)
+	       (let ([ev (new-event-fn c)])
+		 (if (null? ev) output (cons ev output))))))
 
   ;; (context -> bool), context -> context
   (define (context-filter pred context)
@@ -182,6 +179,15 @@
 	       (context-end c)))
     (context-filter pred context))
 
+  ;; Sorts the events in a context by time. In general events should
+  ;; be kept sorted in this way.
+  (define (context-sort context)
+    (let* ([events (context-events-next (context-rewind context))]
+	   [before? (lambda (e1 e2) (< (event-beat e1) (event-beat e2)))]
+	   [sorted (list-sort before? events)])
+      (context-with-events context sorted)))
+
+  ;; Merge two contexts - the new context's events are kept sorted.
   (define (contexts-merge c1 c2)
     (let ([c1 (context-rewind c1)]
 	  [c2 (context-rewind c2)])

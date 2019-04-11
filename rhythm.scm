@@ -5,40 +5,41 @@
 (library (rhythm)
   (export
    snap-next
-   snap-next-if
+   snap-next2
    snap-prev
-   snap-prev-if
+   snap-prev2
    snap-nearest
      
    make-euclid
    euclid-num-steps
    euclid-num-hits
-   euclid-offset
-   euclidean-rhythm)
+   euclid-offset)
 
   (import (chezscheme) (utilities) (event))
 
-  ;; Snap a value to the next number divisible by divisor.
-  (define (snap-next beat divisor)
-    (let ([overlap (mod beat divisor)])
-      (+ (- beat overlap) divisor)))
-
   ;; Snap a value to the next number divisible by divisor,
   ;; if `beat` isn't already cleanly divisible by divisor.
-  (define (snap-next-if beat divisor)
-    (let ([next (snap-next beat divisor)])
-      (if (= beat (- next divisor)) beat next)))
+  (define (snap-next beat divisor)
+    (let ([overlap (mod beat divisor)])
+      (if (zero? overlap) beat (+ (- divisor overlap) beat))))
 
-  ;; Snap a value to the next number divisible by divisor.
+  ;; Snap a value to the next number divisible by divisor,
+  ;; even if 'beat' is cleanly divisible by divisor.
+  (define (snap-next2 beat divisor)
+    (let ([overlap (mod beat divisor)])
+      (+ (- divisor overlap) beat)))
+
+  ;; Snap a value to the previous number divisible by divisor,
+  ;; if 'beat' isn't already cleanly divisible by divisor
   (define (snap-prev beat divisor)
     (let ([overlap (mod beat divisor)])
       (- beat overlap)))
 
-  ;; Snap a value to the next number divisible by divisor,
-  ;; if `beat` isn't already cleanly divisible by divisor
-  (define (snap-prev-if beat divisor)
+  ;; Snap a value to the previous number divisible by divisor,
+  ;; even if 'beat' is cleanly divisible by divisor
+  (define (snap-prev2 beat divisor)
     (let ([prev (snap-prev beat divisor)])
-      (if (= beat (+ prev divisor)) beat prev)))
+      (if (= prev beat) (- beat divisor) prev)))
 
   ;; Snap to the next or previous divisor, whichever's closer.
   (define (snap-nearest beat divisor)
@@ -65,39 +66,15 @@
   (define (euclidean-hit? step e)
     (check-type euclid? e "Parameter 'e' must be a euclidean record")
     
-    (let*
-	([e      (euclid-normalise-offset e)]
-	 [hits   (euclid-num-hits e)]
-	 [steps  (euclid-num-steps e)]
-	 [offset (euclid-offset e)]
-	 ;; put bucket in state as if it had done N = offset iterations 
-	 [bucket (mod (* hits (- steps offset)) steps)]
-	 ;; compute state of bucket just before the requested step
-	 [bucket (+ bucket (* hits (mod step steps)))])
+    (let* ([e      (euclid-normalise-offset e)]
+	   [hits   (euclid-num-hits e)]
+	   [steps  (euclid-num-steps e)]
+	   [offset (euclid-offset e)]
+	   ;; put bucket in state as if it had done N = offset iterations 
+	   [bucket (mod (* hits (- steps offset)) steps)]
+	   ;; compute state of bucket just before the requested step
+	   [bucket (+ bucket (* hits (mod step steps)))])
       
       (not (eqv? (quotient bucket steps)
 		 (quotient (+ bucket hits) steps)))))
-
-  ;; Make the events inside a range w given a euclidean pattern e
-  (define (euclidean-rhythm w e stretch)
-    (check-type euclid? e "Parameter 'e' must be a euclid record")
-    (check-type range? w "Parameter 'w' must be a range record")
-
-    (let*
-	([num-steps  (euclid-num-steps e)]
-	 [step-size  (/ stretch num-steps)]
-	 [start-beat (snap-next-if (range-start w) step-size)])
-      (define (next-step events e w)
-	(if (range-valid? w)
-	    (let*
-		([beat  (range-start w)]
-		 [next  (snap-next beat step-size)]
-		 [step  (mod (round (/ beat step-size)) num-steps)]
-		 [events (if (euclidean-hit? step e)
-			    (cons (make-event beat) events)
-			    events)])
-	      (next-step events e (range-with-start w next)))
-	    events))
-      (next-step '() e (range-with-start w start-beat))))
-
   ); end module 'rhythm'

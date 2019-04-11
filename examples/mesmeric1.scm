@@ -15,7 +15,8 @@
 	 :inst "swirly-keys"
 	 :sustain 0
 	 :attack 0.0025
-	 :release (sine 12 0.5 2.0)
+	 :release (sine 12 0.25 1.75)
+	 :bus1-amt 0.3
 	 :cutoff (/- 4/5 [0.9 2.9 1.3]))
 
     (to+ :cutoff (sine 7 -0.4 5.0))))
@@ -35,24 +36,25 @@
 	      :pan (rnd 0.1 0.9))
 	 (cp: (to: :octave 1)))))
 
-;; Here is some commentary...
 (define drum-pattern
   (o->
-    (in* (/- [1 [• 1] • (pick [1 1 2]) [• 1] (pick [• 1])])
+    (in* (/- [1 [~ 1] ~ (pick [1 1 2 [~ 1]]) (pick [~ 1 [~ 1]]) (pick [~ 1])])
 	 (to: :sample bd
 	      :amp 0.2)
 	 (to* :sustain 0.6))
 
-    (in* (/- 1/2 [• (each 2/3 [• 1]) • • (each 3/4 [1 • 2 • 1]) •])
+    (in* (/- 1/2 [~ (each 2/3 [~ 1]) ~ ~ (each 3/4 [1 ~ [~ 1] ~ 1]) ~])
 	 (to: :sample xt)
-	 (to: :amp 0.7))
+	 (to: :amp 0.5))
     
     (in* (/- 1/2 [1 1 1 1 1 1])
 	 (to: :sample hh)
-	 (to: :amp (/- 1/6 [0.1 (rnd 0.25 0.35)]))
+	 (to: :amp (/- 1/4 [0.05 (rnd 0.2 0.3)]))
 	 (to: :pan (rnd 0.4 0.6)))))
 
 (define p1
-  (o-> arp-pattern
-       drum-pattern
-       pad-pattern))
+  (o->
+    arp-pattern
+    drum-pattern
+    ;; pad-pattern
+    ))
