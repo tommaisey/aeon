@@ -4,37 +4,37 @@
 ;; ---------------------------------------------------------
 (library (utilities)
   (export round-down-f pseudo-rand inc dec
-	  nearly-divisible divisible on-each
-	  above below
-	  between between-inclusive between-each
-	  equal nearly-equal
-	  pair first rest
-	  merge-columns
-	  columns-to-rows
-	  concatenate
-	  merge-sorted
-	  repeat
-	  sorted?
-	  for-any
-	  for-none
-	  combine-preds
-	  list-nth
-	  list-last
-	  remove-list
-	  unsafe-list?
-	  push-front
-	  alist-get-multi
-	  alist-let
-	  make-alist
-	  derecord
-	  declare-keyword
-	  check-type
-	  println
-	  define/optional)
+          nearly-divisible divisible on-each
+          above below
+          between between-inclusive between-each
+          equal nearly-equal
+          pair first rest
+          merge-columns
+          columns-to-rows
+          concatenate
+          merge-sorted
+          repeat
+          sorted?
+          for-any
+          for-none
+          combine-preds
+          list-nth
+          list-last
+          remove-list
+          unsafe-list?
+          push-front
+          alist-get-multi
+          alist-let
+          make-alist
+          derecord
+          declare-keyword
+          check-type
+          println
+          define/optional)
 
   (import (chezscheme)
-	  (srfi s27 random-bits)
-	  (thunder-utils))
+          (srfi s27 random-bits)
+          (thunder-utils))
 
   ;; Find the nearest whole multiple of divisor that's <= x.
   (define (round-down-f x divisor)
@@ -42,23 +42,23 @@
 
   ;; A pseudo-random number generator that takes a seed.
   (define pseudo-rand-src (make-random-source))
-  
+
   (define (pseudo-rand min max seed)
     (let* ([i (exact (truncate seed))]
-	   [j (exact (truncate (* 100 (- seed i))))]
-	   [len (- max min)])
+           [j (exact (truncate (* 100 (- seed i))))]
+           [len (- max min)])
       (random-source-pseudo-randomize! pseudo-rand-src i j)
       (+ min (if (and (exact? min) (exact? max))
-		 ((random-source-make-integers pseudo-rand-src) len)
-		 (* len ((random-source-make-reals pseudo-rand-src)))))))
+                 ((random-source-make-integers pseudo-rand-src) len)
+                 (* len ((random-source-make-reals pseudo-rand-src)))))))
 
   ;; Some 'english sounding' math operators.
   (define (inc val) (+ val 1))
   (define (dec val) (- val 1))
-  
+
   (define (nearly-divisible val div error)
     (let* ([remain (/ val div)]
-	   [truncated (truncate remain)])
+           [truncated (truncate remain)])
       (< (- remain truncated) error)))
 
   (define (divisible val div)
@@ -105,8 +105,8 @@
   (define (column-process col-list joiner)
     (let impl ([l col-list] [result '()])
       (if (member '() l) result
-	  (impl (map cdr l) (joiner result (map car l))))))
-  
+          (impl (map cdr l) (joiner result (map car l))))))
+
   ;; ((1 2 3) (x y) (a b c)) -> (1 x a 2 y b)
   (define (merge-columns col-list)
     (column-process col-list (lambda (a b) (append a b))))
@@ -127,31 +127,31 @@
   (define (sorted? less? l)
     (let loop ([l (cdr l)] [prev (car l)])
       (cond
-       ((null? l) #t)
-       ((or (less? prev (car l))
-	    (not (less? (car l) prev)))
-	(loop (cdr l) (car l)))
-       (else #f))))
+        ((null? l) #t)
+        ((or (less? prev (car l))
+             (not (less? (car l) prev)))
+         (loop (cdr l) (car l)))
+        (else #f))))
 
   ;; Stable merges to lists according to less?. Lifted from
   ;; SRFI95 ref implementation, with tweaks.
   (define (merge-sorted a b less? . opt-key)
     (define key (if (null? opt-key) values (car opt-key)))
     (cond ((null? a) b)
-	  ((null? b) a)
-	  (else
-	   (let loop ((x (car a)) (kx (key (car a))) (a (cdr a))
-		      (y (car b)) (ky (key (car b))) (b (cdr b)))
-	     ;; The loop handles the merging of non-empty lists.  It has
-	     ;; been written this way to save testing and car/cdring.
-	     (if (less? ky kx)
-		 (if (null? b)
-		     (cons y (cons x a))
-		     (cons y (loop x kx a (car b) (key (car b)) (cdr b))))
-		 ;; x <= y
-		 (if (null? a)
-		     (cons x (cons y b))
-		     (cons x (loop (car a) (key (car a)) (cdr a) y ky b))))))))
+          ((null? b) a)
+          (else
+            (let loop ((x (car a)) (kx (key (car a))) (a (cdr a))
+                                   (y (car b)) (ky (key (car b))) (b (cdr b)))
+              ;; The loop handles the merging of non-empty lists.  It has
+              ;; been written this way to save testing and car/cdring.
+              (if (less? ky kx)
+                  (if (null? b)
+                      (cons y (cons x a))
+                      (cons y (loop x kx a (car b) (key (car b)) (cdr b))))
+                  ;; x <= y
+                  (if (null? a)
+                      (cons x (cons y b))
+                      (cons x (loop (car a) (key (car a)) (cdr a) y ky b))))))))
 
   ;;--------------------------------------------------------------------
   ;; R6RS provides for-all, which checks all items in a
@@ -174,27 +174,27 @@
   ;; Get the nth element of a list. Linear time.
   (define (list-nth l n)
     (cond
-     ((null? l) '())
-     ((eq? n 0) (car l))
-     (else (list-nth (cdr l) (- n 1)))))
+      ((null? l) '())
+      ((eq? n 0) (car l))
+      (else (list-nth (cdr l) (- n 1)))))
 
   ;; Get the last element of a list. Linear time.
   (define (list-last l)
     (if (null? (cdr l))
-	(car l)
+        (car l)
         (list-last (cdr l))))
 
   ;; Remove matching items in b from a
   (define (remove-list a b)
     (filter (lambda (x) (not (member x b))) a))
 
-  ;; #t for any kind of list: null, proper, improper, or cyclic. 
+  ;; #t for any kind of list: null, proper, improper, or cyclic.
   ;; Faster than 'list?' but improper lists fail with e.g. append.
   (define (unsafe-list? x)
     (or (null? x)
-	(and (pair? x)
-	     (or (null? (cdr x))
-		 (pair? (cdr x))))))
+        (and (pair? x)
+             (or (null? (cdr x))
+                 (pair? (cdr x))))))
 
   ;; Adds the element to the list. If the element is a list, it is appended.
   (define (push-front val list)
@@ -205,12 +205,12 @@
   ;; More efficient than searching seperately for each value.
   (define (alist-get-multi alist key-default-pairs)
     (let* ([targets key-default-pairs]
-	   [found '()]
-	   [setter (lambda (entry)
-		     (let ([t (assq (car entry) targets)])
-		       (when t
-			 (set! found (cons entry found))
-			 (set! targets (remq t targets)))))])
+           [found '()]
+           [setter (lambda (entry)
+                     (let ([t (assq (car entry) targets)])
+                       (when t
+                         (set! found (cons entry found))
+                         (set! targets (remq t targets)))))])
       (for-each setter alist)
       (append found targets))) ;; Add defaults for those not found.
 
@@ -218,35 +218,35 @@
   (define-syntax alist-let
     (syntax-rules ()
       ((_ alist ([name key default] ...)
-	  body ...)
+          body ...)
        (let* ([found (alist-get-multi alist (list (cons key default) ...))]
-	      [name (cdr (assq key found))] ...)
-	 body ...))))
+              [name (cdr (assq key found))] ...)
+         body ...))))
 
   (define (make-alist . kv-pairs)
     (if (even? (length kv-pairs))
-	(do ([pairs kv-pairs (cddr pairs)]
-	     [alist '() (cons (cons (car pairs) (cadr pairs)) alist)])
-	    ((null? pairs) (reverse alist)))
-	(raise "make-alist requires an even list of keys and values.")))
+        (do ([pairs kv-pairs (cddr pairs)]
+             [alist '() (cons (cons (car pairs) (cadr pairs)) alist)])
+            ((null? pairs) (reverse alist)))
+        (raise "make-alist requires an even list of keys and values.")))
 
   ;; Useful for destructuring records
   (define-syntax derecord
     (syntax-rules ()
       ((_ rec ([name record-accessor] ...) body-forms ...)
        (let ([name (record-accessor rec)] ...)
-	 body-forms ...))))
-  
+         body-forms ...))))
+
   (define-syntax declare-keyword
     (syntax-rules ()
       ((_ name) (define name 'name))))
 
   ;;------------------------------------------------------------------------
-   ;; Throw an error if the wrong type is used
+  ;; Throw an error if the wrong type is used
   (define (check-type pred val string)
     (unless (pred val) (raise string)))
 
   (define (println . objs)
     (for-each (lambda (x) (display x) (newline)) objs))
-  
+
   ) ; end module 'utilities'

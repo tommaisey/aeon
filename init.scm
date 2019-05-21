@@ -132,12 +132,12 @@
 (define playback-chunk 1/4) ; 1 quarter measure for now
 (define playback-thread-semaphore (make-semaphore))
 (define playback-latency 0.2)
-(define playhead 0)
 
 ;; State used to mitigate timing jitter in callbacks:
-(define jitter-overlap 1/32) ;; extra time to render each block
-(define last-cb-time #f)     ;; time of last callback
-(define rendered-point #f)   ;; 
+(define last-process-time #f) ;; time of last callback, utc
+(define last-process-beat 0)  ;; time of last callback, beats
+(define jitter-overlap 1/32)  ;; extra time to render each block
+(define rendered-point #f)    ;; musical time that has been sent to SC
 
 ;; Called regularly by the playback thread. It renders events in
 ;; chunks whose length are determined by playback-chunk, plus a
@@ -145,37 +145,27 @@
 ;; happen late.
 (define (process-chunk)
   (let ([t (utc)])
-    ;; Returns the difference from the expected callback
-    ;; time, in musical measures.
-    (define (get-jitter)
-      (let ([elapsed (if last-cb-time
-			 (secs->measures (- t last-cb-time) bpm)
-			 playback-chunk)])
-	(begin
-	  (set! last-cb-time t)
-	  (- elapsed playback-chunk))))
 
     ;; Dispatches all the events that were rendered.
     (define (play-chunk now-beat context)
       (for-each (lambda (e) (play-event e now-beat t))
-		(context-events-next context)))
-    
+                (context-events-next context)))
+
     (guard (x [else (handle-error x)])
-      (let* ([jitter (get-jitter)]
-	     [now (+ playhead jitter)]
-	     [start (or rendered-point playhead)]
-	     [end (+ now playback-chunk jitter-overlap)]
-	     [c (render p1 start end)])
-	(play-chunk now c)	
-	(set! rendered-point end)
-	(set! playhead (+ now playback-chunk))))))
+      (let* ([now (+ last-process-beat (beats-since-last-process t))]
+             [start (or rendered-point now)]
+             [end (+ now playback-chunk jitter-overlap)])
+        (play-chunk now (render p1 start end))
+        (set! last-process-time t)
+        (set! last-process-beat now)
+        (set! rendered-point end)))))
 
 ;; Only creates new thread if one isn't already in playback-thread.
-(define (start-thread sem)
+(define (start-thread semaphore)
   (when (not playback-thread)
     (set! playback-thread
-      (start-suspendable-thread
-       process-chunk (* playback-chunk (bpm->spm bpm)) sem))))
+          (start-suspendable-thread
+           process-chunk (* playback-chunk (bpm->spm bpm)) semaphore))))
 
 (define (start)
   (start-thread playback-thread-semaphore)
@@ -184,20 +174,29 @@
 (define (pause)
   (start-waiting playback-thread-semaphore)
   (set! rendered-point #f)
-  (set! last-cb-time #f))
+  (set! last-process-time #f))
 
 (define (stop)
   (pause)
-  (set! playhead 0))
+  (set! last-process-beat 0))
+
+(define (beats-since-last-process utc-time)
+  (if (not last-process-time) 0
+      (secs->measures (- utc-time last-process-time) bpm)))
+
+(define (playhead-sync-info)
+  (let ([now (+ last-process-beat (beats-since-last-process (utc)))])
+    (println (format "(playhead-sync (playhead ~A) (bpm ~A)" now bpm))))
 
 (define (set-bpm! n)
   (set! bpm n)
   (let ([e (make-event 0 (:tempo (bpm->mps n))
-		         (:control "tempo")
-		         (:group bus-effect-group))])
+                       (:control "tempo")
+                       (:group bus-effect-group))])
+    (playhead-sync-info)
     (play-event e 0)))
 
-(set-bpm! bpm) ;; Ensure fx synths have tempo
+(set-bpm! bpm)
 
 (define (handle-error condition)
   (let ([p (console-output-port)])

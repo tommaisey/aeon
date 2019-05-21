@@ -77,12 +77,10 @@
 
   ;; For use as a record-writer in chez (see init.scm)
   (define (context-print c port wr)
-    (display "arc: " port)
-    (display (context-start c) port)
-    (display ", " port)
-    (display (context-end c) port)
-    (newline port)
-    (print-events (context-events-next c) port))
+    (let ([data (list 'context
+                      (list 'arc (context-start c) (context-end c))
+                      (cons 'events (event-clean (context-events-next c))))])
+      (display data port)))
 
   (define context-with-events
     (case-lambda
