@@ -2,18 +2,16 @@
 (load "libs.scm")
 
 ;; A default test pattern. Redefine for fun and profit!
-(define p1 (in* 1))
-(define (reset-p1) (set! p1 (in* 1)))
+(define p1 (in! 1))
+(define (reset-p1) (set! p1 (in! 1)))
 
 ;; Adds custom priting of contexts.
 (record-writer (type-descriptor context) context-print)
 
 ;;-----------------------------------------------------------------
 ;; Some SuperCollider setup: a default server, synthdef & event sender.
-;; TODO: this blocks if SuperCollider isn't running!! 
+;; TODO: this blocks if SuperCollider isn't running!!
 (define sc3 (udp:open "127.0.0.1" 57110))
-
-(reset sc3) ;; Make sure we start with a blank server
 
 ;; Helper for sending timestamped OSC bundles
 (define (send-bundle t args)
@@ -23,11 +21,11 @@
 ;; groups of voices after they have started.
 (define (play-when name t group arg-pairs)
   (send-bundle t (list (s-new0 name -1 add-to-head group)
-		       (n-set -1 arg-pairs))))
+                       (n-set -1 arg-pairs))))
 
 ;; Useful for quick testing of synthdefs
 (define (play-now name . arg-pairs)
-  (play-when name (utc) main-group arg-pairs))
+  (play-when name (utc) standard-group arg-pairs))
 
 ;; Sends a control change to all the voices in group.
 (define (control-when t group arg-pairs)
@@ -36,8 +34,8 @@
 ;; Much like play-when, but adds to tail
 (define (start-bus-effect name . arg-pairs)
   (send-bundle (+ (utc) 0.25) ;; Avoid confusing 'late' messages
-	       (list (s-new0 name -1 add-to-tail bus-effect-group)
-		     (n-set -1 arg-pairs))))
+               (list (s-new0 name -1 add-to-tail bus-effect-group)
+                     (n-set -1 arg-pairs))))
 
 ;; We keep a list of all the groups that have been created so
 ;; we don't spam new group commands to SC.
@@ -53,8 +51,8 @@
 
 (define (create-group id order target)
   (when (and (number? id)
-	     (not (< id 1))
-	     (not (known-group? id)))
+             (not (< id 1))
+             (not (known-group? id)))
     (set! known-groups (cons id known-groups))
     (send sc3 (g-new1 id order target))))
 
@@ -63,10 +61,16 @@
 ;; if it's started from cmd-line? Check that.
 (define standard-group (make-unused-group-id))
 (define bus-effect-group (make-unused-group-id))
-;; (create-group default-group add-after 0)
-(create-group standard-group add-to-head default-group)
-(create-group bus-effect-group add-to-tail default-group)
 
+(define (init)
+  (sleep-secs 0.25)
+  (reset sc3) ;; Make sure we start with a blank server
+  (sleep-secs 0.25)
+  ;; (create-group default-group add-after 0)
+  (create-group standard-group add-to-head default-group)
+  (create-group bus-effect-group add-to-tail default-group)) ;; Ensure fx synths have tempo
+
+(init)
 (load "synthdefs.scm")
 
 ;;-----------------------------------------------------------------
@@ -76,44 +80,44 @@
 ;; the same time.
 (define play-event
   (case-lambda
-    ((evt beat) (play-event evt beat (utc)))
-    
+    ((event beat) (play-event event beat (utc)))
+
     ((event current-beat current-time)
      (let ([event (preprocess-event event)])
        (alist-let event ([beat    :beat 0]
-			 [inst    :inst "sine-grain"]
-			 [group   :group standard-group]
-			 [control :control #f]
-			 [sustain :sustain #f])
-	 (let* ([delay (secs-until beat current-beat bpm)]
-		[time (+ current-time delay playback-latency)]
-		[args (map make-synth-arg (event-clean event))])
-	   (create-group group add-to-head default-group)
-	   (if control
-	       (if (or (not (number? group)) (<= group 1))
-		   (println "Error: control event didn't specify a valid group.")
-		   (control-when time group args))
-	       (play-when inst time group args))))))))
+                         [inst    :inst "sine-grain"]
+                         [group   :group standard-group]
+                         [control :control #f]
+                         [sustain :sustain #f])
+         (let* ([delay (secs-until beat current-beat bpm)]
+                [time (+ current-time delay playback-latency)]
+                [args (map make-synth-arg (event-clean event))])
+           (create-group group add-to-head default-group)
+           (if control
+               (if (or (not (number? group)) (<= group 1))
+                   (println "Error: control event didn't specify a valid group.")
+                   (control-when time group args))
+               (play-when inst time group args))))))))
 
 ;; Preprocess an event. Computes frequency for events using the harmony
-;; system. Gives sampler instrument to events with samples. 
+;; system. Gives sampler instrument to events with samples.
 (define (preprocess-event event)
   (process-times (process-inst event)))
 
 ;; If it looks like a sampler event, sets the right inst if it's
 ;; missing. If it looks like a freq event, computes freq.
 (define (process-inst event)
-    (if (event-get event :sample #f)
-	(event-set event :inst (event-get event :inst "sampler"))
-	(event-with-freq event)))
+  (if (event-get event :sample #f)
+      (event-set event :inst (event-get event :inst "sampler"))
+      (event-with-freq event)))
 
 ;; Converts any key found in the 'tempo-dependent-keys' alist
 ;; from measures to seconds, for prior to sending to SC.
 (define (process-times event)
   (define (convert event entry)
     (if (cdr entry)
-	(event-set event (car entry) (measures->secs (cdr entry) bpm))
-	event))
+        (event-set event (car entry) (measures->secs (cdr entry) bpm))
+        event))
   (let ([vals (event-get-multi event tempo-dependent-keys)])
     (fold-left convert event vals)))
 
