@@ -129,7 +129,7 @@
 ;; This essentially controls playback for now.
 (define bpm 100)
 (define playback-thread #f)
-(define playback-chunk 1/4) ; 1 quarter measure for now
+(define playback-chunk 1/8) ; 1/8th beat for now
 (define playback-thread-semaphore (make-semaphore))
 (define playback-latency 0.2)
 
@@ -169,16 +169,22 @@
 
 (define (start)
   (start-thread playback-thread-semaphore)
-  (stop-waiting playback-thread-semaphore))
+  (stop-waiting playback-thread-semaphore)
+  (playhead-sync-info))
 
 (define (pause)
   (start-waiting playback-thread-semaphore)
   (set! rendered-point #f)
-  (set! last-process-time #f))
+  (set! last-process-time #f)
+  (playhead-sync-info))
 
 (define (stop)
   (pause)
-  (set! last-process-beat 0))
+  (set! last-process-beat 0)
+  (playhead-sync-info))
+
+(define (playing?)
+  (not (waiting? playback-thread-semaphore)))
 
 (define (beats-since-last-process utc-time)
   (if (not last-process-time) 0
@@ -186,7 +192,9 @@
 
 (define (playhead-sync-info)
   (let ([now (+ last-process-beat (beats-since-last-process (utc)))])
-    (println (format "(playhead-sync (playhead ~A) (bpm ~A)" now bpm))))
+    (println 
+     (format "(playhead-sync ~A (position ~A) (mps ~A))" 
+              (if (playing?) 'playing 'stopped) now (bpm->mps bpm)))))
 
 (define (set-bpm! n)
   (set! bpm n)

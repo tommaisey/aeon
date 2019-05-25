@@ -7,7 +7,7 @@
 ;; function that returns a value.
 
 (library (chunking)
-  (export /- /+ dispatch-pdef
+  (export sbdv step dispatch-pdef
 	  is-rest? is-sustain?
 	  subdivider
 	  pattern-error)
@@ -33,16 +33,16 @@
      ;; the corresponding value.
      time-chunker))
 
-  (define-syntax /-
+  (define-syntax sbdv
     (syntax-rules ()
-      ((_ def) (/- 1 def))
+      ((_ def) (sbdv 1 def))
 
       ((_ dur def)
        (make-pdef dur (make-pdef-data def) subdivider))))
 
-  (define-syntax /+
+  (define-syntax step
     (syntax-rules ()
-      ((_ def) (/+ 1/4 def))
+      ((_ def) (step 1/4 def))
 
       ((_ slice-dur def)
        (let* ([data (make-pdef-data def)])
@@ -51,7 +51,7 @@
   ;; Executes the time-chunker of a pdef, which will call the
   ;; perform-fn for each chunk of the context as it sees fit.
   (define (dispatch-pdef def context perform-fn)
-    (let ([def (if (pdef? def) def (/- def))])
+    (let ([def (if (pdef? def) def (sbdv def))])
       (derecord def ([fn  pdef-time-chunker]
 		     [dur pdef-dur]
 		     [def pdef-data])

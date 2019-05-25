@@ -9,7 +9,7 @@
     secs-until sleep-secs
     semaphore semaphore? make-semaphore
     semaphore-val semaphore-mutex semaphore-cond
-    start-waiting stop-waiting
+    start-waiting stop-waiting waiting?
     start-suspendable-thread)
 
   (import (context) (rsc3) (sosc)
@@ -59,6 +59,8 @@
 
   (define (start-waiting sem) (set-semaphore sem #t))
   (define (stop-waiting sem) (set-and-signal-semaphore sem #f))
+  (define (waiting? sem) (with-mutex (semaphore-mutex sem)
+                                     (semaphore-val sem)))
 
   ;; Allows introduction of rebindable values for process-fn and
   ;; chunk-secs, so you can use global values and change the

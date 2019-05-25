@@ -10,7 +10,7 @@
 ;; ------------------------------------------------------------
 (library (basic-nodes)
   (export
-   /- /+ in* in:
+   sbdv step in! in:
    to: to+ to- to* to/ to?
    rp: tr: tr? cp: cp?
    is? any-of all-of none-of phrase)
@@ -24,8 +24,8 @@
     (value-nodes))
 
   ;; A node that adds blank events according to a subdividing pattern.
-  (define (in* pdef . ops)
-    (apply o-> (lambda (c) (dispatch-pdef pdef c in*impl)) ops))
+  (define (in! pdef . ops)
+    (apply o-> (lambda (c) (dispatch-pdef pdef c in!impl)) ops))
 
   ;; A node that adds events with a single specified property.
   (define (in: key pdef . ops)
@@ -58,7 +58,7 @@
   ;; Transforms each event and returns the transformed copies only.
   (define (tr: . nodes)
     (lambda (context)
-      (render (apply x-> nodes) context)))
+      ((apply x-> nodes) context)))
 
   ;; Same as tr:, but only events matching pred are returned.
   ;; Confusing? People may expact this to replace only events
@@ -159,7 +159,7 @@
   ;; A leaf value of 1 gives one event.
   ;; For values > 1, creates N subdivided values.
   ;; The symbol ~ creates a rest.
-  (define (in*impl context leaf)
+  (define (in!impl context leaf)
     (make-events
      (lambda (val)
        (let* ([num (max 1 val)]
@@ -168,7 +168,7 @@
 	      [make (lambda (i) (make-event (+ start (* i dur))
 				       (:sustain dur)))])
 	 (map make (iota num))))
-     context leaf in*impl))
+     context leaf in!impl))
 
   ;; Adds events with a property defined by 'key'.
   (define (in:impl key)
