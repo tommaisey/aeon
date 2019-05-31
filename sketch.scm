@@ -1,5 +1,5 @@
 (current-directory "~/Code/convex")
-(load "init.scm")
+(load "init/init.scm")
 
 (start)
 (pause)

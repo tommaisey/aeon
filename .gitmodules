@@ -1,0 +1,3 @@
+[submodule "libs/third-party/thunderchez"]
+	path = libs/third-party/thunderchez
+	url = git@github.com:ovenpasta/thunderchez.git

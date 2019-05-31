@@ -1,0 +1,62 @@
+(library (socket socket)
+  (export
+    AF_UNSPEC
+    AF_UNIX
+    AF_INET
+    SOCK_STREAM     
+    SOCK_DGRAM      
+    SOCK_RAW      
+    SOCK_RDM        
+    SOCK_SEQPACKET
+    SOCK_PACKET
+    INADDR_ANY
+    SOL_SOCKET
+    SO_REUSEADDR
+    SO_REUSEPORT
+    SO_SNDBUF
+    SO_RCVBUF
+    SO_SNDLOWAT
+    SO_RCVLOWAT
+    SO_SNDTIMEO
+    SO_RCVTIMEO
+    SO_ERROR
+    SO_TYPE
+    IPPROTO_IP
+    IPPROTO_TCP
+    IPPROTO_UDP
+    SOCKET_ERROR
+    wsadata
+    c-read
+    c-write
+    c-recv
+    c-send
+    socket
+    bind
+    connect
+    listen
+    accept
+    shutdown
+    close
+    closesocket
+    wsastartup
+    wsacleanup
+    makeword
+    check
+
+    socket:socket
+    socket:bind
+    socket:connect
+    socket:listen
+    socket:accept
+    socket:write
+    socket:sendto
+    socket:read
+    socket:close
+    socket:shutdown
+    socket:cleanup)
+
+  (import 
+    (scheme)
+    (socket ffi)
+    (socket syntax))
+)

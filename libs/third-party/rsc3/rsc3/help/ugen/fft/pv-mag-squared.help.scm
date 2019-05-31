@@ -1,0 +1,1 @@
+;; (pv-mag-squared buffer)

@@ -1,0 +1,17 @@
+(define mp
+  (let* ((sr 48000)
+	 (n 4)
+	 (maxdt (ceiling (* sr 0.03)))
+	 (buf (map (lambda (_) (as-local-buf (replicate maxdt 0))) (enum-from-to 0 (- n 1))))
+	 (tap-tm (replicate-m n (rand 0.015 0.03)))
+	 (exc-freq (mouse-y kr 10 8000 linear 0.2))
+	 (exc-trig (mul (impulse ar 0.5 0) 0.2))
+	 (exc (mul (decay2 exc-trig 0.01 0.2) (lf-noise2 ar exc-freq)))
+	 (del (zip-with (lambda (b tm) (tap 1 ar b tm)) buf tap-tm))
+	 (flt-freq (mouse-x kr 10 5000 linear 0.2))
+	 (flt (map (lambda (i) (mul (lpf i flt-freq) 0.98)) del))
+	 (rb (lambda (b f) (record-buf ar b 0 1 0 1 loop 1 do-nothing (add f exc))))
+	 (wr (zip-with rb buf flt)))
+    (mrg-n (cons (foldr1 add flt) wr))))
+
+(audition (out 0 mp))

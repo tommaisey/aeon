@@ -1,0 +1,141 @@
+rhs
+---
+
+relevant haskell libraries in scheme
+
+a [scheme][scheme] implementation of parts of the [haskell][haskell]
+hierarchical libraries.
+
+[scheme]: http://library.readscheme.org/standards.html
+[r6rs]: http://r6rs.org/
+[haskell]: http://haskell.org/
+
+haskell             rhs                 rnrs
+------------------- ------------------- --------------------
+[Control.Monad][cm]
+replicateM          replicate-m
+                    replicate-m*
+[Data.Bool][db]
+(&&)                and2                and
+                    and3
+(||)                or2                 or
+                    or3
+otherwise           otherwise
+not                 not                 not
+[Data.Function][df]
+(.)                 compose             compose
+const               const
+flip                flip
+id                  id
+[Data.List][dl]     [list.scm][l.scm]
+all                 all
+and                 all-true
+any                 any-true
+(++)                append2             append
+break               break
+concat              concat
+concatMap           concat-map
+deleteBy            delete-by
+delete              delete
+dropWhile           drop-while
+elem                elem                member
+elemIndex           elem-index
+find                find
+findIndex           find-index
+findIndices         find-indices
+filter              filter              filter
+foldl               foldl               fold-left
+foldl1              foldl1
+foldr               foldr               fold-right
+foldr1              foldr1
+groupBy             group-by
+head                head                car
+init                init
+insert              insert
+insertBy            insert-by
+intercalate         intercalate
+intersperse         intersperse
+isInfixOf           is-infix-of
+isPrefixOf          is-prefix-of
+isSuffixOf          is-suffix-of
+last                last
+length              length
+[,]                 list
+                    list[1,2,3,4,5]
+(!!)                list-ref
+lookup              lookup
+map                 map1                map
+mapAccumL           map-accum-l
+mapAccumR           map-accum-r
+maximum             maximum
+minimum             minimum
+nub                 nub
+nubBy               nub-by
+[]                  nil
+notElem             not-elem
+null                null?               null?
+or                  any-true
+partition           partition*          partition
+product             product
+replicate           replicate
+reverse             reverse             reverse
+scanl               scanl
+scanll              scanl1
+scanr               scanr
+scanr1              scanr1
+sort                sort                list-sort
+sortBy              sort-by
+span                span
+splitAt             split-at
+sum                 sum
+tail                tail                cdr
+take                take
+takeWhile           take-while
+transpose           transpose
+unfoldr             unfoldr
+union               union
+unionBy             union-by
+zip                 zip
+zip3                zip3
+zipWith             zip-with            map
+zipWith3            zip-with3           map
+[Data.Ord][do]
+LT, EQ, GT          'lt, 'eq, 'gt
+compare             compare
+max                 max2                max
+min                 min2                min
+[Data.Tree][dt]
+flatten             flatten
+levels              levels
+[Data.Tuple][du]
+curry               curry
+fst                 fst
+snd                 snd
+(,)                 tuple2
+uncurry             uncurry
+[Prelude][p]        [prelude.scm][p.scm]
+enumFromThenTo      enum-from-then-to
+enumFromTo          enum-from-to
+error                                   error
+even                even                even?
+odd                 odd                 odd?
+pred                pred
+signum              signum
+succ                succ
+
+[cm]: http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html
+[db]: http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Bool.html
+[df]: http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Function.html
+[dl]: http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-List.html
+[do]: http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Ord.html
+[dt]: http://hackage.haskell.org/packages/archive/containers/latest/doc/html/Data-Tree.html
+[du]: http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Tuple.html
+[p]: http://hackage.haskell.org/packages/archive/base/latest/doc/html/Prelude.html
+
+[l.scm]: ?t=rhs&e=src/data/list.scm
+[p.scm]: ?t=rhs&e=src/prelude.scm
+
+© [rohan drape][rd], 2008-2016, [gpl][gpl].
+
+[rd]:  http://rd.slavepianos.org/
+[gpl]: http://gnu.org/copyleft/

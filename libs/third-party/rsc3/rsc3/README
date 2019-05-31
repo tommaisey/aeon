@@ -1,0 +1,60 @@
+rsc3
+----
+
+rsc3 supercollider client
+
+[rsc3](http://rohandrape.net/?t=rsc3) is an
+[r6rs](http://r6rs.org/)
+scheme module for working with the
+[supercollider](http://audiosynth.com/)
+synthesiser.
+the rsc3 interaction environment
+([rsc3.el](?t=rsc3&e=emacs/rsc3.el))
+is written for
+gnu [emacs](http://gnu.org/software/emacs/).
+
+for installation and configuration please consult the
+[tutorial](?t=rsc3-texts&e=lss/rsc3-tutorial.lss)
+at [rsc3-texts](?t=rsc3-texts).
+
+there are a number of related projects:
+
+- [rsc3-arf](?t=rsc3-arf): alternate rate flow for ugen graphs
+- [rsc3-dot](?t=rsc3-dot): ugen graph drawing
+- [rsc3-disassembler](?t=rsc3-disassembler): synth graph disassembler
+- [rsc3-lang](?t=rsc3-lang): supercollider language variants
+- [rsc3-midi](?t=rsc3-midi): musical instrument digital interface
+- [rsc3-sdif](?t=rsc3-sdif): sound description interchange format
+- [hsc3-lisp](?t=hsc3-lisp): a lisp interpeter, sc3 ugens are the only type
+
+there is a small set of example [graphs](?t=rsc3&e=md/graphs.md).
+these mostly are written to also work with `hsc3-lisp`,
+& assume that `~/.rsc3` has:
+
+~~~~
+(import (rhs) (sosc) (rsc3) (rsc3 lang))
+~~~~
+
+rsc3 is by rohan drape and others.
+supercollider is by james mccartney.
+ikarus is by abdulaziz ghuloum.
+plt is by matthew flatt and others.
+emacs is by richard stallman and others.
+
+tested with [ikarus](https://launchpad.net/ikarus/) 0.0.4-rc1+ (revision 1870)
+
+© [rohan drape](http://rohandrape.net/) and others, 1998-2018,
+[gpl](http://gnu.org/copyleft/).
+
+see the
+[darcs](http://darcs.net/)
+[history](?t=rsc3&q=history)
+for details
+
+initial announcement:
+[2004-12-15/sc-users](?t=rsc3&e=md/announce.text)
+
+<!--
+[[gmane](http://article.gmane.org/gmane.comp.audio.supercollider.user/7336),
+ [bham](https://www.listarc.bham.ac.uk/lists/sc-users-2004/msg07890.html)]
+-->

@@ -1,0 +1,17 @@
+mk-r6rs
+-------
+
+utility for making [r6rs][r6rs] scheme libraries
+
+This simple r6rs library provides the function
+`mk-r6rs` to generate an r6rs library file from a
+set of scheme files, determining an export list and
+concatenating all definitions into a single library
+s-expression.
+
+[r6rs]: http://r6rs.org/
+
+© [rohan drape][rd], 2008-2014, [gpl][gpl].
+
+[rd]: http://rd.slavepianos.org/
+[gpl]: http://gnu.org/copyleft/

@@ -1,0 +1,20 @@
+sosc
+----
+
+[r6rs](http://r6rs.org/) scheme
+[open sound control](http://opensoundcontrol.org/)
+
+network communication is implemented for
+[ikarus](https://launchpad.net/ikarus/)
+scheme only.
+
+tested with ikarus 0.0.4-rc1+ (revision 1870)
+
+© [rohan drape](http://rohandrape.net/) and others,
+1998-2018,
+[gpl](http://gnu.org/copyleft/).
+
+see the
+[darcs](http://darcs.net/)
+[history](?t=sosc&q=history)
+for details

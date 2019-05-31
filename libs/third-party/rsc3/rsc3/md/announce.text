@@ -1,0 +1,23 @@
+To: sc-users@create.ucsb.edu
+Subject: [OT/Announce] rsc - rsc SuperCollider client
+From: Rohan Drape <rd@alphalink.com.au>
+Date: 15 Dec 2004 01:00:58 +1100
+
+rsc is a module that specializes the PLT Scheme environment for
+working with the SuperCollider synthesis server.
+
+James McCartney's famous Analog Bubbles example is written:
+
+(CombN.ar
+ (SinOsc.ar
+  (MIDICPS
+   (LFSaw.kr 0.4 0 24 (LFSaw.kr '(8 7.23) 0 3 80))) 0 0.1) 0.2 0.2 4)
+
+rsc requires SuperCollider and PLT.  RSC includes an Emacs mode to
+provide a functional work environment.  RSC runs on Linux and OSX.
+
+A source archive and documentation are available at:
+<http://www.alphalink.com.au/~rd/>
+
+Regards,
+Rohan
