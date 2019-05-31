@@ -1,6 +1,6 @@
 ;; A groovy little number...
 
-(define p1
+(defpattern p1
   (o->
     (o-> ;; Keys
       (in: :scd (sbdv 2 [[I III] I VI ~])

@@ -2,25 +2,25 @@
 
 (library (harmony)
   (export
-   5th triad sus2 sus4 6th 7th 9th 11th 13th
-   minor major harmMinor pentNeutral pentMajor pentMinor
-   blues dorian phrygian lydian mixolydian locrian wholeTone
-   chromatic arabicA arabicB japanese ryukyu spanish
-   I II III IV V VI VII VIII IX X XI XII
-   Ab A A+ Bb B C C+ Db D D+ Eb E F F+ Gb G G+
+    5th triad sus2 sus4 6th 7th 9th 11th 13th
+    minor major harmMinor pentNeutral pentMajor pentMinor
+    blues dorian phrygian lydian mixolydian locrian wholeTone
+    chromatic arabicA arabicB japanese ryukyu spanish
+    I II III IV V VI VII VIII IX X XI XII
+    Ab A A+ Bb B C C+ Db D D+ Eb E F F+ Gb G G+
 
-   :tuning :octave
-   :root :midinote
-   :scale :scale-degree
-   :chord-degree
-   :scd :chd :chs
+    :tuning :octave
+    :root :midinote
+    :scale :scale-degree
+    :chord-degree
+    :scd :chd :chs
 
-   event-with-freq
-   chord-offset)
+    event-with-freq
+    chord-offset)
 
   (import (scheme) (utilities) (event)
-	  (chain-nodes)
-	  (basic-nodes))
+          (chain-nodes)
+          (basic-nodes))
 
   (define (midicps midi freqA)
     (* freqA (expt 2 (/ (- midi 69) 12))))
@@ -28,39 +28,39 @@
   ;; TODO: get defaults for :octave, :scale, :chord-shape etc from context defaults.
   (define (event-with-freq e)
     (alist-let
-     e ([freq ':freq #f]
-	[midi :midinote #f])
-     (cond
-      (freq e)
-      (midi (event-set e ':freq (midicps midi 440)))
-      (else
-       (alist-let
-	e ([oct :octave 0]
-	   [root :root C]
-	   [scale :scale minor]
-	   [sc-deg :scale-degree I]
-	   [ch-deg :chord-degree I])
-	(let* ([s (chord-offset oct sc-deg ch-deg scale)]
-	       [f (midicps (+ 60 root s) 440)])
-	  (event-remove-multi (event-set e ':freq f)
-			      (list :scale :chord-shape :octave :root))))))))
+      e ([freq ':freq #f]
+         [midi :midinote #f])
+      (cond
+        (freq e)
+        (midi (event-set e ':freq (midicps midi 440)))
+        (else
+          (alist-let
+            e ([oct :octave 0]
+               [root :root C]
+               [scale :scale minor]
+               [sc-deg :scale-degree I]
+               [ch-deg :chord-degree I])
+            (let* ([s (chord-offset oct sc-deg ch-deg scale)]
+                   [f (midicps (+ 60 root s) 440)])
+              (event-remove-multi (event-set e ':freq f)
+                                  (list :scale :chord-shape :octave :root))))))))
 
   ;; Gets the semitone offset of a single note in a chord, computed
   ;; from the desired octave offset, scale degree, chord degree and scale.
   ;; The result is just an offset from the root's midinote, not a real midinote itself.
   (define (chord-offset octave root-scale-deg chord-deg scale)
     (let* ([sc-len (shape-len scale)]
-	   [scale  (shape-degrees scale)]
-	   [sc-deg (+ root-scale-deg chord-deg)]
-	   [sc-idx (mod sc-deg sc-len)]
-	   [oct-overflow (exact (truncate (/ sc-deg sc-len)))]
-	   [semitone-offset (list-nth scale sc-idx)])
+           [scale  (shape-degrees scale)]
+           [sc-deg (+ root-scale-deg chord-deg)]
+           [sc-idx (mod sc-deg sc-len)]
+           [oct-overflow (exact (truncate (/ sc-deg sc-len)))]
+           [semitone-offset (list-nth scale sc-idx)])
       ;; (println (format "sc-idx: ~A, sc-deg: ~A, scale: ~A, semitone: ~A" sc-idx sc-deg scale semitone))
       ;; (println (format "oct-overflow: ~A" oct-overflow))
       (+ semitone-offset
-	 (* oct-overflow 12)
-	 (* octave 12))))
-  
+         (* oct-overflow 12)
+         (* octave 12))))
+
   ;; Event key definitions
   (declare-keyword :octave)
   (declare-keyword :midinote)
@@ -109,15 +109,15 @@
   ;; Used for chords and scales
   (define-record-type shape
     (fields (immutable name) ;; symbol
-	    (immutable degrees) ;; list
-	    (immutable len)))  ;; number
+            (immutable degrees) ;; list
+            (immutable len)))  ;; number
 
   (define-syntax def-shape
     (syntax-rules ()
       ((_ name (a b ...))
        (define name
-	 (+-> (to: :chd a)
-	      (to: :chd b) ...)))))
+         (+-> (to: :chd a)
+              (to: :chd b) ...)))))
 
   ;; Chord shape definitions (in degrees of current scale)
   (def-shape 5th   (0 4))

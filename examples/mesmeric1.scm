@@ -1,5 +1,5 @@
 
-(define arp-pattern
+(defpattern arp-pattern
   (o->
     (in: :scd (sbdv [I V VII])
          (to: :octave -1))
@@ -21,7 +21,7 @@
 
     (to+ :cutoff (sine 7 -0.4 5.0))))
 
-(define pad-pattern
+(defpattern pad-pattern
   (o->
     (in: :scd (sbdv 8 [I VII])
          (to: :root (sbdv 16 [I III])
@@ -36,7 +36,7 @@
               :pan (rnd 0.1 0.9))
          (cp: (to: :octave 1)))))
 
-(define drum-pattern
+(defpattern drum-pattern
   (o->
     (in* (sbdv [1 [~ 1] ~ (pick [1 1 2 [~ 1]]) (pick [~ 1 [~ 1]]) (pick [~ 1])])
          (to: :sample bd
@@ -51,10 +51,3 @@
          (to: :sample hh)
          (to: :amp (sbdv 1/4 [0.05 (rnd 0.2 0.3)]))
          (to: :pan (rnd 0.4 0.6)))))
-
-(define p1
-  (o->
-    arp-pattern
-    drum-pattern
-    ;; pad-pattern
-    ))

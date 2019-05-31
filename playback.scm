@@ -7,13 +7,17 @@
     bpm->mps bpm->spm
     measures->secs secs->measures
     secs-until sleep-secs
+    make-pattern-dict 
+    iterate-patterns list-patterns
+    add-pattern remove-pattern 
+    get-pattern clear-patterns
     semaphore semaphore? make-semaphore
-    semaphore-val semaphore-mutex semaphore-cond
     start-waiting stop-waiting waiting?
     start-suspendable-thread)
 
   (import (context) (rsc3) (sosc)
           (except (scheme) reset random)
+          (only (utilities) make-safe-val safe-val-apply)
           (only (srfi s1 lists) alist-cons alist-delete))
 
   ;;------------------------------------------------
@@ -37,9 +41,36 @@
       (sleep (make-time 'time-duration ns secs-whole))))
 
   ;;------------------------------------------------
-  ;; Infrastructure for a special playback thread. This will wake up
-  ;; periodically (according to bpm and chunk-size) and send the next
-  ;; chunk of event information to SuperCollider.
+  ;; Manage a threadsafe dictionary of playing patterns.
+
+  (define (make-pattern-dict)
+    (make-safe-val (make-hashtable symbol-hash eq? 32)))
+
+  (define (add-pattern dict id fn)
+    (safe-val-apply hashtable-set! dict id fn))
+
+  (define (remove-pattern dict id)
+    (safe-val-apply hashtable-delete! dict id))
+
+  (define (get-pattern dict id)
+    (safe-val-apply hashtable-ref dict id #f))
+
+  (define (clear-patterns dict)
+    (safe-val-apply hashtable-clear! dict))
+
+  (define (iterate-patterns dict fn)
+    (let-values ([(keys values) (safe-val-apply hashtable-entries dict)])
+      (vector-for-each fn values)))
+
+  (define (list-patterns dict)
+    (let-values ([(keys values) (safe-val-apply hashtable-entries dict)])
+      (vector->list values)))
+
+  ;;------------------------------------------------
+  ;; Infrastructure for a special playback thread.
+  ;; It calls a process-fn roughly each chunk-secs.
+  ;; It's pausable and restartable via a 'semaphore'.
+
   (define-record-type semaphore
     (fields (mutable val semaphore-val set-semaphore-val!)
             (immutable mutex)
@@ -50,17 +81,18 @@
 
   (define (set-semaphore sem val)
     (with-mutex (semaphore-mutex sem)
-                (set-semaphore-val! sem val)))
+      (set-semaphore-val! sem val)))
 
   (define (set-and-signal-semaphore sem val)
     (with-mutex (semaphore-mutex sem)
-                (set-semaphore-val! sem val)
-                (condition-signal (semaphore-cond sem))))
+      (set-semaphore-val! sem val)
+      (condition-signal (semaphore-cond sem))))
 
   (define (start-waiting sem) (set-semaphore sem #t))
   (define (stop-waiting sem) (set-and-signal-semaphore sem #f))
-  (define (waiting? sem) (with-mutex (semaphore-mutex sem)
-                                     (semaphore-val sem)))
+  (define (waiting? sem)
+    (with-mutex (semaphore-mutex sem)
+      (semaphore-val sem)))
 
   ;; Allows introduction of rebindable values for process-fn and
   ;; chunk-secs, so you can use global values and change the
@@ -72,10 +104,10 @@
         (lambda ()
           (let loop ()
             (with-mutex (semaphore-mutex sem)
-                        (when (semaphore-val sem)
-                          (condition-wait
-                           (semaphore-cond sem)
-                           (semaphore-mutex sem))))
+              (when (semaphore-val sem)
+                (condition-wait
+                 (semaphore-cond sem)
+                 (semaphore-mutex sem))))
             (process-fn)
             (sleep-secs chunk-secs)
             (loop)))))))

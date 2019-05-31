@@ -4,18 +4,18 @@
 (start)
 (pause)
 
-(define p1
+(defpattern tune1
   (in! 16
-         (to: :scd (step 1/4 [I V III IV (pick [VI VII VIII])])
-              :inst "sine-grain"
-              :bus1-amt (sine 3 0.05 0.6)
-              :pan (rnd 0.24 0.75)
-              :attack 0.005)
-         ;; (cp: (to: :octave (pick [-1 1 2])))
-         ))
+       (to: :scd (step 1/4 [I V III (pick [IV VI VII VIII])])
+            :inst "sine-grain"
+            :bus1-amt (sine 3 0.05 0.6)
+            :pan (rnd 0.24 0.75)
+            :attack 0.005)
+       ;; (cp: (to: :octave (pick [-1 1 2])))
+       ))
 
 
-(define p1
+(defpattern p1
   (o->
     (in: :scd (step 1/8 [I [VI II] [III ~ V ~] III VII])
          (to: :inst "sine-grain"
@@ -34,7 +34,7 @@
            :bus1-amt 0.02
            :amp (sbdv 1/4 [0.3 (rnd 0.1 0.2)])))))
 
-(define p1
+(defpattern p1
   (define mid-bd
     (pick [[bd ~ bd bd] [~ bd bd ~]]))
   (o->
@@ -62,7 +62,7 @@
            (to: :amp 0.1))
       (to: :inst "sampler"))))
 
-(define p1
+(defpattern p1
   (o->
     (in: :sample (sbdv [bd [~ bd bd ~] [~ bd ~ bd] [~ ~ ~ bd]]))
     (in: :sample (sbdv [~ sn ~ sn])
@@ -78,7 +78,7 @@
     (to* :sustain (sbdv 4 [0.5 0.05 1 0.01]))))
 
 ;; A little beat
-(define p1
+(defpattern p1
   (let ([bd1 (in! (sbdv [4 2 [1 ~] 1]))]
         [bd2 (in! (sbdv [1 2 [2 ~] 1]))])
     (o->
@@ -101,9 +101,9 @@
                 :bus1-amt 0.02))
 
       (in! (sbdv [~
-                [(pick [3 2 4 ~]) (pick [2 4 ~])]
-                (pick [~ 1 3])
-                [~ (pick [~ 1 2])]])
+                  [(pick [3 2 4 ~]) (pick [2 4 ~])]
+                  (pick [~ 1 3])
+                  [~ (pick [~ 1 2])]])
            (to: :sample xt
                 :amp (sbdv 1/2 [0.15 (rnd 0.1 0.4) (rnd 0.15 0.4) 0.15])
                 :speed (rnd 0.8 0.85)

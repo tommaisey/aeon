@@ -30,7 +30,10 @@
           declare-keyword
           check-type
           println
-          define/optional)
+          define/optional
+          make-safe-val
+          safe-val?
+          safe-val-apply)
 
   (import (chezscheme)
           (srfi s27 random-bits)
@@ -248,5 +251,20 @@
 
   (define (println . objs)
     (for-each (lambda (x) (display x) (newline)) objs))
+
+  ;;------------------------------------------------------------------------
+  ;; A value bound with a mutex to make it threadsafe. You should always
+  ;; use and access the value through safe-val-apply.
+  (define-record-type safe-val
+    (fields (immutable mutex)
+            (mutable object))
+    (protocol
+     (lambda (new)
+       (lambda (object)
+         (new (make-mutex) object)))))
+
+  (define (safe-val-apply obj-method safe-obj . args)
+    (with-mutex (safe-val-mutex safe-obj)
+      (apply obj-method (safe-val-object safe-obj) args)))
 
   ) ; end module 'utilities'

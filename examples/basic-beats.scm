@@ -8,7 +8,7 @@
   (in: :sample (sbdv [bd [~ ~ bd bd] [~ ~ bd bd] [~ bd ~ bd]])
        (to: :amp (sbdv [0.2 [0.05 0.2] [0.2 0.1] » »]))))
 
-(define p1
+(defpattern p1
   (o->
     (rp: (sbdv 2 [! kik1 kik2]))
 

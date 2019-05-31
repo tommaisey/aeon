@@ -2,7 +2,7 @@
 
 (define grp1 (make-unused-group-id))
 
-(define p1
+(defpattern p1
   (o->
     (in* (sbdv 2 1)
          (to: :group grp1
