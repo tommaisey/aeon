@@ -20,6 +20,7 @@
           event-clean
           event-optimise
           event-prioritise
+          event-set-multi
           event-get-multi
           event-remove-multi
 
@@ -65,12 +66,29 @@
     (cons (cons key value) event))
   (define (event-update event key update-fn default)
     (event-set event key (update-fn (event-get event key default))))
+
+  ;; Convenience fns for setting/getting multiple values
+  (define-syntax event-set-multi
+    (syntax-rules ()
+      ((_ event (key value) rest ...)
+       (cons (cons key value) (event-set-multi event rest ...)))
+
+      ((_ event) event)))
+
+  (define (event-get-multi event key-default-pairs)
+    (alist-get-multi event key-default-pairs))
+
+  (define (event-remove-multi event key-list)
+    (lset-difference (lambda (entry k) (eq? k (car entry))) event key-list))
+
+  ;; Some time-related helpers
   (define (event-beat event)
     (event-get event time-key 0))
   (define (event-move e n math-fn)
     (event-update e time-key (lambda (beat) (math-fn beat n)) 0))
   (define (event-before? n1 n2)
     (< (event-beat n1) (event-beat n2)))
+  
   ;; Checks there is an item at the key and that it
   ;; satisfies the predicate (which may have extra args)
   (define (event-check event key pred . args)
@@ -91,12 +109,6 @@
   (define (event-optimise event)
     (let ([n (fold-left (cut event-prioritise <> <>) event priority-keys)])
       (event-clean n)))
-
-  (define (event-get-multi event key-default-pairs)
-    (alist-get-multi event key-default-pairs))
-
-  (define (event-remove-multi event key-list)
-    (lset-difference (lambda (entry k) (eq? k (car entry))) event key-list))
 
   ;; Some event convenience functions
   (define (print-event event port)

@@ -1,7 +1,7 @@
 ;;---------------------------------------------------------
 (define pattern-dict (make-pattern-dict))
 
-(define-syntax defpattern
+(define-syntax pattern
   (syntax-rules ()
 
     ((_ name play-now? p)
@@ -10,7 +10,7 @@
               (add-pattern pattern-dict 'name p))))
 
     ((_ name p)
-     (defpattern name #t p))))
+     (pattern name #t p))))
 
 (define-syntax start
   (syntax-rules ()
@@ -27,6 +27,7 @@
     ((_ name) (remove-pattern pattern-dict 'name))))
 
 (define (pause) (pause-playhead)) ;; for symmetry
+(define (clear-all) (clear-patterns pattern-dict))
 
 (define (print-patterns start end)
   (fold-left (lambda (c p) (contexts-merge c (render p start end)))

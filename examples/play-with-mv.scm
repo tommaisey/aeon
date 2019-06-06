@@ -1,5 +1,5 @@
 
-(define p1
+(pattern p1 
   (o->
     ;; Steady bass pulse
     (in: :scd (sbdv 1/4 I)

@@ -53,7 +53,7 @@
            [scale  (shape-degrees scale)]
            [sc-deg (+ root-scale-deg chord-deg)]
            [sc-idx (mod sc-deg sc-len)]
-           [oct-overflow (exact (truncate (/ sc-deg sc-len)))]
+           [oct-overflow (trunc-int (/ sc-deg sc-len))]
            [semitone-offset (list-nth scale sc-idx)])
       ;; (println (format "sc-idx: ~A, sc-deg: ~A, scale: ~A, semitone: ~A" sc-idx sc-deg scale semitone))
       ;; (println (format "oct-overflow: ~A" oct-overflow))

@@ -4,7 +4,7 @@
 (define bassln2
   (make-pdef-data [I IV III II]))
 
-(defpattern p1
+(pattern p1
   (o->
     (in: :scd (sbdv 2 [I II [V III]])
          (rp: (sbdv 2/3 [! (pick [triad 11th 13th]) [7th 9th]])))

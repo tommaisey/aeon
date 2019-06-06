@@ -32,9 +32,12 @@
 ;; If it looks like a sampler event, sets the right inst if it's
 ;; missing. If it looks like a freq event, computes freq.
 (define (process-inst event)
-  (if (event-get event :sample #f)
-      (event-set event :inst (event-get event :inst "sampler"))
-      (event-with-freq event)))
+  (let ([sample (event-get event :sample #f)])
+    (if sample
+        (event-set-multi event 
+                         (:sample (get-bufnum sample)) 
+                         (:inst (event-get event :inst "sampler")))
+        (event-with-freq event))))
 
 ;; Converts any key found in the 'tempo-dependent-keys' alist
 ;; from measures to seconds, for prior to sending to SC.

@@ -103,7 +103,7 @@
 	      [len (length lst)])
 	 (lambda (context)
 	   (let* ([t (context-now context)]
-		  [n (exact (truncate (/ t measures)))])
+		  [n (trunc-int (/ t measures))])
 	     (get-leaf (list-nth lst (modulo n len)) context)))))))
 
   (tag-pdef-callable each) ;; Tag so pdef recognises as a macro

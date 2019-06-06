@@ -144,8 +144,6 @@
         ((context? val) (context-events-next val))
         ((unsafe-list? val)
          (subdivider c (context-length c) val performer))
-        ((not (number? val))
-         (raise (pattern-error "'in'" "number" val)))
         (else (maker val)))))
 
   (define :sustain ':sustain)

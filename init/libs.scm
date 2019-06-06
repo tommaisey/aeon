@@ -26,3 +26,4 @@
 (import (node-eval))
 (import (harmony))
 (import (playback))
+(import (samples))

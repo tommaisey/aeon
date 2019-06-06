@@ -1,6 +1,7 @@
 ;; -*- geiser-scheme-implementation: chez-*-
 (library (context)
   (export
+    testc
     context
     context?
     make-context
@@ -62,6 +63,11 @@
   (define (make-empty-context start end)
     (make-context (make-arc start end)))
 
+  (define testc
+    (case-lambda
+      ((pattern) (testc pattern 0 1))
+      ((pattern start end) (pattern (make-empty-context start end)))))
+
   (define (context-event c)
     (let ([n (context-events-next c)])
       (if (null? n) '() (car n))))
@@ -75,12 +81,14 @@
           (context-start c)
           (event-beat e))))
 
+  (define (context-serialised c)
+    (list 'context
+          (list 'arc (context-start c) (context-end c))
+          (cons 'events (event-clean (context-events-next c)))))
+
   ;; For use as a record-writer in chez (see init.scm)
   (define (context-print c port wr)
-    (let ([data (list 'context
-                      (list 'arc (context-start c) (context-end c))
-                      (cons 'events (event-clean (context-events-next c))))])
-      (display data port)))
+    (put-datum port (context-serialised c)))
 
   (define context-with-events
     (case-lambda

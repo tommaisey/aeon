@@ -3,7 +3,7 @@
 ;; Fundamental utilities
 ;; ---------------------------------------------------------
 (library (utilities)
-  (export round-down-f pseudo-rand inc dec
+  (export trunc-int round-down-f pseudo-rand inc dec
           nearly-divisible divisible on-each
           above below
           between between-inclusive between-each
@@ -33,22 +33,29 @@
           define/optional
           make-safe-val
           safe-val?
-          safe-val-apply)
+          safe-val-apply
+          string-contains string-contains-ci
+          gen-id)
 
   (import (chezscheme)
           (srfi s27 random-bits)
+          (only (srfi s13 strings) string-contains string-contains-ci)
           (thunder-utils))
+
+  ;; Truncate and integerize
+  (define (trunc-int x)
+    (exact (truncate x)))
 
   ;; Find the nearest whole multiple of divisor that's <= x.
   (define (round-down-f x divisor)
-    (* divisor (exact (truncate (/ x divisor)))))
+    (* divisor (trunc-int (/ x divisor))))
 
   ;; A pseudo-random number generator that takes a seed.
   (define pseudo-rand-src (make-random-source))
 
   (define (pseudo-rand min max seed)
-    (let* ([i (exact (truncate seed))]
-           [j (exact (truncate (* 100 (- seed i))))]
+    (let* ([i (trunc-int seed)]
+           [j (trunc-int (* 100 (- seed i)))]
            [len (- max min)])
       (random-source-pseudo-randomize! pseudo-rand-src i j)
       (+ min (if (and (exact? min) (exact? max))
@@ -250,7 +257,13 @@
     (unless (pred val) (raise string)))
 
   (define (println . objs)
-    (for-each (lambda (x) (display x) (newline)) objs))
+    (for-each (lambda (x) (newline) (display x)) objs))
+
+  ;; Helper for synthesising new identifiers in unhygenic macros.
+  (define (gen-id template-id . args)
+    (let* ([str (lambda (x) (if (string? x) x (symbol->string (syntax->datum x))))]
+           [sym (string->symbol (apply string-append (map str args)))])
+      (datum->syntax template-id sym)))
 
   ;;------------------------------------------------------------------------
   ;; A value bound with a mutex to make it threadsafe. You should always
