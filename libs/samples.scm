@@ -4,15 +4,12 @@
     samples
     samples-dir
     valid-sample?
+    get-sample-safe
     path-append
     name-contains?
     number-strings)
 
   (import (scheme) (node-eval) (utilities) (context))
-
-  (define (valid-sample? f)
-    (for-any (lambda (ext) (string-ci=? ext (path-extension f)))
-             (list "wav" "aif" "aiff" "ogg")))
 
   (define-syntax samples
     (syntax-rules ()
@@ -42,29 +39,34 @@
         ((_ name list-impl)
          (with-syntax ([id (gen-id #'name #'name)]
                        [id/  (gen-id #'name #'name "/")]
-                       [id-list (gen-id #'name #'name "-list")]
                        [id-num  (gen-id #'name #'name "-num")])
            #'(begin
-               (define id-list list-impl)
-               (define id-num (length id-list))
-               (define id (if (zero? id-num) "" (car id-list)))
+               (define id (list->vector list-impl))
+               (define id-num (vector-length id))
 
                (define (id/ val)
-                 (define (getter idx)
-                   (if (and (number? idx) (not (zero? id-num)))
-                       (list-ref id-list (mod (trunc-int idx) id-num))
-                       (raise (string-append "No samples in '" 
-                                             (symbol->string 'id) "'"))))
-                 (if (context? val)
-                     (getter 0) ;; raw id was placed in a pattern
-                     (lambda (context)
-                       (getter (get-leaf val context)))))
+                 (lambda (context)
+                   (get-sample-safe id (get-leaf val context))))
 
-               (for-each (lambda (x) (println (path-last x))) id-list)
+               (vector-for-each (lambda (x) (println (path-last x))) id)
 
                (println (string-append (symbol->string 'id) ": "
                                        (number->string id-num)
                                        " samples defined."))))))))
+
+  (define (valid-sample? f)
+    (and (string? f)
+         (for-any (lambda (ext) (string-ci=? ext (path-extension f)))
+                  (list "wav" "aif" "aiff" "ogg"))))
+
+  (define (get-sample-safe sample-vec idx)
+    (let ([len (vector-length sample-vec)])
+      (cond
+        ((not (number? idx))
+         (error 'get-sample-safe "Can't index sample" idx))
+        ((zero? len)
+         (error 'get-sample-safe "No samples in vector"))
+        (else (vector-ref sample-vec (mod (trunc-int idx) len))))))
 
   ;; A safer way to add a file name to a directory
   (define (path-append dir file)

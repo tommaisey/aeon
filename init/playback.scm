@@ -30,9 +30,11 @@
 (define (clear-all) (clear-patterns pattern-dict))
 
 (define (print-patterns start end)
-  (fold-left (lambda (c p) (contexts-merge c (render p start end)))
-             (make-empty-context start end)
-             (list-patterns pattern-dict)))
+  (define ctxt
+    (fold-left (lambda (c p) (contexts-merge c (render p start end)))
+               (make-empty-context start end)
+               (list-patterns pattern-dict)))
+  (context-map (lambda (c) (event-clean (process-inst (context-event c)))) ctxt))
 
 ;;-----------------------------------------------------------------
 (define bpm 100)

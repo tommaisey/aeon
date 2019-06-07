@@ -42,11 +42,11 @@
          "WA_Drum_Machine_Collection/WA_Drum Machines_01/"
          "WA_Airbase Drums/kick drums/mbase 11/" fs))
 
-(samples bd (mbase-kik "waad_mbase_kick_120.wav"))
-(samples-dir sn (tape-drum "tape/snares/machine/") "SM43_vth_tpe_snr_mch_slammin.wav")
-(samples-dir hh (tape-drum "tape/hi-hats/closed/") "SM43_vth_tpe_hh_clsd_hitin.wav")
-(samples-dir oh (tape-drum "tape/hi-hats/open/") "SM43_vth_tpe_hh_op_itsgood.wav")
-(samples-dir xt (path-append drum-dir "Cross Sticks/") "82280__kevoy__acoustic-side-stick.wav")
+(samples-dir bd (mbase-kik))
+(samples-dir sn (tape-drum "tape/snares/machine/"))
+(samples-dir hh (tape-drum "tape/hi-hats/closed/"))
+(samples-dir oh (tape-drum "tape/hi-hats/open/"))
+(samples-dir xt (path-append drum-dir "Cross Sticks/"))
 
 ;;------------------------------------------------------------------
 ;; Keyword for specifying which synthdef an event applies to.
@@ -63,6 +63,10 @@
 ;; will be set on all synths in that node group instead of creating new synths.
 (declare-keyword :group)
 (declare-keyword :control)
+
+;; If the user supplies a vector of samples, for the :sample key, this key can
+;; be used to select between them.
+(declare-keyword :sample-idx)
 
 ;; Defines some globally reserved bus numbers. These are used for
 ;; standard effects busses in the synthdefs. The numbers start at

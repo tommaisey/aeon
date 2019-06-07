@@ -15,7 +15,7 @@
     :chord-degree
     :scd :chd :chs
 
-    event-with-freq
+    process-event-freq
     chord-offset)
 
   (import (scheme) (utilities) (event)
@@ -26,7 +26,7 @@
     (* freqA (expt 2 (/ (- midi 69) 12))))
 
   ;; TODO: get defaults for :octave, :scale, :chord-shape etc from context defaults.
-  (define (event-with-freq e)
+  (define (process-event-freq e)
     (alist-let
       e ([freq ':freq #f]
          [midi :midinote #f])
