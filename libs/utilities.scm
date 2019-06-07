@@ -8,6 +8,7 @@
           above below
           between between-inclusive between-each
           equal nearly-equal
+          range-sine
           pair first rest
           merge-columns
           columns-to-rows
@@ -102,6 +103,11 @@
   (define (between-each x lower upper each)
     (let ([m (mod x each)])
       (between m lower upper)))
+
+  (define pi 3.141592653589793)
+
+  (define (range-sine freq lo hi val)
+    (+ lo (* (- hi lo) 0.5 (+ 1 (sin (/ (* 2 pi val) freq))))))
 
   ;; More readable for users to write pair/first/rest
   (define pair cons)

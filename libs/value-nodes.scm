@@ -15,11 +15,11 @@
 ;;----------------------------------------------------------------------
 (library (value-nodes)
   (export
-   this next nearest
-   c+ c- c* c/
-   rnd pick each snap
-   sine)
-  
+    this next nearest
+    c+ c- c* c/
+    rnd pick each every 
+    snap sine)
+
   (import
     (chezscheme) (utilities) (context) (node-eval) (event)
     (for (pdef) expand))
@@ -48,7 +48,7 @@
 
   (define (c+ . leaves)
     (leaf-apply + leaves))
-  
+
   (define (c- . leaves)
     (leaf-apply - leaves))
 
@@ -62,11 +62,11 @@
   (define (snap divisor val)
     (lambda (context)
       (let* ([val (get-leaf val context)]
-	     [divisor (get-leaf divisor context)]
-	     [overlap (mod val divisor)]
-	     [prev (- val overlap)])
-	(if (>= overlap (* 0.5 divisor))
-	    (+ prev divisor) prev))))
+             [divisor (get-leaf divisor context)]
+             [overlap (mod val divisor)]
+             [prev (- val overlap)])
+        (if (>= overlap (* 0.5 divisor))
+            (+ prev divisor) prev))))
 
   ;;-------------------------------------------------------------------
   ;; Pseudo-random values and choices.
@@ -77,8 +77,8 @@
       [(min max) (rnd min max '())]
       [(min max key/keys)
        (lambda (context)
-	 (let ([seed (fold-by-keys * 10000 key/keys context)])
-	   (pseudo-rand min max seed)))]))
+         (let ([seed (fold-by-keys * 10000 key/keys context)])
+           (pseudo-rand min max seed)))]))
 
   ;; Choose from a list randomly
   (define-syntax pick
@@ -87,34 +87,56 @@
 
       ((_ qlist key/keys)
        (let* ([lst (make-pdef-data qlist)]
-	      [len (length lst)])
-	 (lambda (context)
-	   (get-leaf (list-nth lst ((rnd 0 len key/keys) context)) context))))))
+              [len (length lst)])
+         (lambda (context)
+           (get-leaf (list-nth lst ((rnd 0 len key/keys) context)) context))))))
 
   (tag-pdef-callable pick) ;; Tag so pdef recognises as a macro
 
   ;;--------------------------------------------------------------------
   ;; Rhythmic & sequencing operations.
-  ;; Choose from a list according to the current measure
+
+  ;; Choose from a list according to the current measure.
   (define-syntax each
     (syntax-rules ()
       ((_ measures qlist)
        (let* ([lst (make-pdef-data qlist)]
-	      [len (length lst)])
-	 (lambda (context)
-	   (let* ([t (context-now context)]
-		  [n (trunc-int (/ t measures))])
-	     (get-leaf (list-nth lst (modulo n len)) context)))))))
+              [len (length lst)])
+         (when (< len 1)
+           (error 'each "requires at least 1 value" len))
+         (lambda (context)
+           (let* ([t (context-now context)]
+                  [n (trunc-int (/ t measures))])
+             (get-leaf (list-nth lst (modulo n len)) context)))))))
 
-  (tag-pdef-callable each) ;; Tag so pdef recognises as a macro
+  ;; Normally chooses the first value, but every n measures chooses
+  ;; the second value instead. If there are more than 2 values, the
+  ;; 2nd through nth values are cycled.
+  (define-syntax every
+    (syntax-rules ()
+      ((_ n measures qlist)
+       (let* ([lst (make-pdef-data qlist)]
+              [len (length lst)])
+         (when (< len 2)
+           (error 'every "requires at least 2 values" len))
+         (lambda (context)
+           (let* ([t (context-now context)]
+                  [i (if (zero? t) 0 (trunc-int (/ t measures)))]
+                  [n-wrapped (mod i n)])
+             (if (eq? n-wrapped (- n 1))
+                 (get-leaf (list-nth lst (+ 1 (mod i (- len 1)))) context)
+                 (get-leaf (car lst) context))))))))
+
+  ;; Tag so pdef recognises as a macro
+  (tag-pdef-callable each)
+  (tag-pdef-callable every)
 
   (define (sine freq lo hi)
     (lambda (context)
-      (let ([pi 3.141592653589793]
-	    [f (get-leaf freq context)]
-	    [l (get-leaf lo context)]
-	    [h (get-leaf hi context)])
-	(+ l (* (- h l) 0.5 (+ 1 (sin (/ (* 2 pi (context-now context)) f))))))))
+      (let ([f (get-leaf freq context)]
+            [l (get-leaf lo context)]
+            [h (get-leaf hi context)])
+        (range-sine f l h (context-now context)))))
 
   ;;--------------------------------------------------------------------
   ;; Some leaves allow the user to specify which properties of the
@@ -124,13 +146,13 @@
     (define (matches-key? pair)
       (find (lambda (k) (eq? k (car pair))) key/keys))
     (let ([time (context-now context)]
-	  [event (context-event context)])
+          [event (context-event context)])
       (cond
-       ((null? key/keys)
-	(fn init time))
-       ((symbol? key/keys)
-	(fn init (event-get event key/keys 1)))
-       ((unsafe-list? key/keys)
-	(fold-left fn init (event-clean (filter matches-key? event)))))))
-  
+        ((null? key/keys)
+         (fn init time))
+        ((symbol? key/keys)
+         (fn init (event-get event key/keys 1)))
+        ((unsafe-list? key/keys)
+         (fold-left fn init (event-clean (filter matches-key? event)))))))
+
   )
