@@ -8,16 +8,16 @@
 
 (library (chunking)
   (export sbdv step dispatch-pdef
-	  is-rest? is-sustain?
-	  subdivider
-	  pattern-error)
-  
+          is-rest? is-sustain?
+          subdivider
+          pattern-error)
+
   (import (scheme)
-	  (utilities)
-	  (event)
-	  (context)
-	  (node-eval)
-	  (for (pdef) expand))
+          (utilities)
+          (event)
+          (context)
+          (node-eval)
+          (for (pdef) expand))
 
   (define (pattern-error name type val)
     (format "pattern error: got '~A', ~A expects a ~A" val name type))
@@ -46,17 +46,17 @@
 
       ((_ slice-dur def)
        (let* ([data (make-pdef-data def)])
-	 (make-pdef (* slice-dur (length data)) data subdivider)))))
+         (make-pdef (* slice-dur (length data)) data subdivider)))))
 
   ;; Executes the time-chunker of a pdef, which will call the
   ;; perform-fn for each chunk of the context as it sees fit.
   (define (dispatch-pdef def context perform-fn)
     (let ([def (if (pdef? def) def (sbdv def))])
       (derecord def ([fn  pdef-time-chunker]
-		     [dur pdef-dur]
-		     [def pdef-data])
-	(let ([events (fn context dur def perform-fn)])
-	  (context-trim (context-with-events context events))))))
+                     [dur pdef-dur]
+                     [def pdef-data])
+        (let ([events (fn context dur def perform-fn)])
+          (context-trim (context-with-events context events))))))
 
   ;;-----------------------------------------------------------------------
   ;; General helpers for main time-chunking routines like subdivider.
@@ -75,16 +75,16 @@
   (define (drop-stretched lst)
     (let loop ([lst lst] [n 0])
       (if (and (not (null? lst))
-	       (or (zero? n)
-		   (is-sustain? (car lst))))
-	  (loop (cdr lst) (+ n 1))
-	  (values n lst))))
+               (or (zero? n)
+                   (is-sustain? (car lst))))
+          (loop (cdr lst) (+ n 1))
+          (values n lst))))
 
   ;; -> (values def-len, start-beat, slice-dur)
   (define (pdef-info def dur context)
     (let* ([len (length def)]
-	   [slice-dur (/ dur len)]
-	   [start (round-down-f (context-start context) dur)])
+           [slice-dur (/ dur len)]
+           [start (round-down-f (context-start context) dur)])
       (values len start slice-dur)))
 
   ;;-----------------------------------------------------------------------
@@ -93,34 +93,35 @@
   ;; leaf in the pdef list.
   ;; -> (list event ...)
   (define (subdivider context dur def perform)
-    
+
     (define (build-events item subctxt slice-dur)
       (if (arcs-overlap? (context-arc context)
-			 (context-arc subctxt))
-	  (if (unsafe-list? item)
-	      (subdivider subctxt slice-dur item perform)
-	      (perform subctxt item))
-	  (list)))
+                         (context-arc subctxt))
+          (if (unsafe-list? item)
+              (subdivider subctxt slice-dur item perform)
+              (perform subctxt item))
+          (list)))
+
     (cond
-     ((null? def) (list))
-     ((not (unsafe-list? def))
-      (subdivider context dur (list def) perform))
-     (else
-      (let-values (([len start slice-dur]
-		    (pdef-info def dur context)))
-	(let loop ([t start]
-		   [next def]
-		   [prev #f]
-		   [events '()])
-	  (cond
-	   ((null? next) (loop t def #f events))
-	   ((>= t (context-end context)) events)
-	   (else
-	    (let-values ([[num-slices next-p] (drop-stretched next)])		  
-	      (let* ([item (maybe-repeat (car next) prev)]
-		     [next-t (+ t (* num-slices slice-dur))]
-		     [subctxt (rearc context (make-arc t next-t))]
-		     [new-events (build-events item subctxt slice-dur)])
-		(loop next-t next-p item (append events new-events)))))))))))
-  
+      ((null? def) (list))
+      ((not (unsafe-list? def))
+       (subdivider context dur (list def) perform))
+      (else
+        (let-values (([len start slice-dur]
+                      (pdef-info def dur context)))
+          (let loop ([t start]
+                     [next def]
+                     [prev #f]
+                     [events '()])
+            (cond
+              ((null? next) (loop t def #f events))
+              ((>= t (context-end context)) events)
+              (else
+                (let-values ([[num-slices next-p] (drop-stretched next)])
+                  (let* ([item (maybe-repeat (car next) prev)]
+                         [next-t (+ t (* num-slices slice-dur))]
+                         [subctxt (rearc context (make-arc t next-t))]
+                         [new-events (build-events item subctxt slice-dur)])
+                    (loop next-t next-p item (append events new-events)))))))))))
+
   )

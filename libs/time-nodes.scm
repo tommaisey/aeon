@@ -1,12 +1,12 @@
 (library (time-nodes)
   (export mv- mv+ mv/ mv*
-	  flip-time)
+          flip-time swing)
 
   (import (chezscheme) (utilities) (context) (event)
-	  (chunking)
-	  (node-eval)
-	  (chain-nodes)
-	  (rhythm))
+          (chunking)
+          (node-eval)
+          (chain-nodes)
+          (rhythm))
 
   ;; A general 'mv', taking a math op and a def. The math op is
   ;; called with each segment's current time and the value returned by
@@ -23,32 +23,56 @@
   ;;-------------------------------------------------------------------
   ;; Flips time of events within each chunk.
   ;; e.g. with chunk = 2:
-  ;; 0.1 -> 1.9 and vice versa. 
+  ;; 0.1 -> 1.9 and vice versa.
   ;; 2.1 -> 3.9 and vice versa
   ;; 1 -> 1
   ;; TODO: I think this requests more from its source than needed, but
   ;; it's hard to get it right at chunk boundaries. Investigate.
   (define (flip-time chunk)
-    
+
     (define (flip-chunked chunk x)
       (let* ([x-trunc (snap-prev x chunk)]
-	     [x-mod (- x x-trunc)])
-	(+ x-trunc (abs (- x-mod chunk)))))
-    
+             [x-mod (- x x-trunc)])
+        (+ x-trunc (abs (- x-mod chunk)))))
+
     (define (move-event start end)
       (lambda (context)
-	(let* ([e (context-event context)]
-	       [t (flip-chunked chunk (event-beat e))])
-	  (if (between t start end)
-	      (event-set e time-key t)
-	      (list))))) ;; empty events are ignored by context-map
-    
+        (let* ([e (context-event context)]
+               [t (flip-chunked chunk (event-beat e))])
+          (if (between t start end)
+              (event-set e time-key t)
+              (list))))) ;; empty events are ignored by context-map
+
     (lambda (context)
       (let* ([s (- (context-start context) chunk)]
-	     [e (snap-next (context-end context) chunk)]
-	     [c (context-resolve (rearc context (make-arc s e)))]
-	     [c (context-sort (context-map (move-event s e) c))])
-	(context-trim (context-with-arc c (context-arc context))))))
+             [e (snap-next (context-end context) chunk)]
+             [c (context-resolve (rearc context (make-arc s e)))]
+             [c (context-sort (context-map (move-event s e) c))])
+        (context-trim (context-with-arc c (context-arc context))))))
+
+  ;;-------------------------------------------------------------------
+  ;; Swing - implemented as a sine wave, so that notes off the main beat
+  ;; are moved progressively more as they get closer to it.
+  (define (swing period amount)
+
+    (define (mover context)
+      (let* ([period (get-leaf period context)]
+             [amount (get-leaf amount context)]
+             [now (context-now context)]
+             [ev (context-event context)]
+             [b (event-beat ev)]
+             [offset (+ b (* 3 (/ period 2)))]
+             [t (+ b (range-sine (* 2 period) 0 (* amount period) offset))]
+             [sus (event-get ev ':sustain #f)])
+        (if sus 
+            (event-set-multi ev (:beat t) (':sustain (- sus (- t b))))
+            (event-set-multi ev (:beat t)))))
+
+    (lambda (context)
+      (let* ([s (context-start context)]
+             [e (context-end context)]
+             [c (context-resolve (rearc context (make-arc (- s period) e)))])
+        (context-trim (rearc (context-map mover c) (make-arc s e))))))
 
   ;;-------------------------------------------------------------------
   ;; Helper for building nodes from a list of pdefs
@@ -58,26 +82,26 @@
 
   ;;-------------------------------------------------------------------
   ;; Implementation functions to be supplied to a chunking algorithm.
-  
+
   ;; Resolves input context with an arc shifted by the leaf value,
   ;; effectively moving a different slice of time into this one.
   (define (mv-math-impl math-fn inv-math-fn)
     (define (mapper new-val)
       (lambda (context)
-	(event-move (context-event context) new-val math-fn)))
+        (event-move (context-event context) new-val math-fn)))
     (lambda (context leaf)
       (derecord context ([old-start context-start]
-			 [old-end context-end])
-	(context-events-next
-	 (let ([val (get-leaf-early leaf old-start context)])
-	   (cond
-	    ((is-rest? val) (context-resolve context))
-	    ((not (number? val)) (raise (pattern-error "'mv'" "number" val)))
-	    (else
-	     (let* ([new-start (inv-math-fn old-start val)]
-		    [new-end (inv-math-fn old-end val)]
-		    [shifted (rearc context (make-arc new-start new-end))])
-	       (context-map (mapper val) (context-resolve shifted))))))))))
+                         [old-end context-end])
+        (context-events-next
+         (let ([val (get-leaf-early leaf old-start context)])
+           (cond
+             ((is-rest? val) (context-resolve context))
+             ((not (number? val)) (raise (pattern-error "'mv'" "number" val)))
+             (else
+               (let* ([new-start (inv-math-fn old-start val)]
+                      [new-end (inv-math-fn old-end val)]
+                      [shifted (rearc context (make-arc new-start new-end))])
+                 (context-map (mapper val) (context-resolve shifted))))))))))
 
 
   )

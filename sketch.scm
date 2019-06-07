@@ -7,18 +7,16 @@
 (pattern tune1
   (in! 16
        (to: :scd (step 1/4 [I V III (pick [IV VI VII VIII])])
-            :inst "sine-grain"
             :bus1-amt (sine 3 0.05 0.6)
             :pan (rnd 0.24 0.75)
             :attack 0.005)
-       ;; (cp: (to: :octave (pick [-1 1 2])))
+       (cp: (to: :octave (pick [-1 1 2])))
        ))
 
 (pattern p1
   (o->
     (in: :scd (step 1/8 [I [VI II] [III ~ V ~] III VII])
-         (to: :inst "sine-grain"
-              :amp (sbdv 1/3 [0.2 0.4 (rnd 0.1 0.5)])
+         (to: :amp (sbdv 1/3 [0.2 0.4 (rnd 0.1 0.5)])
               :attack 0.005
               :bus1-amt 0.1
               :octave (pick [0 -1 1])
@@ -29,8 +27,7 @@
            (to: :sustain (pick [1/8 1/32 1/4 1/16])))
       (in: :sample (sbdv 1/2 [~ hh ~ [~ hh]])
            (to: :sustain 0.01))
-      (to: :inst "sampler"
-           :bus1-amt 0.02
+      (to: :bus1-amt 0.02
            :amp (sbdv 1/4 [0.3 (rnd 0.1 0.2)])))))
 
 (pattern p1
@@ -58,8 +55,7 @@
       (in: :sample (step 1/16 [hh hh ~ hh ~])
            (to: :amp 0.075))
       (in: :sample (step 1/16 [~ ~ ~ ~ oh ~ ~ ~ ~])
-           (to: :amp 0.1))
-      (to: :inst "sampler"))))
+           (to: :amp 0.1)))))
 
 (pattern p1
   (o->
@@ -73,7 +69,6 @@
          (to: :sample oh
               :pan 0.7
               :amp 0.175))
-    (to: :inst "sampler")
     (to* :sustain (sbdv 4 [0.5 0.05 1 0.01]))))
 
 ;; A little beat
@@ -109,6 +104,4 @@
                 :pan (rnd 0.2 0.8)
                 :bus1-amt (rnd 0.0 0.05)))
 
-      (to: :speed (sbdv [~ 2]))
-
-      (to: :inst "sampler"))))
+      (to: :speed (sbdv [~ 2])))))
