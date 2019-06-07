@@ -130,9 +130,10 @@
 
   (define (rp:impl context leaf)
     (let ([result (get-leaf leaf context)])
-      (if (not (context? result))
-          (raise (pattern-error "'rp'" "procedure" result))
-          (context-events-next result))))
+      (cond
+        ((is-rest? result) (context-events-next context))
+        ((not (context? result)) (error 'rp: "expects procedure" result))
+        (else (context-events-next result)))))
 
   ;; Helper for 'in' impls to get a value from a leaf node,
   ;; and to use it to add a new note/notes to the context.

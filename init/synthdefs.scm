@@ -170,11 +170,14 @@
   (letc ([:attack 0.01] [:sustain 1] [:release 0.25]
                         [:sample 0] [:speed 1]
                         [:amp 0.3] [:pan 0.5]
+                        [:sample-pos 0.0]
                         [:bus1 :verb1]  [:bus1-amt 0]
                         [:bus2 :delay1] [:bus2-amt 0])
 
     (let* ([rate (mul :speed (buf-rate-scale kr :sample))]
-           [osc  (play-buf 1 ar :sample rate 1 0 no-loop remove-synth)]
+           [frames (buf-frames kr :sample)]
+           [pos (mul frames :sample-pos)]
+           [osc  (play-buf 1 ar :sample rate 1 pos no-loop remove-synth)]
            [env  (make-asr 1 :attack :sustain :release -4)]
            [sig (mul env osc)])
       (make-outputs sig :pan
@@ -273,17 +276,18 @@
       (out 0 sig))))
 
 (send-synth sc3 "bus-delay"
-  (letc ([:time-l 0.5] [:time-r 1.0]
-                       [:decay-l 2.0] [:decay-r 1.5]
-                       [:width 0.5] [:tempo 0.5]
-                       [:inbus :delay1])
-    (let* ([l (in 1 ar (private-bus :inbus))]
+  (letc ([:time-l 0.5]  [:time-r 1.0]
+         [:decay-l 2.0] [:decay-r 1.5]
+         [:width 0.5]   
+         [:tempo 0.5]
+         [:inbus :delay1])
+    (let* ([t (fdiv 0.25 :tempo)]
+           [l (in 1 ar (private-bus :inbus))]
            [r (in 1 ar (add 1 (private-bus :inbus)))]
-           [l (comb-c l 4.0 (mul :time-l :tempo) :decay-l)]
-           [r (comb-c r 4.0 (mul :time-r :tempo) :decay-r)])
+           [l (comb-c l 4.0 (mul :time-l t) :decay-l)]
+           [r (comb-c r 4.0 (mul :time-r t) :decay-r)])
       (out 0 (add (make-pan l (add 0.5 (mul -0.5 :width)))
                   (make-pan r (add 0.5 (mul  0.5 :width))))))))
 
 (start-bus-effect "bus-verb"  (pair ":inbus" :verb1))
 (start-bus-effect "bus-delay" (pair ":inbus" :delay1))
-

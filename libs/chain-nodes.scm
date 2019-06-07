@@ -1,7 +1,7 @@
 #!chezscheme ;; Needed for the extra symbols like +->
 
 (library (chain-nodes)
-  (export o-> x-> +-> mute)
+  (export o-> x-> +-> off)
 
   (import (chezscheme) (utilities) (context) (event) (node-eval))
 
@@ -30,7 +30,7 @@
       (fold-left sum context nodes)))
 
   ;; Nodes wrapped in this will be skipped
-  (define (mute . nodes)
+  (define (off . nodes)
     (lambda (context) (context-resolve context)))
 
   )
