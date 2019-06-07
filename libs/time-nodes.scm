@@ -76,36 +76,56 @@
 
   ;;-------------------------------------------------------------------
   ;; Taps is like a MIDI delay effect, but it can operate in reverse.
-  (define (taps period num . nodes)
+  ;; The optional node arguments are applied to the taps differently.
+  ;; `iterative-node` is applied once to the 1st tap, twice to the 2nd, etc.
+  ;; `once-node` is applied once to all taps but not the original.
+  (define taps
+    (case-lambda
+      ((period num) (taps period num (off)))
+      ((period num iterative-node) (taps period num iterative-node (off)))
+      ((period num iterative-node once-node)
 
-    ;; Builds a list of pairs of times and their indeces
-    (define (list-times src start end period num)
-      (let ([sign (if (>= num 0) 1 -1)])
-        (filter (lambda (t) (between (car t) start end))
-                (map (lambda (i) (cons (+ src (* i sign period)) i))
-                     (iota (abs num))))))
+       ;; Builds a list of pairs of times and their indeces. 
+       ;; Omits the original 'src' time.
+       (define (list-taps src period num start end)
+         (if (zero? num) (list)
+             (let* ([sign (if (> num 0) 1 -1)]
+                    [time-flt (lambda (t-i) (between (car t-i) start end))]
+                    [time-idx (lambda (i) (cons (+ src (* (inc i) sign period)) (inc i)))])
+               (filter time-flt (map time-idx (iota (abs (- num sign))))))))
 
-    (define (event-update e)
-      (lambda (t) (event-set e :beat (car t))))
+       ;; Sets the new time and repeatedly applies iterative-node to an event.
+       ;; Has to wrap then unwrap the event in a context so iterative-node
+       ;; can work on it individually.
+       (define (tap-maker ev period)
+         (lambda (time-and-idx)
+           (let* ([t (car time-and-idx)]
+                  [i (cdr time-and-idx)]
+                  [c (make-context (list (event-set ev :beat t))
+                                   (make-arc t (+ t period)))])
+             (context-event ((apply x-> (repeat iterative-node i)) c)))))
 
-    (lambda (context)
-      (let* ([s (context-start context)]
-             [e (context-end context)]
-             [p (get-leaf period context)]
-             [n (get-leaf num context)]
-             [len (* p n)]
-             [a (if (>= len 0)
-                    (make-arc (- s len) e)
-                    (make-arc s (- e len)))]
-             [c (context-resolve (rearc context a))])
+       (lambda (context)
+         (let* ([orig-arc (context-arc context)]
+                [s (arc-start orig-arc)]
+                [e (arc-end orig-arc)]
+                [p (get-leaf period context)]
+                [n (get-leaf num context)]
+                [len (* p n)]
+                [a (if (> len 0)
+                       (arc-with-start orig-arc (- s len))
+                       (arc-with-end orig-arc (- e len)))]
+                [c (context-resolve (rearc context a))]
+                [events (context-events-next c)])
 
-        (define (make lst ev)
-          (let ([times (list-times (event-beat ev) s e p n)])
-            (append (map (event-update ev) times) lst)))
+           (define (build-taps result ev)
+             (let ([times-and-indeces (list-taps (event-beat ev) p n s e)])
+               (append (map (tap-maker ev p) times-and-indeces) result)))
 
-        (make-context (fold-left make '() (context-events-next c)) 
-                      (make-arc s e)))))
-
+           (contexts-merge
+            (rearc c orig-arc)
+            (once-node (make-context (fold-left build-taps '() events) orig-arc))))))))
+  
   ;;-------------------------------------------------------------------
   ;; Helper for building nodes from a list of pdefs
   ;; (pdef ...), impl -> ((context -> context) ...)

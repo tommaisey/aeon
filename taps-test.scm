@@ -10,8 +10,9 @@
 
 (pattern tps
   (in! (sbdv [1 ~ ~ ~])
-       (taps 1/16 -8)
-       (to: :scd III
-            :sustain 1/16)))
+       (to: :amp 1
+            :scd III)
+       (taps 1/16 -8 (to* :amp 0.7) (to: :scd IV))
+       (to: :sustain 1/16)))
 
 (context-events-next (testc tps))
