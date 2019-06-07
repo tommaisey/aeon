@@ -1,6 +1,6 @@
 (library (time-nodes)
   (export mv- mv+ mv/ mv*
-          flip-time swing)
+          flip-time swing taps)
 
   (import (chezscheme) (utilities) (context) (event)
           (chunking)
@@ -64,7 +64,7 @@
              [offset (+ b (* 3 (/ period 2)))]
              [t (+ b (range-sine (* 2 period) 0 (* amount period) offset))]
              [sus (event-get ev ':sustain #f)])
-        (if sus 
+        (if sus
             (event-set-multi ev (:beat t) (':sustain (- sus (- t b))))
             (event-set-multi ev (:beat t)))))
 
@@ -73,6 +73,38 @@
              [e (context-end context)]
              [c (context-resolve (rearc context (make-arc (- s period) e)))])
         (context-trim (rearc (context-map mover c) (make-arc s e))))))
+
+  ;;-------------------------------------------------------------------
+  ;; Taps is like a MIDI delay effect, but it can operate in reverse.
+  (define (taps period num . nodes)
+
+    ;; Builds a list of pairs of times and their indeces
+    (define (list-times src start end period num)
+      (let ([sign (if (>= num 0) 1 -1)])
+        (filter (lambda (t) (between (car t) start end))
+                (map (lambda (i) (cons (+ src (* i sign period)) i))
+                     (iota (abs num))))))
+
+    (define (event-update e)
+      (lambda (t) (event-set e :beat (car t))))
+
+    (lambda (context)
+      (let* ([s (context-start context)]
+             [e (context-end context)]
+             [p (get-leaf period context)]
+             [n (get-leaf num context)]
+             [len (* p n)]
+             [a (if (>= len 0)
+                    (make-arc (- s len) e)
+                    (make-arc s (- e len)))]
+             [c (context-resolve (rearc context a))])
+
+        (define (make lst ev)
+          (let ([times (list-times (event-beat ev) s e p n)])
+            (append (map (event-update ev) times) lst)))
+
+        (make-context (fold-left make '() (context-events-next c)) 
+                      (make-arc s e)))))
 
   ;;-------------------------------------------------------------------
   ;; Helper for building nodes from a list of pdefs

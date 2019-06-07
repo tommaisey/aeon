@@ -3,7 +3,7 @@
 (library (harmony)
   (export
     5th triad sus2 sus4 6th 7th 9th 11th 13th
-    minor major harmMinor pentNeutral pentMajor pentMinor
+    minor major harm-minor pent-neutral pent-major pent-minor
     blues dorian phrygian lydian mixolydian locrian wholeTone
     chromatic arabicA arabicB japanese ryukyu spanish
     I II III IV V VI VII VIII IX X XI XII
@@ -138,10 +138,10 @@
   ;; Scale shape definitions
   (def-scale major       (0 2 4 5 7 9 11))
   (def-scale minor       (0 2 4 5 7 8 10))
-  (def-scale harmMinor   (0 2 4 5 7 8 11))
-  (def-scale pentNeutral (0 2 5 7 10))
-  (def-scale pentMajor   (0 2 4 7 9))
-  (def-scale pentMinor   (0 3 5 7 10))
+  (def-scale harm-minor   (0 2 4 5 7 8 11))
+  (def-scale pent-neutral (0 2 5 7 10))
+  (def-scale pent-major   (0 2 4 7 9))
+  (def-scale pent-minor   (0 3 5 7 10))
   (def-scale blues       (0 3 5 6 7 10))
   (def-scale dorian      (0 2 3 5 7 9 10))
   (def-scale phrygian    (0 1 3 5 7 8 10))

@@ -63,7 +63,9 @@
     (let ([result (assq key event)])
       (if result (cdr result) default)))
   (define (event-set event key value)
-    (cons (cons key value) event))
+    (if (and (eq? key (caar event)) (eq? value (cadr event)))
+        event ;; optimise: don't set same value twice in a row
+        (cons (cons key value) event)))
   (define (event-update event key update-fn default)
     (event-set event key (update-fn (event-get event key default))))
 
