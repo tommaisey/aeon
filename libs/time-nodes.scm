@@ -21,36 +21,6 @@
   (define (mv/ . pdefs) (apply mv / * pdefs))
 
   ;;-------------------------------------------------------------------
-  ;; Flips time of events within each chunk.
-  ;; e.g. with chunk = 2:
-  ;; 0.1 -> 1.9 and vice versa.
-  ;; 2.1 -> 3.9 and vice versa
-  ;; 1 -> 1
-  ;; TODO: I think this requests more from its source than needed, but
-  ;; it's hard to get it right at chunk boundaries. Investigate.
-  (define (flip-time chunk)
-
-    (define (flip-chunked chunk x)
-      (let* ([x-trunc (snap-prev x chunk)]
-             [x-mod (- x x-trunc)])
-        (+ x-trunc (abs (- x-mod chunk)))))
-
-    (define (move-event start end)
-      (lambda (context)
-        (let* ([e (context-event context)]
-               [t (flip-chunked chunk (event-beat e))])
-          (if (between t start end)
-              (event-set e time-key t)
-              (list))))) ;; empty events are ignored by context-map
-
-    (lambda (context)
-      (let* ([s (- (context-start context) chunk)]
-             [e (snap-next (context-end context) chunk)]
-             [c (context-resolve (rearc context (make-arc s e)))]
-             [c (context-sort (context-map (move-event s e) c))])
-        (context-trim (context-with-arc c (context-arc context))))))
-
-  ;;-------------------------------------------------------------------
   ;; Swing - implemented as a sine wave, so that notes off the main beat
   ;; are moved progressively more as they get closer to it.
   (define (swing period amount)
@@ -67,6 +37,9 @@
         (if sus
             (event-set-multi ev (:beat t) (':sustain (- sus (- t b))))
             (event-set-multi ev (:beat t)))))
+
+    (unless (between amount 0.0 1.001) 
+      (error 'swing "amount should be in the range 0 <-> 1" amount))
 
     (lambda (context)
       (let* ([s (context-start context)]
@@ -105,6 +78,8 @@
                                    (make-arc t (+ t period)))])
              (context-event ((apply x-> (repeat iterative-node i)) c)))))
 
+       (check-type num integer? 'taps)
+
        (lambda (context)
          (let* ([orig-arc (context-arc context)]
                 [s (arc-start orig-arc)]
@@ -125,6 +100,36 @@
            (contexts-merge
             (rearc c orig-arc)
             (once-node (make-context (fold-left build-taps '() events) orig-arc))))))))
+
+  ;;-------------------------------------------------------------------
+  ;; Flips time of events within each chunk.
+  ;; e.g. with chunk = 2:
+  ;; 0.1 -> 1.9 and vice versa.
+  ;; 2.1 -> 3.9 and vice versa
+  ;; 1 -> 1
+  ;; TODO: I think this requests more from its source than needed, but
+  ;; it's hard to get it right at chunk boundaries. Investigate.
+  (define (flip-time chunk)
+
+    (define (flip-chunked chunk x)
+      (let* ([x-trunc (snap-prev x chunk)]
+             [x-mod (- x x-trunc)])
+        (+ x-trunc (abs (- x-mod chunk)))))
+
+    (define (move-event start end)
+      (lambda (context)
+        (let* ([e (context-event context)]
+               [t (flip-chunked chunk (event-beat e))])
+          (if (between t start end)
+              (event-set e time-key t)
+              (list))))) ;; empty events are ignored by context-map
+
+    (lambda (context)
+      (let* ([s (- (context-start context) chunk)]
+             [e (snap-next (context-end context) chunk)]
+             [c (context-resolve (rearc context (make-arc s e)))]
+             [c (context-sort (context-map (move-event s e) c))])
+        (context-trim (context-with-arc c (context-arc context))))))
   
   ;;-------------------------------------------------------------------
   ;; Helper for building nodes from a list of pdefs

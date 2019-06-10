@@ -12,8 +12,7 @@
   (export
     sbdv step in! in:
     to: to+ to- to* to/ to?
-    rp: tr? cp: cp?
-    is? any-of all-of none-of phrase)
+    rp: tr? cp: cp?)
 
   (import
     (chezscheme) (srfi s26 cut)
@@ -25,11 +24,11 @@
 
   ;; A node that adds blank events according to a subdividing pattern.
   (define (in! pdef . ops)
-    (apply o-> (lambda (ctxt) (dispatch-pdef pdef ctxt in!impl)) ops))
+    (apply o-> (lambda (context) (dispatch-pdef pdef context in!impl)) ops))
 
   ;; A node that adds events with a single specified property.
   (define (in: key pdef . ops)
-    (apply o-> (lambda (ctxt) (dispatch-pdef pdef ctxt (in:impl key))) ops))
+    (apply o-> (lambda (context) (dispatch-pdef pdef context (in:impl key))) ops))
 
   ;; A node that replaces the input with the result of applying
   ;; it to each pattern member, which must all be functional nodes.
@@ -45,7 +44,8 @@
   ;; A general 'to', taking a math op, a key and a def. The math op is
   ;; called with the current value for key and the value returned by def.
   (define (to math-op . kv-pairs)
-    (apply x-> (kv-pairs-to-nodes kv-pairs (lambda (key) (to-math-impl math-op key)))))
+    (define (impl key) (to-math-impl math-op key))
+    (apply x-> (kv-pairs-to-nodes kv-pairs impl)))
 
   (define (to+ . kv-pairs) (apply to + kv-pairs))
   (define (to- . kv-pairs) (apply to - kv-pairs))
@@ -82,56 +82,14 @@
              [unfiltered (context-filter (lambda (c) (not (pred c))) resolved)])
         (contexts-merge unfiltered ((apply tr? pred nodes) context)))))
 
-  ;;---------------------------------------------------------
-  ;; Predicates & filtering. WARNING: This is all quite dated,
-  ;; may need to change as it hasn't been tested in a while.
-
-  ;; Takes either a key (shorthand for (this key #f)) or a c-val.
-  ;; WARNING: what if we want to check for values of #f?
-  (define-syntax is?
-    (syntax-rules ()
-      ((_ key/getter pred args ...)
-       (lambda (context)
-         (let ([v (if (procedure? key/getter)
-                      (key/getter context)
-                      ((this key/getter #f) context))])
-           (and v (pred v args ...)))))))
-
-  ;; Find the intersection of the inner filters
-  (define (all-of . preds)
-    (lambda (context)
-      ((combine-preds preds for-all) context)))
-
-  ;; Find the union of the inner filters.
-  (define (any-of . preds)
-    (lambda (context)
-      ((combine-preds preds for-any) context)))
-
-  ;; Subtract the events matched by each filter from the input.
-  (define (none-of . preds)
-    (lambda (context)
-      ((combine-preds preds for-none) context)))
-
-  ;; Takes: a list of N filters (e.g. has, any)
-  ;; Returns: a filter finding sequences matching the inputs.
-  ;; This doesn't work very well currently. Will need thorough
-  ;; unit tests.
-  ;; TODO: not updated since switched to new context model...
-  (define (phrase . filters)
-    (define (merge-results ll)
-      (let* ([columns  (map (cut sort event-before? <>) ll)]
-             [patterns (columns-to-rows columns)])
-        (concatenate (filter (cut sorted? event-before? <>) patterns))))
-    (lambda [events]
-      (concatenate (map (cut <> events) filters))))
-
   ;;-------------------------------------------------------------------
   ;; Implementation functions to be supplied to a chunking algorithm.
+  ;; These must return a list of events, not a context.
 
   (define (rp:impl context leaf)
     (let ([result (get-leaf leaf context)])
       (cond
-        ((is-rest? result) (context-events-next context))
+        ((is-rest? result) (context-events-next (context-resolve context)))
         ((not (context? result)) (error 'rp: "expects procedure" result))
         (else (context-events-next result)))))
 
@@ -146,8 +104,6 @@
         ((unsafe-list? val)
          (subdivider c (context-length c) val performer))
         (else (maker val)))))
-
-  (define :sustain ':sustain)
 
   ;; Adds blank events to the context with a subdividing pattern.
   ;; A leaf value of 1 gives one event.
@@ -174,6 +130,9 @@
            (list (make-event start (:sustain dur) (key val)))))
        context leaf (in:impl key))))
 
+  ;; Used in above in forms.
+  (define :sustain ':sustain)
+
   ;; Helper for 'to' forms below.
   (define (set-or-rest c leaf key val-transform)
     (let ([val (get-leaf leaf c)])
@@ -194,9 +153,9 @@
     (lambda (context leaf)
       (define (map-fn c)
         (let ([current (event-get (context-event c) key #f)])
-          (if (not current)
-              (context-event c)
-              (set-or-rest c leaf key (lambda (v) (math-fn current v))))))
+          (if current
+              (set-or-rest c leaf key (lambda (v) (math-fn current v)))
+              (context-event c))))
       (context-events-next (context-map map-fn (context-resolve context)))))
 
   ;;-------------------------------------------------------------------

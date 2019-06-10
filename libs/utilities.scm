@@ -259,8 +259,11 @@
 
   ;;------------------------------------------------------------------------
   ;; Throw an error if the wrong type is used
-  (define (check-type pred val string)
-    (unless (pred val) (raise string)))
+  (define-syntax check-type
+    (syntax-rules ()
+      ((_ pred val context-id)
+       (unless (pred val) 
+         (error context-id (format "~A should satisfy ~A" 'val 'pred) val)))))
 
   (define (println . objs)
     (for-each (lambda (x) (newline) (display x)) objs))
