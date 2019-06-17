@@ -50,6 +50,7 @@
 
 (define (pause-playhead)
   (start-waiting playback-thread-semaphore)
+  (send sc3 clear-sched)
   (set! rendered-point #f)
   (set! last-process-time #f)
   (playhead-sync-info))
