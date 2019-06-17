@@ -78,7 +78,7 @@
                                    (make-arc t (+ t period)))])
              (context-event ((apply x-> (repeat iterative-node i)) c)))))
 
-       (check-type num integer? 'taps)
+       (check-type integer? num 'taps)
 
        (lambda (context)
          (let* ([orig-arc (context-arc context)]

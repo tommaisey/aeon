@@ -7,18 +7,19 @@
     bpm->mps bpm->spm
     measures->secs secs->measures
     secs-until sleep-secs
-    make-pattern-dict 
+    make-pattern-dict
     iterate-patterns list-patterns
-    add-pattern remove-pattern 
+    add-pattern remove-pattern
     get-pattern clear-patterns
+    list-patterns-in-file
+    list-files-with-playing-patterns
     semaphore semaphore? make-semaphore
     start-waiting stop-waiting waiting?
     start-suspendable-thread)
 
   (import (context) (rsc3) (sosc)
           (except (scheme) reset random)
-          (only (utilities) make-safe-val safe-val-apply)
-          (only (srfi s1 lists) alist-cons alist-delete))
+          (utilities))
 
   ;;------------------------------------------------
   ;; Some useful functions for dealing with time.
@@ -65,6 +66,32 @@
   (define (list-patterns dict)
     (let-values ([(keys values) (safe-val-apply hashtable-entries dict)])
       (vector->list values)))
+
+  (define (list-patterns-in-file file-path pattern-form?)
+    (with-input-from-file
+     file-path
+     (lambda ()
+       (do ([s (read) (read)]
+            [out (list) (if (pattern-form? s)
+                            (cons (cadr s) out) out)])
+           ((eof-object? s) out)))))
+
+  (define (list-files-with-playing-patterns root-path pattern-dict pattern-form?)
+    
+    (define (contains-playing? file)
+      (and (string=? (path-extension file) "scm")
+           (for-any (lambda (p) (get-pattern pattern-dict p))
+                    (list-patterns-in-file file pattern-form?))))
+
+    (define (build result file)
+      (let ([recur (lambda (f) (list-files-with-playing-patterns
+                                f pattern-dict pattern-form?))])
+        (cond
+          ((file-directory? file) (append (recur file) result))
+          ((contains-playing? file) (cons file result))
+          (else result))))
+
+    (fold-left build '() (child-file-paths root-path)))
 
   ;;------------------------------------------------
   ;; Infrastructure for a special playback thread.

@@ -61,4 +61,5 @@
   (create-group bus-effect-group add-to-tail default-group))
 
 (init-sc3)
+
 (load "synthdefs.scm")

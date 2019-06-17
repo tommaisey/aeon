@@ -1,41 +1,3 @@
-;;---------------------------------------------------------
-(define pattern-dict (make-pattern-dict))
-
-(define-syntax pattern
-  (syntax-rules ()
-
-    ((_ name play-now? p)
-     (begin (define name p)
-            (when play-now?
-              (add-pattern pattern-dict 'name p))))
-
-    ((_ name p)
-     (pattern name #t p))))
-
-(define-syntax start
-  (syntax-rules ()
-
-    ((_) (start-playhead))
-
-    ((_ name) (add-pattern pattern-dict 'name name))))
-
-(define-syntax stop
-  (syntax-rules ()
-
-    ((_) (stop-playhead))
-
-    ((_ name) (remove-pattern pattern-dict 'name))))
-
-(define (pause) (pause-playhead)) ;; for symmetry
-(define (clear-all) (clear-patterns pattern-dict))
-
-(define (print-patterns start end)
-  (define ctxt
-    (fold-left (lambda (c p) (contexts-merge c (render p start end)))
-               (make-empty-context start end)
-               (list-patterns pattern-dict)))
-  (context-map (lambda (c) (event-clean (process-inst (context-event c)))) ctxt))
-
 ;;-----------------------------------------------------------------
 (define bpm 100)
 (define playback-thread #f)
@@ -112,13 +74,12 @@
 
 (define (set-bpm! n)
   (set! bpm n)
-  (let ([e (make-event 0 (:tempo (bpm->mps n))
-                         (:control "tempo")
-                         (:group bus-effect-group))])
+  (let ([e (make-event 0 
+                       (:tempo (bpm->mps n))
+                       (:control "tempo")
+                       (:group bus-effect-group))])
     (playhead-sync-info)
     (play-event e 0)))
-
-(set-bpm! bpm)
 
 (define (handle-error condition)
   (let ([p (console-output-port)])

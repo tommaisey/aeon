@@ -122,9 +122,10 @@
          (lambda (context)
            (let* ([t (context-now context)]
                   [i (if (zero? t) 0 (trunc-int (/ t measures)))]
-                  [n-wrapped (mod i n)])
+                  [n-wrapped (mod i n)]
+                  [n-cycles (trunc-int (/ i n))])
              (if (eq? n-wrapped (- n 1))
-                 (get-leaf (list-nth lst (+ 1 (mod i (- len 1)))) context)
+                 (get-leaf (list-ref lst (+ 1 (mod n-cycles (- len 1)))) context)
                  (get-leaf (car lst) context))))))))
 
   ;; Tag so pdef recognises as a macro

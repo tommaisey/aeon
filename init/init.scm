@@ -12,7 +12,11 @@
 (load "libs.scm")
 (load "sc3.scm")
 (load "event-process.scm")
+(load "patterns.scm")
 (load "playback.scm")
+
+(set-bpm! bpm)
+(start)
 
 ;; Custom priting of contexts.
 (record-writer (type-descriptor context) context-print)

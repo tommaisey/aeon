@@ -35,12 +35,18 @@
           make-safe-val
           safe-val?
           safe-val-apply
-          string-contains string-contains-ci
+          string-contains 
+          string-contains-ci
+          path-append
+          child-file-paths
           gen-id)
 
   (import (chezscheme)
           (srfi s27 random-bits)
-          (only (srfi s13 strings) string-contains string-contains-ci)
+          (only (srfi s13 strings) 
+                string-contains 
+                string-contains-ci
+                string-suffix?)
           (thunder-utils))
 
   ;; Truncate and integerize
@@ -274,6 +280,18 @@
            [sym (string->symbol (apply string-append (map str args)))])
       (datum->syntax template-id sym)))
 
+  ;;------------------------------------------------------------------------
+  ;; A safer way to add a file name to a directory
+  (define (path-append dir file)
+    (let* ([sep (string (directory-separator))]
+           [dir (if (string-suffix? sep dir) dir (string-append dir sep))])
+      (string-append dir file)))
+
+  ;; Unlike directory list, returns full path of child files
+  (define (child-file-paths dir)
+    (map (lambda (f) (path-append dir f)) 
+         (directory-list dir)))
+  
   ;;------------------------------------------------------------------------
   ;; A value bound with a mutex to make it threadsafe. You should always
   ;; use and access the value through safe-val-apply.

@@ -41,6 +41,7 @@
                        [id/  (gen-id #'name #'name "/")]
                        [id-num  (gen-id #'name #'name "-num")])
            #'(begin
+               (define last-samples-num (if (top-level-bound? 'id-num) id-num 0))
                (define id (list->vector list-impl))
                (define id-num (vector-length id))
 
@@ -48,11 +49,11 @@
                  (lambda (context)
                    (get-sample-safe id (get-leaf val context))))
 
-               (vector-for-each (lambda (x) (println (path-last x))) id)
-
-               (println (string-append (symbol->string 'id) ": "
-                                       (number->string id-num)
-                                       " samples defined."))))))))
+               (when (not (eq? last-samples-num id-num))
+                 (vector-for-each (lambda (x) (println (path-last x))) id)
+                 (println (string-append (symbol->string 'id) ": "
+                                         (number->string id-num)
+                                         " samples defined.")))))))))
 
   (define (valid-sample? f)
     (and (string? f)
@@ -67,10 +68,6 @@
         ((zero? len)
          (error 'get-sample-safe "No samples in vector"))
         (else (vector-ref sample-vec (mod (trunc-int idx) len))))))
-
-  ;; A safer way to add a file name to a directory
-  (define (path-append dir file)
-    (string-append (path-root dir) (string (directory-separator)) file))
 
   ;; Returns a predicate for matching strings. May take a string or a
   ;; list of strings. Supply a bool for the first arg to invert the results.
