@@ -27,11 +27,13 @@
 
       (o-> ;; Drums
         (in: :sample (sbdv 1/3 [~ hh × ×])
-             (to: :amp 0.1
+             (to: :sample-idx 12
+                  :amp 0.1
                   :pan (rnd 0.1 0.7)))
 
         (in! (sbdv 2 [(rnd 1 3) 1 [1 1] 1])
-             (to: :sample bd))
+             (to: :sample bd
+                  :sample-idx 80))
 
         (in: :sample (sbdv 1 [~ sn ~ sn])
              (to: :amp 0.2))

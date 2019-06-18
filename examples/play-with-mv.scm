@@ -3,8 +3,10 @@
   (o->
     ;; Steady bass pulse
     (in: :scd (sbdv 1/4 I)
-         (to: :octave -1)
-         (to* :sustain (sbdv [0.75 0.5 0.5 0.5])))
+         (to: :octave -1
+              :amp 0.3)
+         (to* :sustain (sbdv [0.75 0.5 0.5 0.5]))
+         (mv+ 1/8))
 
     ;; Simply melody shifted repeatedly
     (in: :scd (sbdv 2 [[II II] [V V] [I [I X I XII]] [I I]])

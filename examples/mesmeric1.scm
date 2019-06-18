@@ -28,8 +28,7 @@
               :inst "dual-lopass"
               :attack 4
               :release 12
-              :amp 0.05
-              :tremolo-speed (pick [0.75 1 1.5 2 4 6 8]))
+              :amp 0.05)
          (mv- 1/8)
          (rp: triad)
          (to: :resonance (rnd 0.1 1.2)
@@ -38,16 +37,16 @@
 
 (pattern drum-pattern
   (o->
-    (in* (sbdv [1 [~ 1] ~ (pick [1 1 2 [~ 1]]) (pick [~ 1 [~ 1]]) (pick [~ 1])])
+    (in! (sbdv [1 [~ 1] ~ (pick [1 1 2 [~ 1]]) (pick [~ 1 [~ 1]]) (pick [~ 1])])
          (to: :sample bd
-              :amp 0.2)
-         (to* :sustain 0.6))
+              :sample-idx 2
+              :amp 0.2))
 
-    (in* (sbdv 1/2 [~ (each 2/3 [~ 1]) ~ ~ (each 3/4 [1 ~ [~ 1] ~ 1]) ~])
-         (to: :sample xt)
-         (to: :amp 0.5))
+    (in! (sbdv 1/2 [~ (each 2/3 [~ 1]) ~ ~ (each 3/4 [1 ~ [~ 1] ~ 1]) ~])
+         (to: :sample xt
+              :amp 0.5))
 
-    (in* (sbdv 1/2 [1 1 1 1 1 1])
-         (to: :sample hh)
-         (to: :amp (sbdv 1/4 [0.05 (rnd 0.2 0.3)]))
-         (to: :pan (rnd 0.4 0.6)))))
+    (in! (sbdv 1/2 [1 1 1 1 1 1])
+         (to: :sample hh
+              :amp (sbdv 1/4 [0.05 (rnd 0.2 0.3)])
+              :pan (rnd 0.4 0.6)))))
