@@ -11,9 +11,14 @@
 (source-directories (list "." "./init"))
 (load "libs.scm")
 (load "sc3.scm")
+(load "synthdefs.scm")
 (load "event-process.scm")
 (load "patterns.scm")
-(load "playback.scm")
+(load "playhead.scm")
+
+;; Load music files intended to be shared, but not clip files.
+(for-each (lambda (p) (when (valid-scheme-path? p) (load p)))
+          (child-file-paths "music/"))
 
 (set-bpm! bpm)
 (start)

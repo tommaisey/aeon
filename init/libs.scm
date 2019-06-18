@@ -16,6 +16,7 @@
 (import (sosc))
 (import (rhs))
 (import (utilities))
+(import (file-tools))
 (import (event))
 (import (context))
 (import (pdef))

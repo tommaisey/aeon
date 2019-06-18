@@ -1,17 +1,6 @@
-(current-directory "~/Code/convex")
-(load "init/init.scm")
-
 (start)
 (pause)
-
-(pattern tune1
-  (in! 16
-       (to: :scd (step 1/4 [I V III (pick [IV VI VII VIII])])
-            :bus1-amt (sine 3 0.05 0.6)
-            :pan (rnd 0.24 0.75)
-            :attack 0.005)
-       (cp: (to: :octave (pick [-1 1 2])))
-       ))
+(clear-all)
 
 (pattern p1
   (o->
@@ -26,7 +15,7 @@
       (in: :sample (sbdv 1 [bd [sn bd] [~ bd ~ bd] sn])
            (to: :sustain (pick [1/8 1/32 1/4 1/16])))
       (in: :sample (sbdv 1/2 [~ hh ~ [~ hh]])
-           (to: :sustain 0.01))
+           (to: :sustain 1/128))
       (to: :bus1-amt 0.02
            :amp (sbdv 1/4 [0.3 (rnd 0.1 0.2)])))))
 
@@ -98,7 +87,7 @@
                   [(pick [3 2 4 ~]) (pick [2 4 ~])]
                   (pick [~ 1 3])
                   [~ (pick [~ 1 2])]])
-           (to: :sample xt0
+           (to: :sample xt
                 :amp (sbdv 1/2 [0.15 (rnd 0.1 0.4) (rnd 0.15 0.4) 0.15])
                 :speed (rnd 0.8 0.85)
                 :pan (rnd 0.2 0.8)

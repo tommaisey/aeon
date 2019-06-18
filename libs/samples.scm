@@ -9,7 +9,8 @@
     name-contains?
     number-strings)
 
-  (import (scheme) (node-eval) (utilities) (context))
+  (import (scheme) (utilities) (node-eval) 
+          (file-tools) (context))
 
   (define-syntax samples
     (syntax-rules ()

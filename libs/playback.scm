@@ -19,7 +19,7 @@
 
   (import (context) (rsc3) (sosc)
           (except (scheme) reset random)
-          (utilities))
+          (utilities) (file-tools))
 
   ;;------------------------------------------------
   ;; Some useful functions for dealing with time.
@@ -68,13 +68,7 @@
       (vector->list values)))
 
   (define (list-patterns-in-file file-path pattern-form?)
-    (with-input-from-file
-     file-path
-     (lambda ()
-       (do ([s (read) (read)]
-            [out (list) (if (pattern-form? s)
-                            (cons (cadr s) out) out)])
-           ((eof-object? s) out)))))
+    (definitions-in-file file-path pattern-form? (lambda (f) (cadr f))))
 
   (define (list-files-with-playing-patterns root-path pattern-dict pattern-form?)
     
