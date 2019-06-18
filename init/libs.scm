@@ -7,6 +7,7 @@
 (library-directories
  (list "."
        "./libs"
+       "./libs/tests"
        "./libs/third-party"
        "./libs/third-party/thunderchez"
        "./libs/third-party/rsc3"))
