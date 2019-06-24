@@ -30,7 +30,7 @@
               :release 12
               :amp 0.05)
          (mv- 1/8)
-         (rp: triad)
+         (rp: (chord triad))
          (to: :resonance (rnd 0.1 1.2)
               :pan (rnd 0.1 0.9))
          (cp: (to: :octave 1)))))

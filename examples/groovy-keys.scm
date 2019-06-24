@@ -7,7 +7,8 @@
 (pattern p1
   (o->
     (in: :scd (sbdv 2 [I II [V III]])
-         (rp: (sbdv 2/3 [! (pick [triad 11th 13th]) [7th 9th]])))
+         (rp: (sbdv 2/3 [! (pick [(chord triad) (chord 11th) (chord 13th)]) 
+                           [(chord 7th) (chord 9th)]])))
 
     (in: :scd (sbdv 4 [bassln1 bassln2])
          (to: :octave -1))

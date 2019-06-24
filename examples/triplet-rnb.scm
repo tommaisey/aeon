@@ -5,7 +5,7 @@
     (o-> ;; Keys
       (in: :scd (sbdv 2 [[I III] I VI ~])
            (to: :octave (sbdv [0 1 (pick [1 0]) 0]))
-           (rp: (sbdv 4 [! triad 7th 9th])))
+           (rp: (sbdv 4 [! (chord triad) (chord 7th) (chord 9th)])))
 
       (cp: (to: :octave -1)
            (to+ :beat 1/12))

@@ -111,7 +111,7 @@
   ;; it's hard to get it right at chunk boundaries. Investigate.
   (define (flip-time chunk)
 
-    (define (flip-chunked chunk x)
+    (define (flip-chunked x)
       (let* ([x-trunc (snap-prev x chunk)]
              [x-mod (- x x-trunc)])
         (+ x-trunc (abs (- x-mod chunk)))))
@@ -119,7 +119,7 @@
     (define (move-event start end)
       (lambda (context)
         (let* ([e (context-event context)]
-               [t (flip-chunked chunk (event-beat e))])
+               [t (flip-chunked (event-beat e))])
           (if (between t start end)
               (event-set e time-key t)
               (list))))) ;; empty events are ignored by context-map

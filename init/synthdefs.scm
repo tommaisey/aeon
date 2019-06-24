@@ -155,6 +155,7 @@
   (letc ([:attack 0.01] [:sustain 1] [:release 0.25]
                         [:sample 0] [:speed 1]
                         [:amp 0.3] [:pan 0.5]
+                        [:resonance 0.0] [:cutoff 1.0]
                         [:sample-pos 0.0]
                         [:bus1 :verb1]  [:bus1-amt 0]
                         [:bus2 :delay1] [:bus2-amt 0])
@@ -162,8 +163,9 @@
     (let* ([rate (mul :speed (buf-rate-scale kr :sample))]
            [frames (buf-frames kr :sample)]
            [pos (mul frames :sample-pos)]
-           [osc  (play-buf 1 ar :sample rate 1 pos no-loop remove-synth)]
-           [env  (make-asr 1 :attack :sustain :release -4)]
+           [osc (play-buf 1 ar :sample rate 1 pos no-loop remove-synth)]
+           [osc (moog-ff osc (add 75 (mul :cutoff 17000)) :resonance 0)]
+           [env (make-asr 1 :attack :sustain :release -4)]
            [sig (mul env osc)])
       (make-outputs sig :pan
                     (pair 0 :amp)
@@ -173,7 +175,7 @@
 (send-synth sc3 "swirly-keys"
   (letc ([:attack 0.4] [:sustain 1] [:release 1]
                        [:freq 440] [:amp 0.2] [:pan 0.5]
-                       [:resonance 0.1] [:cutoff 3]
+                       [:cutoff 3] [:resonance 0.1]
                        [:bus1 :verb1]  [:bus1-amt 0]
                        [:bus2 :delay1] [:bus2-amt 0])
 
