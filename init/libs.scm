@@ -26,6 +26,7 @@
 (import (chain-nodes))
 (import (time-nodes))
 (import (node-eval))
+(import (midinotes))
 (import (harmony))
 (import (playback))
 (import (samples))
