@@ -15,7 +15,7 @@
   (define-syntax samples
     (syntax-rules ()
       ((_ name files ...)
-       (samples-impl name (list files ...)))))
+       (samples-impl name (list files ...) ""))))
 
   (define-syntax samples-dir
     (syntax-rules ()
@@ -24,7 +24,8 @@
          (let* ([p (if (procedure? pred) pred (lambda (s) (string=? pred s)))]
                 [p (lambda (s) (and (p s) (valid-sample? s)))])
            (map (lambda (x) (path-append dir-path x))
-                (filter p (list-sort string<? (directory-list dir-path)))))))
+                (filter p (list-sort string<? (directory-list dir-path)))))
+         (string-append " from " dir-path)))
 
       ((_ name dir-path)
        (samples-dir name dir-path (lambda (x) #t)))))
@@ -37,7 +38,7 @@
   (define-syntax samples-impl
     (lambda (x)
       (syntax-case x ()
-        ((_ name list-impl)
+        ((_ name list-impl source-string)
          (with-syntax ([id (gen-id #'name #'name)]
                        [id/  (gen-id #'name #'name "/")]
                        [id-num  (gen-id #'name #'name "-num")])
@@ -48,13 +49,12 @@
 
                (define (id/ val)
                  (lambda (context)
-                   (get-sample-safe id (get-leaf val context))))
+                   (get-sample-safe id (eval-leaf val context))))
 
-               (when (not (eq? last-samples-num id-num))
-                 (vector-for-each (lambda (x) (println (path-last x))) id)
-                 (println (string-append (symbol->string 'id) ": "
-                                         (number->string id-num)
-                                         " samples defined.")))))))))
+               (println (string-append (symbol->string 'id) ": "
+                                       (number->string id-num)
+                                       " samples defined"
+                                       source-string))))))))
 
   (define (valid-sample? f)
     (and (string? f)

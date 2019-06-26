@@ -9,7 +9,8 @@
           between between-inclusive between-each
           equal nearly-equal
           range-sine
-          pair first rest
+          identity
+          pair first rest cons-r
           merge-columns
           columns-to-rows
           concatenate
@@ -28,6 +29,7 @@
           alist-let
           make-alist
           derecord
+          lif
           declare-keyword
           check-type
           println
@@ -116,6 +118,8 @@
   (define pair cons)
   (define first car)
   (define rest cdr)
+  (define identity (lambda (x) x))
+  (define (cons-r a b) (cons b a))
 
   ;;-------------------------------------------------------------------
   ;; Takes the head off each inner list until one of
@@ -259,6 +263,13 @@
   (define-syntax declare-keyword
     (syntax-rules ()
       ((_ name) (define name 'name))))
+
+  ;; let+if in a more compact way
+  (define-syntax lif
+    (syntax-rules ()
+      ((_ [name init] test t-branch f-branch)
+       (let ([name init])
+         (if test t-branch f-branch)))))
 
   ;;------------------------------------------------------------------------
   ;; Throw an error if the wrong type is used

@@ -26,8 +26,8 @@
   (define (swing period amount)
 
     (define (mover context)
-      (let* ([period (get-leaf period context)]
-             [amount (get-leaf amount context)]
+      (let* ([period (eval-leaf period context)]
+             [amount (eval-leaf amount context)]
              [now (context-now context)]
              [ev (context-event context)]
              [b (event-beat ev)]
@@ -38,7 +38,7 @@
             (event-set-multi ev (:beat t) (':sustain (- sus (- t b))))
             (event-set-multi ev (:beat t)))))
 
-    (unless (between amount 0.0 1.001) 
+    (unless (between amount 0.0 1.001)
       (error 'swing "amount should be in the range 0 <-> 1" amount))
 
     (lambda (context)
@@ -54,11 +54,25 @@
   ;; `once-node` is applied once to all taps but not the original.
   (define taps
     (case-lambda
-      ((period num) (taps period num (off)))
-      ((period num iterative-node) (taps period num iterative-node (off)))
+      ((period num) (taps period num nowt))
+      ((period num iterative-node) (taps period num iterative-node nowt))
       ((period num iterative-node once-node)
 
-       ;; Builds a list of pairs of times and their indeces. 
+       ;; Compute furthest lookahead/lookback that might be required.
+       (define possible-range
+         (let ([min-p (maybe-leaf-meta period leaf-range-min)]
+               [max-p (maybe-leaf-meta period leaf-range-max)]
+               [min-n (maybe-leaf-meta num leaf-range-min)]
+               [max-n (maybe-leaf-meta num leaf-range-max)])
+           (if (for-all identity (list min-p max-p min-n max-n))
+               (let ([values (list (* min-p min-n)
+                                   (* min-p max-n)
+                                   (* max-p min-n)
+                                   (* max-p max-n))])
+                 (list (apply min values) (apply max values)))
+               (error 'taps "period and num must specify definite ranges" (list period num)))))
+
+       ;; Builds a list of pairs of times and their indeces.
        ;; Omits the original 'src' time.
        (define (list-taps src period num start end)
          (if (zero? num) (list)
@@ -78,28 +92,31 @@
                                    (make-arc t (+ t period)))])
              (context-event ((apply x-> (repeat iterative-node i)) c)))))
 
-       (check-type integer? num 'taps)
+       ;; Builds a list of events (the taps) based on the context's current event.
+       (define (build-taps start end)
+         (lambda (context)
+           (let* ([t (context-now context)]
+                  [period (eval-leaf period context)]
+                  [num (eval-leaf num context)]
+                  [times-and-indeces (list-taps t period num start end)])
+             (map (tap-maker (context-event context) period) times-and-indeces))))
+
+       ;; Just catches a common error (reversing period and num).
+       (if (and (number? num) (not (integer? num)))
+           (error 'taps "number of taps should be an integer" num))
 
        (lambda (context)
          (let* ([orig-arc (context-arc context)]
                 [s (arc-start orig-arc)]
                 [e (arc-end orig-arc)]
-                [p (get-leaf period context)]
-                [n (get-leaf num context)]
-                [len (* p n)]
-                [a (if (> len 0)
-                       (arc-with-start orig-arc (- s len))
-                       (arc-with-end orig-arc (- e len)))]
+                [a (make-arc (- s (apply max 0 possible-range))
+                             (- e (apply min 0 possible-range)))]
                 [c (context-resolve (rearc context a))]
-                [events (context-events-next c)])
-
-           (define (build-taps result ev)
-             (let ([times-and-indeces (list-taps (event-beat ev) p n s e)])
-               (append (map (tap-maker ev p) times-and-indeces) result)))
+                [c-taps (context-map (build-taps s e) c append)])
 
            (contexts-merge
             (rearc c orig-arc)
-            (once-node (make-context (fold-left build-taps '() events) orig-arc))))))))
+            (once-node (rearc c-taps orig-arc))))))))
 
   ;;-------------------------------------------------------------------
   ;; Flips time of events within each chunk.
@@ -130,7 +147,7 @@
              [c (context-resolve (rearc context (make-arc s e)))]
              [c (context-sort (context-map (move-event s e) c))])
         (context-trim (context-with-arc c (context-arc context))))))
-  
+
   ;;-------------------------------------------------------------------
   ;; Helper for building nodes from a list of pdefs
   ;; (pdef ...), impl -> ((context -> context) ...)
@@ -150,7 +167,7 @@
       (derecord context ([old-start context-start]
                          [old-end context-end])
         (context-events-next
-         (let ([val (get-leaf-early leaf old-start context)])
+         (let ([val (eval-leaf-early leaf old-start context)])
            (cond
              ((is-rest? val) (context-resolve context))
              ((not (number? val)) (raise (pattern-error "'mv'" "number" val)))
@@ -159,6 +176,5 @@
                       [new-end (inv-math-fn old-end val)]
                       [shifted (rearc context (make-arc new-start new-end))])
                  (context-map (mapper val) (context-resolve shifted))))))))))
-
 
   )

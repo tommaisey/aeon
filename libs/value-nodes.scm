@@ -1,9 +1,9 @@
 ;;----------------------------------------------------------------------
 ;; leaves
 ;;
-;; These are 'contextual' values - functions which return a value based
-;; on the context they are passed. This lets us maintain the referential
-;; transparency that is key for the system to work.
+;; Functions which might return different value based on the context they
+;; are passed, i.e. 'contextual' values. This lets us maintain the
+;; referential transparency that is key for the system to work.
 ;;
 ;; They form the 'leaves' of a tree of functions defining musical patterns.
 ;;
@@ -11,19 +11,24 @@
 ;; event in the context, unless passed one or more extra keys to look at.
 ;;
 ;; Others of these functions don't really need a context - but may want to
-;; treat their arguments as callable leaves (which *may* need a context).
+;; treat _their_ arguments as callable leaves (which *may* need a context).
+;;
+;; Many of these actually return a special 'leaf' object, a function wrapped
+;; with some metadata that may be needed to evaluate the graph accurately.
 ;;----------------------------------------------------------------------
 (library (value-nodes)
   (export
     this next nearest
     c+ c- c* c/
-    rnd pick each every 
+    rnd pick each every
     snap sine)
 
   (import
-    (chezscheme) (utilities) (context) (node-eval) (event)
+    (chezscheme) (utilities) (context)
+    (node-eval) (event)
     (for (pdef) expand))
-
+  
+  ;;-------------------------------------------------------------------
   (define (get c key default)
     (event-get (context-event c) key default))
 
@@ -44,7 +49,7 @@
   ;; Maths
   (define (leaf-apply fn leaves)
     (lambda (context)
-      (apply fn (map (lambda (v) (get-leaf v context)) leaves))))
+      (apply fn (map (lambda (v) (eval-leaf v context)) leaves))))
 
   (define (c+ . leaves)
     (leaf-apply + leaves))
@@ -61,8 +66,8 @@
   ;; Snap the input value to the next number divisible by divisor.
   (define (snap divisor val)
     (lambda (context)
-      (let* ([val (get-leaf val context)]
-             [divisor (get-leaf divisor context)]
+      (let* ([val (eval-leaf val context)]
+             [divisor (eval-leaf divisor context)]
              [overlap (mod val divisor)]
              [prev (- val overlap)])
         (if (>= overlap (* 0.5 divisor))
@@ -76,9 +81,10 @@
       [(key) (rnd 0.0 1.0 key)]
       [(min max) (rnd min max '())]
       [(min max key/keys)
-       (lambda (context)
-         (let ([seed (fold-by-keys * 10000 key/keys context)])
-           (pseudo-rand min max seed)))]))
+       (leaf-from-list (list min max)
+        (lambda (context)
+          (let ([seed (fold-by-keys * 10000 key/keys context)])
+            (pseudo-rand (eval-leaf min context) (eval-leaf max context) seed))))]))
 
   ;; Choose from a list randomly
   (define-syntax pick
@@ -88,11 +94,13 @@
       ((_ qlist key/keys)
        (let* ([lst (make-pdef-data qlist)]
               [len (length lst)])
-         (lambda (context)
-           (get-leaf (list-nth lst ((rnd 0 len key/keys) context)) context))))))
+         (leaf-from-list lst
+          (lambda (context)
+            (let ([choice (eval-leaf (rnd 0 len key/keys) context)])
+              (eval-leaf (list-nth lst choice) context))))))))
 
   (tag-pdef-callable pick) ;; Tag so pdef recognises as a macro
-
+  
   ;;--------------------------------------------------------------------
   ;; Rhythmic & sequencing operations.
 
@@ -104,10 +112,11 @@
               [len (length lst)])
          (when (< len 1)
            (error 'each "requires at least 1 value" len))
-         (lambda (context)
-           (let* ([t (context-now context)]
-                  [n (trunc-int (/ t measures))])
-             (get-leaf (list-nth lst (modulo n len)) context)))))))
+         (leaf-from-list lst
+          (lambda (context)
+            (let* ([t (context-now context)]
+                   [n (trunc-int (/ t measures))])
+              (eval-leaf (list-nth lst (modulo n len)) context))))))))
 
   ;; Normally chooses the first value, but every n measures chooses
   ;; the second value instead. If there are more than 2 values, the
@@ -119,25 +128,27 @@
               [len (length lst)])
          (when (< len 2)
            (error 'every "requires at least 2 values" len))
-         (lambda (context)
-           (let* ([t (context-now context)]
-                  [i (if (zero? t) 0 (trunc-int (/ t measures)))]
-                  [n-wrapped (mod i n)]
-                  [n-cycles (trunc-int (/ i n))])
-             (if (eq? n-wrapped (- n 1))
-                 (get-leaf (list-ref lst (+ 1 (mod n-cycles (- len 1)))) context)
-                 (get-leaf (car lst) context))))))))
+         (leaf-from-list lst
+          (lambda (context)
+            (let* ([t (context-now context)]
+                   [i (if (zero? t) 0 (trunc-int (/ t measures)))]
+                   [n-wrapped (mod i n)]
+                   [n-cycles (trunc-int (/ i n))])
+              (if (eq? n-wrapped (- n 1))
+                  (eval-leaf (list-ref lst (+ 1 (mod n-cycles (- len 1)))) context)
+                  (eval-leaf (car lst) context)))))))))
 
   ;; Tag so pdef recognises as a macro
   (tag-pdef-callable each)
   (tag-pdef-callable every)
 
   (define (sine freq lo hi)
-    (lambda (context)
-      (let ([f (get-leaf freq context)]
-            [l (get-leaf lo context)]
-            [h (get-leaf hi context)])
-        (range-sine f l h (context-now context)))))
+    (leaf-from-list (list lo hi)
+     (lambda (context)
+       (let ([f (eval-leaf freq context)]
+             [l (eval-leaf lo context)]
+             [h (eval-leaf hi context)])
+         (range-sine f l h (context-now context))))))
 
   ;;--------------------------------------------------------------------
   ;; Some leaves allow the user to specify which properties of the
@@ -155,5 +166,6 @@
          (fn init (event-get event key/keys 1)))
         ((unsafe-list? key/keys)
          (fold-left fn init (event-clean (filter matches-key? event)))))))
+
 
   )

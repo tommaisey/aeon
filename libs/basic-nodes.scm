@@ -87,7 +87,7 @@
   ;; These must return a list of events, not a context.
 
   (define (rp:impl context leaf)
-    (let ([result (get-leaf leaf context)])
+    (let ([result (eval-leaf leaf context)])
       (cond
         ((is-rest? result) (context-events-next (context-resolve context)))
         ((not (context? result)) (error 'rp: "expects procedure" result))
@@ -97,7 +97,7 @@
   ;; and to use it to add a new note/notes to the context.
   (define (make-events maker context leaf performer)
     (let* ([c context]
-           [val (get-leaf-early leaf (context-start c) c)])
+           [val (eval-leaf-early leaf (context-start c) c)])
       (cond
         ((is-rest? val) (list))
         ((context? val) (context-events-next val))
@@ -135,7 +135,7 @@
 
   ;; Helper for 'to' forms below.
   (define (set-or-rest c leaf key val-transform)
-    (let ([val (get-leaf leaf c)])
+    (let ([val (eval-leaf leaf c)])
       (if (is-rest? val)
           (context-event c)
           (event-set (context-event c) key (val-transform val)))))

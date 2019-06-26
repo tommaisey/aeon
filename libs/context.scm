@@ -69,17 +69,17 @@
       ((pattern start end) (pattern (make-empty-context start end)))))
 
   (define (context-event c)
-    (let ([n (context-events-next c)])
-      (if (null? n) '() (car n))))
+    (lif (n (context-events-next c))
+         (null? n) '() (car n)))
 
   (define (context-start c) (arc-start (context-arc c)))
   (define (context-end c) (arc-end (context-arc c)))
 
   (define (context-now c)
-    (let ([e (context-event c)])
-      (if (null? e)
-          (context-start c)
-          (event-beat e))))
+    (lif (e (context-event c))
+         (null? e)
+         (context-start c)
+         (event-beat e)))
 
   (define (context-serialised c)
     (list 'context
@@ -119,15 +119,13 @@
 
   ;; Pop the top lambda off the chain.
   (define (context-pop-chain c)
-    (let ([ch (context-chain c)])
-      (context-with-chain c (if (null? ch) ch (cdr ch)))))
+    (context-with-chain c (lif [ch (context-chain c)] (null? ch) '() (cdr ch))))
 
   ;; Pop the top lambda off the context's chain, and call it
   ;; with the context itself. This will be done recursively
   ;; up the chain.
   (define (context-resolve c)
-    (let ([ch (context-chain c)])
-      (if (null? ch) c ((car ch) (context-pop-chain c)))))
+    (lif [ch (context-chain c)] (null? ch) c ((car ch) (context-pop-chain c))))
 
   ;;--------------------------------------------------------------------
   ;; Iteration. A context has a list of previous and next events - these
@@ -156,24 +154,30 @@
   ;;----------------------------------------------------------------------
   ;; Transformations.
 
-  ;; Used in context-map and context-filter
-  (define (context-transform context build-events-fn)
+  ;; Used in context-map and context-filter.
+  ;; context, (context, result-list -> result-list) -> context
+  (define (context-reduce context event-reducer)
     (let loop ([c context] [output '()])
       (if (context-it-end? c)
           (context-with-events c (reverse output))
           (loop (context-move1-fwd c)
-                (build-events-fn c output)))))
+                (event-reducer c output)))))
 
   ;; (context -> event), context -> context
-  (define (context-map new-event-fn context)
-    (context-transform
-     context (lambda (c output)
-               (let ([ev (new-event-fn c)])
-                 (if (null? ev) output (cons ev output))))))
+  ;; To return lists of events, supply 'append' for reducer.
+  (define context-map
+    (case-lambda
+      ((new-event-fn context)
+       (context-map new-event-fn context cons))
+
+      ((new-event-fn context reducer)
+       (context-reduce
+        context (lambda (c output)
+                  (lif [ev (new-event-fn c)] (null? ev) output (reducer ev output)))))))
 
   ;; (context -> bool), context -> context
   (define (context-filter pred context)
-    (context-transform
+    (context-reduce
      context (lambda (c output)
                (if (pred c) (cons (context-event c) output) output))))
 
