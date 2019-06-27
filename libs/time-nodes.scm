@@ -13,7 +13,8 @@
   ;; def. The input context is resolved with a different arc, in effect
   ;; shifting it in time.
   (define (mv math-op inv-math-op . pdefs)
-    (apply x-> (pdefs-to-nodes pdefs (mv-math-impl math-op inv-math-op))))
+    (let ([impl (mv-math-impl math-op inv-math-op)])
+      (apply x-> (map (lambda (p) (wrap-transform-fn impl p)) pdefs))))
 
   (define (mv+ . pdefs) (apply mv + - pdefs))
   (define (mv- . pdefs) (apply mv - + pdefs))
@@ -70,7 +71,8 @@
                                    (* max-p min-n)
                                    (* max-p max-n))])
                  (list (apply min values) (apply max values)))
-               (error 'taps "period and num must specify definite ranges" (list period num)))))
+               (error 'taps "period and num must specify definite ranges" 
+                      (list period num)))))
 
        ;; Builds a list of pairs of times and their indeces.
        ;; Omits the original 'src' time.
@@ -78,7 +80,8 @@
          (if (zero? num) (list)
              (let* ([sign (if (> num 0) 1 -1)]
                     [time-flt (lambda (t-i) (between (car t-i) start end))]
-                    [time-idx (lambda (i) (cons (+ src (* (inc i) sign period)) (inc i)))])
+                    [time-idx (lambda (i) (cons (+ src (* (inc i) sign period)) 
+                                                (inc i)))])
                (filter time-flt (map time-idx (iota (abs (- num sign))))))))
 
        ;; Sets the new time and repeatedly applies iterative-node to an event.
@@ -149,12 +152,6 @@
         (context-trim (context-with-arc c (context-arc context))))))
 
   ;;-------------------------------------------------------------------
-  ;; Helper for building nodes from a list of pdefs
-  ;; (pdef ...), impl -> ((context -> context) ...)
-  (define (pdefs-to-nodes pdefs impl)
-    (map (lambda (p) (lambda (c) (dispatch-pdef p c impl))) pdefs))
-
-  ;;-------------------------------------------------------------------
   ;; Implementation functions to be supplied to a chunking algorithm.
 
   ;; Resolves input context with an arc shifted by the leaf value,
@@ -164,17 +161,14 @@
       (lambda (context)
         (event-move (context-event context) new-val math-fn)))
     (lambda (context leaf)
-      (derecord context ([old-start context-start]
-                         [old-end context-end])
-        (context-events-next
-         (let ([val (eval-leaf-early leaf old-start context)])
-           (cond
-             ((is-rest? val) (context-resolve context))
-             ((not (number? val)) (raise (pattern-error "'mv'" "number" val)))
-             (else
-               (let* ([new-start (inv-math-fn old-start val)]
-                      [new-end (inv-math-fn old-end val)]
-                      [shifted (rearc context (make-arc new-start new-end))])
-                 (context-map (mapper val) (context-resolve shifted))))))))))
+      (let* ([old-arc (context-arc context)]
+             [val (eval-leaf-early leaf (arc-start old-arc) context)])
+        (cond
+          ((is-rest? val) (context-resolve context))
+          ((not (number? val)) (error 'mv "number" val))
+          (else
+            (let* ([shifted (rearc context (arc-math old-arc inv-math-fn val))]
+                   [shifted (context-resolve shifted)])
+              (context-trim (rearc (context-map (mapper val) shifted) old-arc))))))))
 
   )

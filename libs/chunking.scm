@@ -7,9 +7,9 @@
 ;; function that returns a value.
 
 (library (chunking)
-  (export sbdv step dispatch-pdef
+  (export sbdv step
           is-rest? is-sustain?
-          subdivider
+          wrap-transform-fn
           pattern-error)
 
   (import (scheme)
@@ -23,22 +23,12 @@
     (format "pattern error: got '~A', ~A expects a ~A" val name type))
 
   ;;-------------------------------------------------------------------
-  (define-record-type pdef
-    (fields
-     dur  ;; Length of the pattern represented here, in beats
-     data ;; List of values/procedures created by make-pdef-data
-
-     ;; A procedure that interprets a pdef as a series of time chunks,
-     ;; and calls a 'performing' function for each of those chunks with
-     ;; the corresponding value.
-     time-chunker))
-
   (define-syntax sbdv
     (syntax-rules ()
       ((_ def) (sbdv 1 def))
 
       ((_ dur def)
-       (make-pdef dur (make-pdef-data def) subdivider))))
+       (subdivide dur (make-pdef-data def)))))
 
   (define-syntax step
     (syntax-rules ()
@@ -46,17 +36,21 @@
 
       ((_ slice-dur def)
        (let* ([data (make-pdef-data def)])
-         (make-pdef (* slice-dur (length data)) data subdivider)))))
+         (subdivide (* slice-dur (length data)) data)))))
 
-  ;; Executes the time-chunker of a pdef, which will call the
-  ;; perform-fn for each chunk of the context as it sees fit.
-  (define (dispatch-pdef def context perform-fn)
-    (let ([def (if (pdef? def) def (sbdv def))])
-      (derecord def ([fn  pdef-time-chunker]
-                     [dur pdef-dur]
-                     [def pdef-data])
-        (let ([events (fn context dur def perform-fn)])
-          (context-trim (context-with-events context events))))))
+  ;;-------------------------------------------------------------------
+  ;; Puts a wrapper around a leaf that sets a certain special transform-fn on
+  ;; the context, then unsets it on the returned context.
+  ;; This also tests if the leaf returns values or contexts, and if it
+  ;; returns values, it wraps it in a subdividing pattern so it works
+  ;; in places that expect to use context-transform-fn.
+  (define (wrap-transform-fn fn leaf)
+    (let* ([get context-transform-fn]
+           [set context-with-transform-fn]
+           [fake-ctxt (set (make-empty-context 0 1) (lambda (c v) c))]
+           [leaf (if (context? (eval-leaf leaf fake-ctxt)) leaf (sbdv [leaf]))])
+      (lambda (context)
+        (set (eval-leaf leaf (set context fn)) (get context)))))
 
   ;;-----------------------------------------------------------------------
   ;; General helpers for main time-chunking routines like subdivider.
@@ -80,48 +74,58 @@
           (loop (cdr lst) (+ n 1))
           (values n lst))))
 
-  ;; -> (values def-len, start-beat, slice-dur)
-  (define (pdef-info def dur context)
-    (let* ([len (length def)]
-           [slice-dur (/ dur len)]
-           [start (round-down-f (context-start context) dur)])
-      (values len start slice-dur)))
+  ;;--------------------------------------------------------------------------------
+  ;; Iterates list 'vals', which is stretched over 'dur' with a subdividing pattern
+  ;; according to its sublists.
+  ;;
+  ;; If the context has a transform-fn of #f, this simply returns a value from vals based
+  ;; on the context's pointed to event, or the context's start if empty.
+  ;; If the context has a transform-fn, it calls it for each slice with the same context
+  ;; except with its arc changed to represent the slice. The transform-fn must return
+  ;; a transformed context with the same arc.
+  (define (subdivide dur vals)
 
-  ;;-----------------------------------------------------------------------
-  ;; Implements the recursive subdivision of an input pdef list into equal-sized
-  ;; elements. A perform fn is supplied, which returns a list of events for each
-  ;; leaf in the pdef list.
-  ;; -> (list event ...)
-  (define (subdivider context dur def perform)
+    ;; Basic checks
+    (when (null? vals)
+      (error 'subdivide "empty subdividing pdef" vals))
+    (unless (unsafe-list? vals)
+      (set! vals (list vals)))
 
-    (define (build-events item subctxt slice-dur)
-      (if (arcs-overlap? (context-arc context)
-                         (context-arc subctxt))
-          (if (unsafe-list? item)
-              (subdivider subctxt slice-dur item perform)
-              (perform subctxt item))
-          (list)))
+    (let ([len (length vals)])
+      (lambda (ctxt)
 
-    (cond
-      ((null? def) (list))
-      ((not (unsafe-list? def))
-       (subdivider context dur (list def) perform))
-      (else
-        (let-values (([len start slice-dur]
-                      (pdef-info def dur context)))
-          (let loop ([t start]
-                     [next def]
-                     [prev #f]
-                     [events '()])
-            (cond
-              ((null? next) (loop t def #f events))
-              ((>= t (context-end context)) events)
-              (else
-                (let-values ([[num-slices next-p] (drop-stretched next)])
-                  (let* ([item (maybe-repeat (car next) prev)]
-                         [next-t (+ t (* num-slices slice-dur))]
-                         [subctxt (rearc context (make-arc t next-t))]
-                         [new-events (build-events item subctxt slice-dur)])
-                    (loop next-t next-p item (append events new-events)))))))))))
+        (define (transform item subctxt transform-fn)
+          (lif (arc (context-arc subctxt))
+               (arcs-overlap? (context-arc ctxt) arc)
+               (let* ([subctxt (context-to-event-after subctxt (arc-start arc))]
+                      [eval-d (eval-leaf-early item (context-now subctxt) subctxt)]
+                      [dur (arc-length arc)])
+                 (cond
+                   ((is-rest? eval-d)     (context-resolve subctxt))
+                   ((unsafe-list? eval-d) ((subdivide dur eval-d) subctxt))
+                   (else                  (transform-fn subctxt item))))
+               subctxt))
+
+        (let loop ([c (make-context (context-arc ctxt))]
+                   [t (round-down-f (context-start ctxt) dur)]
+                   [next vals]
+                   [prev #f])
+          (cond
+            ((>= t (context-end ctxt)) (context-trim (rearc c (context-arc ctxt))))
+            ((null? next) (loop c t vals #f))
+            (else
+              (let-values ([[num-slices next-vals] (drop-stretched next)])
+                (let* ([transform-fn (context-transform-fn ctxt)]
+                       [item (maybe-repeat (car next) prev)]
+                       [next-t (+ t (* num-slices (/ dur len)))]
+                       [arc (make-arc t next-t)]
+                       [subctxt (rearc ctxt arc)])
+                  (cond
+                    (transform-fn
+                     (loop (contexts-merge (transform item subctxt transform-fn) c)
+                            next-t next-vals item))
+
+                    ((within-arc? arc (context-now ctxt)) item)
+                    (else (loop subctxt next-t next-vals item)))))))))))
 
   )

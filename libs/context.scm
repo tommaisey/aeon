@@ -16,12 +16,15 @@
     context-print
     context-insert
     context-with-events
+    context-replace-event
     context-clear-events
     context-with-arc rearc
     context-with-chain
     context-append-chain
     context-pop-chain
     context-resolve
+    context-transform-fn
+    context-with-transform-fn
     context-length
     context-move
     context-to-closest-event
@@ -45,20 +48,32 @@
   ;; should render the context - it does so by calling the second one,
   ;; etc. This 'inversion of control' allows each of the lambdas to call
   ;; their ancestors with different time chunks, to acheive lookahead.
+  ;;
+  ;; Sometimes we want to inform a function that operates on a context to
+  ;; call a callback for different chunks of a context rather than simply
+  ;; return a value based on the current position (as most do, see value-nodes).
+  ;; In this case we change transform-fn from #f (the default) to a function
+  ;; taking a sub-context of the original and a value. The transform-fn can
+  ;; then do its work to the subcontext, which will be pieced together back into
+  ;; a full length context and returned. See 'subdivide' for an example (at time of
+  ;; writing it's the only example).
   (define-record-type context
     (fields (immutable events-next)
             (immutable events-prev)
             (immutable arc)
-            (immutable chain))
+            (immutable chain)
+            (immutable transform-fn))
     (protocol
      (lambda (new)
        (case-lambda ; events-prev is optional in ctor
+         ((events-next events-prev arc chain transform-fn)
+          (new events-next events-prev arc chain transform-fn))
          ((events-next events-prev arc chain)
-          (new events-next events-prev arc chain))
+          (new events-next events-prev arc chain #f))
          ((events-next arc)
-          (new events-next '() arc '()))
+          (new events-next '() arc '() #f))
          ((arc)
-          (new '() '() arc '()))))))
+          (new '() '() arc '() #f))))))
 
   (define (make-empty-context start end)
     (make-context (make-arc start end)))
@@ -69,8 +84,7 @@
       ((pattern start end) (pattern (make-empty-context start end)))))
 
   (define (context-event c)
-    (lif (n (context-events-next c))
-         (null? n) '() (car n)))
+    (lif (n (context-events-next c)) (null? n) '() (car n)))
 
   (define (context-start c) (arc-start (context-arc c)))
   (define (context-end c) (arc-end (context-arc c)))
@@ -90,10 +104,21 @@
   (define (context-print c port wr)
     (put-datum port (context-serialised c)))
 
+  ;; TODO: DRY up all these context-with... functions.
   (define context-with-events
     (case-lambda
       ((c nxt) (context-with-events c nxt '()))
-      ((c nxt prv) (make-context nxt prv (context-arc c) (context-chain c)))))
+      ((c nxt prv) (make-context nxt prv 
+                                 (context-arc c) 
+                                 (context-chain c)
+                                 (context-transform-fn c)))))
+
+  ;; Replaces the pointed-to event, or simply adds if there is none.
+  (define (context-replace-event c new-event)
+    (if (context-it-end? c)
+        (context-insert c new-event)
+        (context-with-events c (cons new-event (cdr (context-events-next c)))
+                               (context-events-prev c))))
 
   (define (context-clear-events c)
     (context-with-events c '()))
@@ -102,7 +127,8 @@
     (make-context (context-events-next c)
                   (context-events-prev c)
                   new-arc
-                  (context-chain c)))
+                  (context-chain c)
+                  (context-transform-fn c)))
   (define rearc context-with-arc) ; alias
 
   (define (context-length c)
@@ -112,7 +138,8 @@
     (make-context (context-events-next c)
                   (context-events-prev c)
                   (context-arc c)
-                  chain))
+                  chain
+                  (context-transform-fn c)))
 
   (define (context-append-chain c chain)
     (context-with-chain c (append chain (context-chain c))))
@@ -125,7 +152,15 @@
   ;; with the context itself. This will be done recursively
   ;; up the chain.
   (define (context-resolve c)
-    (lif [ch (context-chain c)] (null? ch) c ((car ch) (context-pop-chain c))))
+    (lif (ch (context-chain c)) (null? ch) c
+         ((car ch) (context-pop-chain c))))
+
+  (define (context-with-transform-fn c transform-fn)
+    (make-context (context-events-next c)
+                  (context-events-prev c)
+                  (context-arc c)
+                  (context-chain c)
+                  transform-fn))
 
   ;;--------------------------------------------------------------------
   ;; Iteration. A context has a list of previous and next events - these
@@ -149,7 +184,7 @@
     (context-it c (to-closest time)))
 
   (define (context-to-event-after c time)
-    (context-it c (to-before time)))
+    (context-it c (to-after time)))
 
   ;;----------------------------------------------------------------------
   ;; Transformations.
@@ -203,11 +238,12 @@
           [c2 (context-rewind c2)])
       (make-context (merge-sorted (context-events-next c1)
                                   (context-events-next c2)
-                                  event-before?)
+                                   event-before?)
                     '()
                     (make-arc (min (context-start c1) (context-start c2))
                               (max (context-end c1) (context-end c2)))
-                    (context-chain c2))))
+                    (context-chain c2)
+                    (context-transform-fn c2))))
 
   ;;---------------------------------------------------------------------
   ;; Helpers used in public iteration functions.
@@ -255,7 +291,7 @@
 
   ;; direction-fn that moves a context to the first event that's greater
   ;; than or equal to the requested time.
-  (define (to-before time)
+  (define (to-after time)
     (lambda (c)
       (define (get-delt bounds-check? default get-event)
         (if (bounds-check? c) default (delta time (get-event c))))
@@ -275,7 +311,8 @@
         (null? (cdr (context-events-next c)))))
 
   (define (context-it-end? c)
-    (null? (context-events-next c)))
+    (or (null? (context-events-next c))
+        (>= (context-now c) (context-end c))))
 
   (define (context-empty? c)
     (and (null? (context-events-next c))

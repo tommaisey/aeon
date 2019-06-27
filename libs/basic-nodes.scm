@@ -22,30 +22,65 @@
     (chain-nodes)
     (value-nodes))
 
-  ;; A node that adds blank events according to a subdividing pattern.
+  ;; Adds blank events to the context.
+  ;; A leaf value of 1 gives one event.
+  ;; For values > 1, creates N subdivided values.
+  ;; The symbol ~ creates a rest.
   (define (in! pdef . ops)
-    (apply o-> (lambda (context) (dispatch-pdef pdef context in!impl)) ops))
+    (define (impl context value)
+      (let* ([value (eval-leaf-early value (context-start context) context)]
+             [num (max 1 value)]
+             [dur (/ (context-length context) num)]
+             [start (context-start context)]
+             [make (lambda (i) (make-event (+ start (* i dur))
+                                           (:sustain dur)))])
+        (fold-left (lambda (c i) (context-insert c (make i))) 
+                   (context-resolve context) 
+                   (reverse (iota num)))))
+    (apply o-> (wrap-transform-fn impl pdef) ops))
 
-  ;; A node that adds events with a single specified property.
+  ;; Adds events with a single specified property
   (define (in: key pdef . ops)
-    (apply o-> (lambda (context) (dispatch-pdef pdef context (in:impl key))) ops))
+    (define (impl context value)
+      (let ([value (eval-leaf-early value (context-start context) context)])
+        (context-insert (context-resolve context)
+                        (make-event (context-start context)
+                                    (:sustain (context-length context))
+                                    (key value)))))
+    (apply o-> (wrap-transform-fn impl pdef) ops))
 
   ;; A node that replaces the input with the result of applying
   ;; it to each pattern member, which must all be functional nodes.
   (define (rp: pdef)
-    (lambda (context)
-      (dispatch-pdef pdef context rp:impl)))
+    (define (impl context value)
+      (let ([context (context-resolve context)]
+            [value (eval-leaf-early value (context-start context) context)])
+        (if (procedure? value)
+            (value context)
+             context)))
+    (wrap-transform-fn impl pdef))
 
   ;; A node that sets a property of events according to the pattern.
   ;; key value ... -> (context -> context)
   (define (to: . kv-pairs)
-    (apply x-> (kv-pairs-to-nodes kv-pairs to:impl)))
+    (define (impl key)
+      (lambda (context value)
+        (context-map (lambda (c) (set-or-rest c value key identity))
+                     (context-resolve context))))
+    (build-kv kv-pairs 'to: impl))
 
   ;; A general 'to', taking a math op, a key and a def. The math op is
   ;; called with the current value for key and the value returned by def.
   (define (to math-op . kv-pairs)
-    (define (impl key) (to-math-impl math-op key))
-    (apply x-> (kv-pairs-to-nodes kv-pairs impl)))
+    (define (impl key)
+      (lambda (context value)
+        (context-map (lambda (c)
+                       (lif [current (event-get (context-event c) key #f)]
+                             current
+                            (set-or-rest c value key (lambda (v) (math-op current v)))
+                            (context-event c)))
+                     (context-resolve context))))
+    (build-kv kv-pairs 'to-math impl))
 
   (define (to+ . kv-pairs) (apply to + kv-pairs))
   (define (to- . kv-pairs) (apply to - kv-pairs))
@@ -86,50 +121,6 @@
   ;; Implementation functions to be supplied to a chunking algorithm.
   ;; These must return a list of events, not a context.
 
-  (define (rp:impl context leaf)
-    (let ([result (eval-leaf leaf context)])
-      (cond
-        ((is-rest? result) (context-events-next (context-resolve context)))
-        ((not (context? result)) (error 'rp: "expects procedure" result))
-        (else (context-events-next result)))))
-
-  ;; Helper for 'in' impls to get a value from a leaf node,
-  ;; and to use it to add a new note/notes to the context.
-  (define (make-events maker context leaf performer)
-    (let* ([c context]
-           [val (eval-leaf-early leaf (context-start c) c)])
-      (cond
-        ((is-rest? val) (list))
-        ((context? val) (context-events-next val))
-        ((unsafe-list? val)
-         (subdivider c (context-length c) val performer))
-        (else (maker val)))))
-
-  ;; Adds blank events to the context with a subdividing pattern.
-  ;; A leaf value of 1 gives one event.
-  ;; For values > 1, creates N subdivided values.
-  ;; The symbol ~ creates a rest.
-  (define (in!impl context leaf)
-    (make-events
-     (lambda (val)
-       (let* ([num (max 1 val)]
-              [dur (/ (context-length context) num)]
-              [start (context-start context)]
-              [make (lambda (i) (make-event (+ start (* i dur))
-                                            (:sustain dur)))])
-         (map make (iota num))))
-     context leaf in!impl))
-
-  ;; Adds events with a property defined by 'key'.
-  (define (in:impl key)
-    (lambda (context leaf)
-      (make-events
-       (lambda (val)
-         (let ([dur (context-length context)]
-               [start (context-start context)])
-           (list (make-event start (:sustain dur) (key val)))))
-       context leaf (in:impl key))))
-
   ;; Used in above in forms.
   (define :sustain ':sustain)
 
@@ -140,39 +131,17 @@
           (context-event c)
           (event-set (context-event c) key (val-transform val)))))
 
-  ;; Sets the property 'key' on all events in the context.
-  (define (to:impl key)
-    (lambda (context leaf)
-      (define (map-fn c)
-        (set-or-rest c leaf key (lambda (v) v)))
-      (context-events-next (context-map map-fn (context-resolve context)))))
+  ;; Builds a list of transformers. Each one is built from the value of a key-value
+  ;; pair, which should be an context op function, and a transform-fn, which is
+  ;; built by calling impl with the key.
+  (define (build-kv kv-pairs err-symbol impl)
+    (let ([pairs (pairwise kv-pairs)])
 
-  ;; Sets the property 'key' by doing some math on the old
-  ;; value together with leaf.
-  (define (to-math-impl math-fn key)
-    (lambda (context leaf)
-      (define (map-fn c)
-        (let ([current (event-get (context-event c) key #f)])
-          (if current
-              (set-or-rest c leaf key (lambda (v) (math-fn current v)))
-              (context-event c))))
-      (context-events-next (context-map map-fn (context-resolve context)))))
+      (define (make-transformer key-value)
+        (wrap-transform-fn (impl (car key-value)) (cdr key-value)))
 
-  ;;-------------------------------------------------------------------
-  ;; Helper for building a list of nodes from pairs of keys and values,
-  ;; used in the implementation of the to: family of ops above.
-  ;; (key value ...), (key -> impl) -> ((context -> context) ...)
-  (define (kv-pairs-to-nodes pairs impl)
-    (define (make-node key val)
-      (lambda (c) (dispatch-pdef val c (impl key))))
-    (if (zero? (mod (length pairs) 2))
-        (let loop ([pairs pairs] [out '()])
-          (if (null? pairs)
-              (reverse out)
-              (loop (cddr pairs)
-                    (cons (make-node (car pairs) (cadr pairs)) out))))
-        (raise (string-append
-                "'to' family operators must have an even number of arguments, "
-                "made up of alternating keys and patterns."))))
+      (unless pairs (error err-symbol "invalid key value pairs" kv-pairs))
+
+      (apply x-> (map make-transformer pairs))))
 
   ) ; end module 'logic-nodes'

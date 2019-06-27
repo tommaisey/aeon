@@ -15,6 +15,8 @@
           columns-to-rows
           concatenate
           merge-sorted
+          pairwise
+          unzip-pairs
           repeat
           sorted?
           for-any
@@ -175,6 +177,33 @@
                   (if (null? a)
                       (cons x (cons y b))
                       (cons x (loop (car a) (key (car a)) (cdr a) y ky b))))))))
+
+  ;; Takes successive pairs in a flat list and builds a new list with them
+  ;; as consed pairs.
+  ;; If the input list isn't even numbered, returns #f.
+  (define (pairwise lst)
+    (if (not (zero? (mod (length lst) 2)))
+        #f
+        (let loop ([lst lst] [pairs '()])
+          (if (null? lst)
+              (reverse pairs)
+              (loop (cddr lst) 
+                    (cons (cons (car lst) (cadr lst)) pairs))))))
+
+  ;; Unzips an even-numbered list into two lists. 
+  ;; If the input list isn't even numbered, returns two #f values.
+  ;; (1 2 3 4 5 6 7 8) ->
+  ;; (values (1 3 5 7)
+  ;;         (2 4 6 8))
+  (define (unzip-pairs pairs)
+    (if (not (zero? (mod (length pairs) 2)))
+        (values #f #f)
+        (let loop ([pairs pairs] [keys '()] [vals '()])
+          (if (null? pairs)
+              (values (reverse keys) (reverse vals))
+              (loop (cddr pairs) 
+                    (cons (car pairs) keys)
+                    (cons (cadr pairs) vals))))))
 
   ;;--------------------------------------------------------------------
   ;; R6RS provides for-all, which checks all items in a

@@ -40,6 +40,7 @@
           arc-length
           arc-negate
           arc-add
+          arc-math
           arc-valid?
           within-arc?
           arcs-overlap?)
@@ -63,7 +64,9 @@
     (let ([result (assq key event)])
       (if result (cdr result) default)))
   (define (event-set event key value)
-    (if (and (not (null? event)) 
+    (unless (symbol? key)
+      (error 'event-set "trying to set a non-symbol event key" key))
+    (if (and (not (null? event))
              (eq? key (caar event)) (eq? value (cadr event)))
         event ;; optimise: don't set same value twice in a row
         (cons (cons key value) event)))
@@ -160,5 +163,7 @@
   (define (arc-add a1 a2)
     (make-arc (+ (arc-start a1) (arc-start a2))
               (+ (arc-end a1) (arc-end a2))))
+  (define (arc-math a proc val)
+    (make-arc (proc (arc-start a) val) (proc (arc-end a) val)))
 
   ) ; END module 'event'
