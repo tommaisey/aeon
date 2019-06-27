@@ -25,6 +25,7 @@
     context-resolve
     context-transform-fn
     context-with-transform-fn
+    context-no-transform-fn
     context-length
     context-move
     context-to-closest-event
@@ -161,6 +162,9 @@
                   (context-arc c)
                   (context-chain c)
                   transform-fn))
+
+  (define (context-no-transform-fn c)
+    (context-with-transform-fn c #f))
 
   ;;--------------------------------------------------------------------
   ;; Iteration. A context has a list of previous and next events - these

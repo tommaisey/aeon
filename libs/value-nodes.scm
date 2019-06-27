@@ -83,8 +83,10 @@
       [(min max key/keys)
        (leaf-from-list (list min max)
         (lambda (context)
-          (let ([seed (fold-by-keys * 10000 key/keys context)])
-            (pseudo-rand (eval-leaf min context) (eval-leaf max context) seed))))]))
+          (let ([min (eval-leaf min context)]
+                [max (eval-leaf max context)]
+                [seed (fold-by-keys * 10000 key/keys context)])
+            (pseudo-rand min max seed))))]))
 
   ;; Choose from a list randomly
   (define-syntax pick

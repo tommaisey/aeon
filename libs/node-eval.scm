@@ -32,6 +32,9 @@
   ;; wrong - the event doesn't yet exist, so e.g. rand seeding would be broken.
   ;; In this case, add an empty event to the context before evaluating.
   (define (eval-leaf-early v time-to-add context)
+    (when (context-transform-fn context)
+      (error 'eval-leaf-early "eval-leaf-early got a transform-fn"
+             (context-transform-fn context)))
     (if (or (procedure? v) (leaf? v))
         (eval-leaf v (context-insert context (make-event time-to-add)))
         v))

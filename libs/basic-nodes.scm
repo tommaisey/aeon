@@ -42,7 +42,7 @@
   ;; Adds events with a single specified property
   (define (in: key pdef . ops)
     (define (impl context value)
-      (let ([value (eval-leaf-early value (context-start context) context)])
+      (let* ([value (eval-leaf-early value (context-start context) context)])
         (context-insert (context-resolve context)
                         (make-event (context-start context)
                                     (:sustain (context-length context))
@@ -53,8 +53,8 @@
   ;; it to each pattern member, which must all be functional nodes.
   (define (rp: pdef)
     (define (impl context value)
-      (let ([context (context-resolve context)]
-            [value (eval-leaf-early value (context-start context) context)])
+      (let* ([context (context-resolve context)]
+             [value (eval-leaf-early value (context-start context) context)])
         (if (procedure? value)
             (value context)
              context)))
@@ -126,7 +126,11 @@
 
   ;; Helper for 'to' forms below.
   (define (set-or-rest c leaf key val-transform)
+    (when (context-transform-fn c)
+          (error 'set-or-rest "got a transformer" (context-transform-fn c)))
     (let ([val (eval-leaf leaf c)])
+      (when (context? val)
+          (error 'set-or-rest "evaluated to context" leaf))
       (if (is-rest? val)
           (context-event c)
           (event-set (context-event c) key (val-transform val)))))
