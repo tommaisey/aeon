@@ -90,7 +90,7 @@
       (set! vals (list vals)))
 
     (let ([len (length vals)])
-      (make-leaf-wanting-transform
+      (leaf-meta-ranged #t vals
        (lambda (ctxt)
 
          (define (transform item subctxt transform-fn)

@@ -4,12 +4,10 @@
     eval-leaf
     eval-leaf-early
     leaf-meta-ranged
-    make-leaf-wanting-transform
     leaf-wanting-transform?
     maybe-leaf-meta
-    leaf-foldl
-    leaf-meta-range-max
-    leaf-meta-range-min
+    leaf-meta-rng-max
+    leaf-meta-rng-min
     context-resolve)
 
   (import (scheme) (utilities) (event) (context))
@@ -50,23 +48,28 @@
   ;; An object containing a contextual function as well as some metadata
   ;; that are needed to evaluate the graph correctly in some situations.
   (define-record-type leaf-meta
-    (fields (immutable range-min) ;; #f if impossible to detect
-            (immutable range-max) ;; #f if impossible to detect
+    (fields (immutable rng-min) ;; #f if impossible to detect
+            (immutable rng-max) ;; #f if impossible to detect
             (immutable fn)
             (immutable wants-transform?)))
 
   ;; Try to create a leaf object, filling in the min and max possible values
   ;; from an input list. Input is filtered for symbols, so ~ rests are ok.
   ;; If we can't work out a min & max value from lst, just returns the raw fn.
-  (define (leaf-meta-ranged lst fn)
-    (let* ([lst (filter (lambda (x) (not (symbol? x))) lst)]
-           [range-min (leaf-foldl leaf-meta-range-min min +inf.0 lst)]
-           [range-max (leaf-foldl leaf-meta-range-max max -inf.0 lst)])
-      (if (and range-min range-max)
-          (make-leaf-meta range-min range-max fn #f) fn)))
+  (define leaf-meta-ranged
+    (case-lambda
+      ((lst fn) (leaf-meta-ranged #f lst fn))
 
-  (define (make-leaf-wanting-transform fn)
-    (make-leaf-meta #f #f fn #t))
+      ((wants-transform? lst fn)
+       (let* ([lst (filter (lambda (x) (not (symbol? x))) lst)]
+              [range-min (leaf-foldl leaf-meta-rng-min min +inf.0 lst)]
+              [range-max (leaf-foldl leaf-meta-rng-max max -inf.0 lst)])
+         (cond
+           ((and range-min range-max)
+            (make-leaf-meta range-min range-max fn wants-transform?))
+           (wants-transform?
+            (make-leaf-meta #f #f fn wants-transform?))
+           (else fn))))))
 
   (define (leaf-wanting-transform? leaf)
     (and (leaf-meta? leaf)
@@ -87,6 +90,7 @@
   (define (leaf-foldl leaf-field fn start-val values)
     (define (combine result v)
       (lif [meta (maybe-leaf-meta v leaf-field)]
-            meta (fn result meta) #f))
+           (and result meta)
+           (fn result meta) #f))
     (fold-left combine start-val values))
   )
