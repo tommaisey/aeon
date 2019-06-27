@@ -10,10 +10,11 @@
     context-events-next
     context-events-prev
     context-arc
+    context-chain
     context-start
     context-end
     context-now
-    context-print
+    context-serialised
     context-insert
     context-with-events
     context-replace-event
@@ -22,7 +23,6 @@
     context-with-chain
     context-append-chain
     context-pop-chain
-    context-resolve
     context-transform-fn
     context-with-transform-fn
     context-no-transform-fn
@@ -82,7 +82,9 @@
   (define testc
     (case-lambda
       ((pattern) (testc pattern 0 1))
-      ((pattern start end) (pattern (make-empty-context start end)))))
+      ((pattern start end) (put-datum (current-output-port)
+                                      (context-serialised
+                                       (pattern (make-empty-context start end)))))))
 
   (define (context-event c)
     (lif (n (context-events-next c)) (null? n) '() (car n)))
@@ -100,10 +102,6 @@
     (list 'context
           (list 'arc (context-start c) (context-end c))
           (cons 'events (event-clean (context-events-next c)))))
-
-  ;; For use as a record-writer in chez (see init.scm)
-  (define (context-print c port wr)
-    (put-datum port (context-serialised c)))
 
   ;; TODO: DRY up all these context-with... functions.
   (define context-with-events
@@ -148,13 +146,6 @@
   ;; Pop the top lambda off the chain.
   (define (context-pop-chain c)
     (context-with-chain c (lif [ch (context-chain c)] (null? ch) '() (cdr ch))))
-
-  ;; Pop the top lambda off the context's chain, and call it
-  ;; with the context itself. This will be done recursively
-  ;; up the chain.
-  (define (context-resolve c)
-    (lif (ch (context-chain c)) (null? ch) c
-         ((car ch) (context-pop-chain c))))
 
   (define (context-with-transform-fn c transform-fn)
     (make-context (context-events-next c)

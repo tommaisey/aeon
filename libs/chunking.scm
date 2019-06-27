@@ -34,6 +34,9 @@
        (let* ([data (make-pdef-data def)])
          (subdivide (* slice-dur (length data)) data)))))
 
+  (tag-pdef-callable sbdv)
+  (tag-pdef-callable step)
+
   ;;-------------------------------------------------------------------
   ;; Puts a wrapper around a leaf that sets a certain special transform-fn on
   ;; the context, then unsets it on the returned context.
@@ -43,9 +46,9 @@
   (define (wrap-transform-fn fn leaf)
     (let* ([get-fn context-transform-fn]
            [set-fn context-with-transform-fn]
-           [leaf (subdivide 1 leaf)])
+           [leaf (if (leaf-wanting-transform? leaf) leaf (subdivide 1 leaf))])
       (lambda (context)
-        (set-fn (leaf (set-fn context fn)) (get-fn context)))))
+        (set-fn (eval-leaf leaf (set-fn context fn)) (get-fn context)))))
 
   ;;-----------------------------------------------------------------------
   ;; General helpers for main time-chunking routines like subdivider.
@@ -73,11 +76,11 @@
   ;; Iterates list 'vals', which is stretched over 'dur' with a subdividing pattern
   ;; according to its sublists.
   ;;
-  ;; If the context has a transform-fn of #f, this simply returns a value from vals based
-  ;; on the context's pointed to event, or the context's start if empty.
-  ;; If the context has a transform-fn, it calls it for each slice with the same context
-  ;; except with its arc changed to represent the slice. The transform-fn must return
-  ;; a transformed context with the same arc.
+  ;; If the context has a transform-fn of #f, this simply returns a value from vals
+  ;; based on the context's pointed to event, or the context's start if empty.
+  ;; If the context has a transform-fn, it calls it for each slice with the same
+  ;; context except with its arc changed to represent the slice. The transform-fn 
+  ;; must return a transformed context with the same arc.
   (define (subdivide dur vals)
 
     ;; Basic checks
@@ -87,44 +90,46 @@
       (set! vals (list vals)))
 
     (let ([len (length vals)])
-      (lambda (ctxt)
+      (make-leaf-wanting-transform
+       (lambda (ctxt)
 
-        (define (transform item subctxt transform-fn)
-          (lif (arc (context-arc subctxt))
-               (arcs-overlap? (context-arc ctxt) arc)
-               (let* ([subctxt (context-to-event-after subctxt (arc-start arc))]
-                      [sans-tran (context-no-transform-fn subctxt)]
-                      [early (eval-leaf-early item (context-now subctxt) sans-tran)]
-                      [dur (arc-length arc)])
-                 (cond
-                   ((is-rest? early)     (context-resolve sans-tran))
-                   ((unsafe-list? early) ((subdivide dur early) subctxt))
-                   (else (transform-fn sans-tran item))))
-               subctxt))
-
-        (let loop ([c (make-context (context-arc ctxt))]
-                   [t (round-down-f (context-start ctxt) dur)]
-                   [next vals]
-                   [prev #f])
-          (cond
-            ((null? next) (loop c t vals #f))
-            ((>= t (context-end ctxt))
-             (if (context-transform-fn ctxt)
-                 (context-trim (rearc c (context-arc ctxt)))
-                 (maybe-repeat (car next) prev)))
-            (else
-              (let-values ([[num-slices next-vals] (drop-stretched next)])
-                (let* ([item (maybe-repeat (car next) prev)]
-                       [next-t (+ t (* num-slices (/ dur len)))]
-                       [arc (make-arc t next-t)]
-                       [subctxt (rearc ctxt arc)]
-                       [tfn (context-transform-fn ctxt)])
+         (define (transform item subctxt transform-fn)
+           (lif (arc (context-arc subctxt))
+                (arcs-overlap? (context-arc ctxt) arc)
+                (let* ([subctxt (context-to-event-after subctxt (arc-start arc))]
+                       [sans-tran (context-no-transform-fn subctxt)]
+                       [time (context-now subctxt)]
+                       [dur (arc-length arc)]
+                       [early (eval-leaf-early item time sans-tran)])
                   (cond
-                    (tfn
-                     (loop (contexts-merge (transform item subctxt tfn) c)
-                           next-t next-vals item))
+                    ((is-rest? early)     (context-resolve sans-tran))
+                    ((unsafe-list? early) (eval-leaf (subdivide dur early) subctxt))
+                    (else (transform-fn sans-tran item))))
+                subctxt))
 
-                    ((within-arc? arc (context-now ctxt)) item)
-                    (else (loop subctxt next-t next-vals item)))))))))))
+         (let loop ([c (make-context (context-arc ctxt))]
+                    [t (round-down-f (context-start ctxt) dur)]
+                    [next vals]
+                    [prev #f])
+           (cond
+             ((null? next) (loop c t vals #f))
+             ((>= t (context-end ctxt))
+              (if (context-transform-fn ctxt)
+                  (context-trim (rearc c (context-arc ctxt)))
+                  (maybe-repeat (car next) prev)))
+             (else
+               (let-values ([[num-slices next-vals] (drop-stretched next)])
+                 (let* ([item (maybe-repeat (car next) prev)]
+                        [next-t (+ t (* num-slices (/ dur len)))]
+                        [arc (make-arc t next-t)]
+                        [subctxt (rearc ctxt arc)]
+                        [tfn (context-transform-fn ctxt)])
+                   (cond
+                     (tfn
+                      (loop (contexts-merge (transform item subctxt tfn) c)
+                            next-t next-vals item))
+
+                     ((within-arc? arc (context-now ctxt)) item)
+                     (else (loop subctxt next-t next-vals item))))))))))))
 
   )

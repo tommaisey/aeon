@@ -38,7 +38,7 @@
                (list-patterns pattern-dict)))
   (define (process c)
     (event-clean (process-inst (context-event c))))
-  (context-map process ctxt))
+  (context-serialised (context-map process ctxt)))
 
 ;;------------------------------------------------------------------
 (define (stop-patterns-in-file file-path)

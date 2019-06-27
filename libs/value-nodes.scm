@@ -81,7 +81,7 @@
       [(key) (rnd 0.0 1.0 key)]
       [(min max) (rnd min max '())]
       [(min max key/keys)
-       (leaf-from-list (list min max)
+       (leaf-meta-ranged (list min max)
         (lambda (context)
           (let ([min (eval-leaf min context)]
                 [max (eval-leaf max context)]
@@ -96,7 +96,7 @@
       ((_ qlist key/keys)
        (let* ([lst (make-pdef-data qlist)]
               [len (length lst)])
-         (leaf-from-list lst
+         (leaf-meta-ranged lst
           (lambda (context)
             (let ([choice (eval-leaf (rnd 0 len key/keys) context)])
               (eval-leaf (list-nth lst choice) context))))))))
@@ -114,7 +114,7 @@
               [len (length lst)])
          (when (< len 1)
            (error 'each "requires at least 1 value" len))
-         (leaf-from-list lst
+         (leaf-meta-ranged lst
           (lambda (context)
             (let* ([t (context-now context)]
                    [n (trunc-int (/ t measures))])
@@ -130,7 +130,7 @@
               [len (length lst)])
          (when (< len 2)
            (error 'every "requires at least 2 values" len))
-         (leaf-from-list lst
+         (leaf-meta-ranged lst
           (lambda (context)
             (let* ([t (context-now context)]
                    [i (if (zero? t) 0 (trunc-int (/ t measures)))]
@@ -145,7 +145,7 @@
   (tag-pdef-callable every)
 
   (define (sine freq lo hi)
-    (leaf-from-list (list lo hi)
+    (leaf-meta-ranged (list lo hi)
      (lambda (context)
        (let ([f (eval-leaf freq context)]
              [l (eval-leaf lo context)]

@@ -61,10 +61,10 @@
 
        ;; Compute furthest lookahead/lookback that might be required.
        (define possible-range
-         (let ([min-p (maybe-leaf-meta period leaf-range-min)]
-               [max-p (maybe-leaf-meta period leaf-range-max)]
-               [min-n (maybe-leaf-meta num leaf-range-min)]
-               [max-n (maybe-leaf-meta num leaf-range-max)])
+         (let ([min-p (maybe-leaf-meta period leaf-meta-range-min)]
+               [max-p (maybe-leaf-meta period leaf-meta-range-max)]
+               [min-n (maybe-leaf-meta num leaf-meta-range-min)]
+               [max-n (maybe-leaf-meta num leaf-meta-range-max)])
            (if (for-all identity (list min-p max-p min-n max-n))
                (let ([values (list (* min-p min-n)
                                    (* min-p max-n)

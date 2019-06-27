@@ -42,7 +42,7 @@
   ;; Adds events with a single specified property
   (define (in: key pdef . ops)
     (define (impl context value)
-      (let* ([value (eval-leaf-early value (context-start context) context)])
+      (let ([value (eval-leaf-early value (context-start context) context)])
         (context-insert (context-resolve context)
                         (make-event (context-start context)
                                     (:sustain (context-length context))

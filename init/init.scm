@@ -22,6 +22,3 @@
 
 (set-bpm! bpm)
 (start)
-
-;; Custom priting of contexts.
-(record-writer (type-descriptor context) context-print)
