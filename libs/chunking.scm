@@ -9,7 +9,7 @@
 (library (chunking)
   (export sbdv step
           is-rest? is-sustain?
-          wrap-transform-fn)
+          wrap-subdivide-fn)
 
   (import (scheme)
           (utilities)
@@ -38,15 +38,14 @@
   (tag-pdef-callable step)
 
   ;;-------------------------------------------------------------------
-  ;; Puts a wrapper around a leaf that sets a certain special transform-fn on
-  ;; the context, then unsets it on the returned context.
-  ;; This also tests if the leaf returns values or contexts, and if it
-  ;; returns values, it wraps it in a subdividing pattern so it works
-  ;; in places that expect to use context-transform-fn.
-  (define (wrap-transform-fn fn leaf)
-    (let* ([get-fn context-transform-fn]
-           [set-fn context-with-transform-fn]
-           [leaf (if (leaf-wanting-transform? leaf) leaf (subdivide 1 leaf))])
+  ;; Puts a wrapper around a leaf that sets a certain special subdivide-fn
+  ;; on the context, then unsets it on the returned context.
+  ;; This also wraps the leaf in a subdividing pattern, if it hasn't
+  ;; already declared that it is one.
+  (define (wrap-subdivide-fn fn leaf)
+    (let* ([get-fn context-subdivide-fn]
+           [set-fn context-with-subdivide-fn]
+           [leaf (if (leaf-subdivider? leaf) leaf (subdivide 1 leaf))])
       (lambda (context)
         (set-fn (eval-leaf leaf (set-fn context fn)) (get-fn context)))))
 
@@ -76,11 +75,11 @@
   ;; Iterates list 'vals', which is stretched over 'dur' with a subdividing pattern
   ;; according to its sublists.
   ;;
-  ;; If the context has a transform-fn of #f, this simply returns a value from vals
+  ;; If the context has a subdivide-fn of #f, this simply returns a value from vals
   ;; based on the context's pointed to event, or the context's start if empty.
-  ;; If the context has a transform-fn, it calls it for each slice with the same
-  ;; context except with its arc changed to represent the slice. The transform-fn 
-  ;; must return a transformed context with the same arc.
+  ;; If the context has a subdivide-fn, it calls it for each slice with the same
+  ;; context except with its arc changed to represent the slice. The subdivide-fn 
+  ;; must return a subdivideed context with the same arc.
   (define (subdivide dur vals)
 
     ;; Basic checks
@@ -93,18 +92,18 @@
       (leaf-meta-ranged #t vals
        (lambda (ctxt)
 
-         (define (transform item subctxt transform-fn)
+         (define (transform item subctxt subdivide-fn)
            (lif (arc (context-arc subctxt))
                 (arcs-overlap? (context-arc ctxt) arc)
                 (let* ([subctxt (context-to-event-after subctxt (arc-start arc))]
-                       [sans-tran (context-no-transform-fn subctxt)]
+                       [sans-tran (context-no-subdivide-fn subctxt)]
                        [time (context-now subctxt)]
                        [dur (arc-length arc)]
                        [early (eval-leaf-early item time sans-tran)])
                   (cond
                     ((is-rest? early)     (context-resolve sans-tran))
                     ((unsafe-list? early) (eval-leaf (subdivide dur early) subctxt))
-                    (else (transform-fn sans-tran item))))
+                    (else (subdivide-fn sans-tran item))))
                 subctxt))
 
          (let loop ([c (make-context (context-arc ctxt))]
@@ -114,7 +113,7 @@
            (cond
              ((null? next) (loop c t vals #f))
              ((>= t (context-end ctxt))
-              (if (context-transform-fn ctxt)
+              (if (context-subdivide-fn ctxt)
                   (context-trim (rearc c (context-arc ctxt)))
                   (maybe-repeat (car next) prev)))
              (else
@@ -123,7 +122,7 @@
                         [next-t (+ t (* num-slices (/ dur len)))]
                         [arc (make-arc t next-t)]
                         [subctxt (rearc ctxt arc)]
-                        [tfn (context-transform-fn ctxt)])
+                        [tfn (context-subdivide-fn ctxt)])
                    (cond
                      (tfn
                       (loop (contexts-merge (transform item subctxt tfn) c)

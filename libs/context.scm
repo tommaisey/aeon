@@ -23,9 +23,9 @@
     context-with-chain
     context-append-chain
     context-pop-chain
-    context-transform-fn
-    context-with-transform-fn
-    context-no-transform-fn
+    context-subdivide-fn
+    context-with-subdivide-fn
+    context-no-subdivide-fn
     context-length
     context-move
     context-to-closest-event
@@ -53,8 +53,8 @@
   ;; Sometimes we want to inform a function that operates on a context to
   ;; call a callback for different chunks of a context rather than simply
   ;; return a value based on the current position (as most do, see value-nodes).
-  ;; In this case we change transform-fn from #f (the default) to a function
-  ;; taking a sub-context of the original and a value. The transform-fn can
+  ;; In this case we change subdivide-fn from #f (the default) to a function
+  ;; taking a sub-context of the original and a value. The subdivide-fn can
   ;; then do its work to the subcontext, which will be pieced together back into
   ;; a full length context and returned. See 'subdivide' for an example (at time of
   ;; writing it's the only example).
@@ -63,12 +63,12 @@
             (immutable events-prev)
             (immutable arc)
             (immutable chain)
-            (immutable transform-fn))
+            (immutable subdivide-fn))
     (protocol
      (lambda (new)
        (case-lambda ; events-prev is optional in ctor
-         ((events-next events-prev arc chain transform-fn)
-          (new events-next events-prev arc chain transform-fn))
+         ((events-next events-prev arc chain subdivide-fn)
+          (new events-next events-prev arc chain subdivide-fn))
          ((events-next events-prev arc chain)
           (new events-next events-prev arc chain #f))
          ((events-next arc)
@@ -110,7 +110,7 @@
       ((c nxt prv) (make-context nxt prv 
                                  (context-arc c) 
                                  (context-chain c)
-                                 (context-transform-fn c)))))
+                                 (context-subdivide-fn c)))))
 
   ;; Replaces the pointed-to event, or simply adds if there is none.
   (define (context-replace-event c new-event)
@@ -127,7 +127,7 @@
                   (context-events-prev c)
                   new-arc
                   (context-chain c)
-                  (context-transform-fn c)))
+                  (context-subdivide-fn c)))
   (define rearc context-with-arc) ; alias
 
   (define (context-length c)
@@ -138,7 +138,7 @@
                   (context-events-prev c)
                   (context-arc c)
                   chain
-                  (context-transform-fn c)))
+                  (context-subdivide-fn c)))
 
   (define (context-append-chain c chain)
     (context-with-chain c (append chain (context-chain c))))
@@ -147,15 +147,15 @@
   (define (context-pop-chain c)
     (context-with-chain c (lif [ch (context-chain c)] (null? ch) '() (cdr ch))))
 
-  (define (context-with-transform-fn c transform-fn)
+  (define (context-with-subdivide-fn c subdivide-fn)
     (make-context (context-events-next c)
                   (context-events-prev c)
                   (context-arc c)
                   (context-chain c)
-                  transform-fn))
+                  subdivide-fn))
 
-  (define (context-no-transform-fn c)
-    (context-with-transform-fn c #f))
+  (define (context-no-subdivide-fn c)
+    (context-with-subdivide-fn c #f))
 
   ;;--------------------------------------------------------------------
   ;; Iteration. A context has a list of previous and next events - these
@@ -238,7 +238,7 @@
                     (make-arc (min (context-start c1) (context-start c2))
                               (max (context-end c1) (context-end c2)))
                     (context-chain c2)
-                    (context-transform-fn c2))))
+                    (context-subdivide-fn c2))))
 
   ;;---------------------------------------------------------------------
   ;; Helpers used in public iteration functions.

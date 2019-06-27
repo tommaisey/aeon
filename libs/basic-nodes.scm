@@ -37,7 +37,7 @@
         (fold-left (lambda (c i) (context-insert c (make i))) 
                    (context-resolve context) 
                    (reverse (iota num)))))
-    (apply o-> (wrap-transform-fn impl pdef) ops))
+    (apply o-> (wrap-subdivide-fn impl pdef) ops))
 
   ;; Adds events with a single specified property
   (define (in: key pdef . ops)
@@ -47,7 +47,7 @@
                         (make-event (context-start context)
                                     (:sustain (context-length context))
                                     (key value)))))
-    (apply o-> (wrap-transform-fn impl pdef) ops))
+    (apply o-> (wrap-subdivide-fn impl pdef) ops))
 
   ;; A node that replaces the input with the result of applying
   ;; it to each pattern member, which must all be functional nodes.
@@ -58,7 +58,7 @@
         (if (procedure? value)
             (value context)
              context)))
-    (wrap-transform-fn impl pdef))
+    (wrap-subdivide-fn impl pdef))
 
   ;; A node that sets a property of events according to the pattern.
   ;; key value ... -> (context -> context)
@@ -126,8 +126,8 @@
 
   ;; Helper for 'to' forms below.
   (define (set-or-rest c leaf key val-transform)
-    (when (context-transform-fn c)
-          (error 'set-or-rest "got a transformer" (context-transform-fn c)))
+    (when (context-subdivide-fn c)
+          (error 'set-or-rest "got a transformer" (context-subdivide-fn c)))
     (let ([val (eval-leaf leaf c)])
       (when (context? val)
           (error 'set-or-rest "evaluated to context" leaf))
@@ -141,11 +141,11 @@
   (define (build-kv kv-pairs err-symbol impl)
     (let ([pairs (pairwise kv-pairs)])
 
-      (define (make-transformer key-value)
-        (wrap-transform-fn (impl (car key-value)) (cdr key-value)))
+      (define (make-subdivider key-value)
+        (wrap-subdivide-fn (impl (car key-value)) (cdr key-value)))
 
       (unless pairs (error err-symbol "invalid key value pairs" kv-pairs))
 
-      (apply x-> (map make-transformer pairs))))
+      (apply x-> (map make-subdivider pairs))))
 
   ) ; end module 'logic-nodes'

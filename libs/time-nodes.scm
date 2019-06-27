@@ -14,7 +14,7 @@
   ;; shifting it in time.
   (define (mv math-op inv-math-op . pdefs)
     (let ([impl (mv-math-impl math-op inv-math-op)])
-      (apply x-> (map (lambda (p) (wrap-transform-fn impl p)) pdefs))))
+      (apply x-> (map (lambda (p) (wrap-subdivide-fn impl p)) pdefs))))
 
   (define (mv+ . pdefs) (apply mv + - pdefs))
   (define (mv- . pdefs) (apply mv - + pdefs))

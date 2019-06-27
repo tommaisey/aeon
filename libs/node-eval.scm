@@ -4,7 +4,7 @@
     eval-leaf
     eval-leaf-early
     leaf-meta-ranged
-    leaf-wanting-transform?
+    leaf-subdivider?
     maybe-leaf-meta
     leaf-meta-rng-max
     leaf-meta-rng-min
@@ -51,7 +51,7 @@
     (fields (immutable rng-min) ;; #f if impossible to detect
             (immutable rng-max) ;; #f if impossible to detect
             (immutable fn)
-            (immutable wants-transform?)))
+            (immutable subdivider?)))
 
   ;; Try to create a leaf object, filling in the min and max possible values
   ;; from an input list. Input is filtered for symbols, so ~ rests are ok.
@@ -60,20 +60,20 @@
     (case-lambda
       ((lst fn) (leaf-meta-ranged #f lst fn))
 
-      ((wants-transform? lst fn)
+      ((subdivider? lst fn)
        (let* ([lst (filter (lambda (x) (not (symbol? x))) lst)]
               [range-min (leaf-foldl leaf-meta-rng-min min +inf.0 lst)]
               [range-max (leaf-foldl leaf-meta-rng-max max -inf.0 lst)])
          (cond
            ((and range-min range-max)
-            (make-leaf-meta range-min range-max fn wants-transform?))
-           (wants-transform?
-            (make-leaf-meta #f #f fn wants-transform?))
+            (make-leaf-meta range-min range-max fn subdivider?))
+           (subdivider?
+            (make-leaf-meta #f #f fn subdivider?))
            (else fn))))))
 
-  (define (leaf-wanting-transform? leaf)
+  (define (leaf-subdivider? leaf)
     (and (leaf-meta? leaf)
-         (leaf-meta-wants-transform? leaf)))
+         (leaf-meta-subdivider? leaf)))
 
   ;; Tries to get field from a leaf - if it's an undecorated procedure
   ;; we return false. Otherwise we return a primitive value.
