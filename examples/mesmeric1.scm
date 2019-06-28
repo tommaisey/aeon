@@ -31,13 +31,13 @@
               :amp 0.05)
          (mv- 1/8)
          (rp: (chord triad))
-         (to: :resonance (rnd 0.1 1.2)
+         (to: :resonance (? 0.1 1.2)
               :pan (rnd 0.1 0.9))
          (cp: (to: :octave 1)))))
 
 (pattern drum-pattern
   (o->
-    (in! (sbdv [1 [~ 1] ~ (pick [1 1 2 [~ 1]]) (pick [~ 1 [~ 1]]) (pick [~ 1])])
+    (in! (sbdv [1 [~ 1] ~ (? [1 1 2 [~ 1]]) (? [~ 1 [~ 1]]) (? [~ 1])])
          (to: :sample bd
               :sample-idx 2
               :amp 0.2))
@@ -48,5 +48,5 @@
 
     (in! (sbdv 1/2 [1 1 1 1 1 1])
          (to: :sample hh
-              :amp (sbdv 1/4 [0.05 (rnd 0.2 0.3)])
-              :pan (rnd 0.4 0.6)))))
+              :amp (sbdv 1/4 [0.05 (? 0.2 0.3)])
+              :pan (? 0.4 0.6)))))

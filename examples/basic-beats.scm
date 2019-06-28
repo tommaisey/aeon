@@ -21,7 +21,7 @@
               :speed 0.85
               :sustain 0.01))
 
-    (in: :amp (sbdv 1/8 [0.015 (rnd 0.03 0.05)])
+    (in: :amp (sbdv 1/8 [0.015 (? 0.03 0.05)])
          (to: :sample hh
               :sample-idx 12
               :pan (rnd 0.6 0.7)))
@@ -30,4 +30,4 @@
           (to: :sample oh
                :pan 0.6))
 
-    (to* :amp (rnd 0.7 1.02))))
+    (to* :amp (? 0.7 1.02))))

@@ -17,12 +17,15 @@
           merge-sorted
           pairwise
           unzip-pairs
+          extend-repeating-last
+          take
           repeat
           sorted?
           for-any
           for-none
           combine-preds
           list-nth
+          list-index
           list-last
           remove-list
           unsafe-list?
@@ -44,6 +47,10 @@
           gen-id)
 
   (import (chezscheme)
+          (only (srfi s1 lists)
+                take
+                first
+                list-index)
           (srfi s27 random-bits)
           (only (srfi s13 strings) 
                 string-contains
@@ -64,11 +71,14 @@
   (define (pseudo-rand min max seed)
     (let* ([i (trunc-int seed)]
            [j (trunc-int (* 100 (- seed i)))]
-           [len (- max min)])
+           [len (- max min)]
+           [sign (if (negative? len) -1 1)]
+           [len (abs len)])
       (random-source-pseudo-randomize! pseudo-rand-src i j)
-      (+ min (if (and (exact? min) (exact? max))
-                 ((random-source-make-integers pseudo-rand-src) len)
-                 (* len ((random-source-make-reals pseudo-rand-src)))))))
+      (* sign
+         (+ min (if (and (exact? min) (exact? max))
+                    ((random-source-make-integers pseudo-rand-src) len)
+                    (* len ((random-source-make-reals pseudo-rand-src))))))))
 
   ;; Some 'english sounding' math operators.
   (define (inc val) (+ val 1))
@@ -118,7 +128,6 @@
 
   ;; More readable for users to write pair/first/rest
   (define pair cons)
-  (define first car)
   (define rest cdr)
   (define identity (lambda (x) x))
   (define (cons-r a b) (cons b a))
@@ -205,6 +214,19 @@
                     (cons (car pairs) keys)
                     (cons (cadr pairs) vals))))))
 
+  ;; Makes the input list have a length of desired-len, either
+  ;; by dropping elements at the end or repeating the last list element.
+  (define (extend-repeating-last lst desired-len)
+    (when (null? lst)
+      (error 'extend-by-repeating-last "can't accept null list" lst))
+    (let ([to-repeat (list-last lst)]
+          [len (length lst)])
+      (let loop ([num (- desired-len len)] [end '()])
+        (cond
+          ((zero? num) (append lst end))
+          ((negative? num) (take (+ len num) lst))
+          (else (loop (dec num) (cons to-repeat end)))))))
+
   ;;--------------------------------------------------------------------
   ;; R6RS provides for-all, which checks all items in a
   ;; list return true for pred. Here's the 'none' and
@@ -224,11 +246,8 @@
 
   ;;----------------------------------------------------------------------
   ;; Get the nth element of a list. Linear time.
-  (define (list-nth l n)
-    (cond
-      ((null? l) '())
-      ((eq? n 0) (car l))
-      (else (list-nth (cdr l) (- n 1)))))
+  ;; DEPRECATED, duplicates list-ref
+  (alias list-nth list-ref)
 
   ;; Get the last element of a list. Linear time.
   (define (list-last l)

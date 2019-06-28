@@ -20,15 +20,16 @@
   (export
     this next nearest
     c+ c- c* c/
-    rnd pick each every
+    ? rnd wpick pick
+    each every
     snap sine)
 
   (import
-    (chezscheme) 
+    (chezscheme)
     (utilities)  (context) (event)
-    (node-eval) 
+    (node-eval)
     (for (pdef) expand))
-  
+
   ;;-------------------------------------------------------------------
   (define (get c key default)
     (event-get (context-event c) key default))
@@ -83,11 +84,11 @@
       [(min max) (rnd min max '())]
       [(min max key/keys)
        (leaf-meta-ranged (list min max)
-        (lambda (context)
-          (let ([min (eval-leaf min context)]
-                [max (eval-leaf max context)]
-                [seed (fold-by-keys * 10000 key/keys context)])
-            (pseudo-rand min max seed))))]))
+                         (lambda (context)
+                           (let ([min (eval-leaf min context)]
+                                 [max (eval-leaf max context)]
+                                 [seed (fold-by-keys * 10000 key/keys context)])
+                             (pseudo-rand min max seed))))]))
 
   ;; Choose from a list randomly
   (define-syntax pick
@@ -97,13 +98,65 @@
       ((_ qlist key/keys)
        (let* ([lst (make-pdef-data qlist)]
               [len (length lst)])
-         (leaf-meta-ranged lst
+         (leaf-meta-ranged
+          lst
           (lambda (context)
             (let ([choice (eval-leaf (rnd 0 len key/keys) context)])
-              (eval-leaf (list-nth lst choice) context))))))))
+              (eval-leaf (list-ref lst choice) context))))))))
 
-  (tag-pdef-callable pick) ;; Tag so pdef recognises as a macro
-  
+  ;; Choose from a list randomly, with weightings
+  (define-syntax wpick
+    (syntax-rules ()
+      ((_ qlist weights) (wpick qlist weights '()))
+
+      ((_ qlist weights key/keys)
+
+       (let ([lst (make-pdef-data qlist)])
+         (define (to-cumulative lst)
+           (let loop ([cnt 0] [o '()] [lst lst])
+             (if (null? lst)
+                 (reverse o)
+                 (let ([nxt-cnt (+ cnt (car lst))])
+                   (loop nxt-cnt (cons nxt-cnt o) (cdr lst))))))
+
+         (define (pick-index v cumulative-weights)
+           (lif (i (list-index (lambda (x) (>= x v)) cumulative-weights))
+                i i (- (length cumulative-weights) 1)))
+
+         (when (or (null? lst) (null? weights))
+           (error 'wpick "requires 2 lists" lst weights))
+
+         (let* ([len (length lst)]
+                [weights (extend-repeating-last (make-pdef-data weights) len)]
+                [cumulative-weights (to-cumulative weights)]
+                [top (list-last cumulative-weights)])
+           (leaf-meta-ranged
+            lst
+            (lambda (context)
+              (let* ([v (eval-leaf (rnd 0 top key/keys) context)]
+                     [choice (pick-index v cumulative-weights)])
+                (eval-leaf (list-ref lst choice) context)))))))))
+
+  (define-syntax ?
+    (syntax-rules ()
+      ((_ a b)
+       (let ([ad (make-pdef-data a)]
+             [bd (make-pdef-data b)])
+         (if (unsafe-list? ad)
+             (wpick ad bd)
+             (rnd ad bd))))
+      
+      ((_ [a b ...])
+       (pick [a b ...]))
+      
+      ((_ a b ...)
+       (syntax-error a "? has invalid arguments"))))
+
+  ;; Tag so pdef recognises as a macro
+  (tag-pdef-callable pick)
+  (tag-pdef-callable wpick)
+  (tag-pdef-callable ?)
+
   ;;--------------------------------------------------------------------
   ;; Rhythmic & sequencing operations.
 
@@ -115,11 +168,12 @@
               [len (length lst)])
          (when (< len 1)
            (error 'each "requires at least 1 value" len))
-         (leaf-meta-ranged lst
+         (leaf-meta-ranged
+          lst
           (lambda (context)
             (let* ([t (context-now context)]
                    [n (trunc-int (/ t measures))])
-              (eval-leaf (list-nth lst (modulo n len)) context))))))))
+              (eval-leaf (list-ref lst (modulo n len)) context))))))))
 
   ;; Normally chooses the first value, but every n measures chooses
   ;; the second value instead. If there are more than 2 values, the
@@ -131,22 +185,25 @@
               [len (length lst)])
          (when (< len 2)
            (error 'every "requires at least 2 values" len))
-         (leaf-meta-ranged lst
+         (leaf-meta-ranged
+          lst
           (lambda (context)
             (let* ([t (context-now context)]
                    [i (if (zero? t) 0 (trunc-int (/ t measures)))]
-                   [n-wrapped (mod i n)]
-                   [n-cycles (trunc-int (/ i n))])
-              (if (eq? n-wrapped (- n 1))
-                  (eval-leaf (list-ref lst (+ 1 (mod n-cycles (- len 1)))) context)
-                  (eval-leaf (car lst) context)))))))))
+                   [n-cycles (trunc-int (/ i n))]
+                   [choice (lambda () (+ 1 (mod n-cycles (- len 1))))])
+              (lif (n-wrapped (mod i n))
+                   (eq? n-wrapped (- n 1))
+                   (eval-leaf (list-ref lst (choice)) context)
+                   (eval-leaf (car lst) context)))))))))
 
   ;; Tag so pdef recognises as a macro
   (tag-pdef-callable each)
   (tag-pdef-callable every)
 
   (define (sine freq lo hi)
-    (leaf-meta-ranged (list lo hi)
+    (leaf-meta-ranged
+     (list lo hi)
      (lambda (context)
        (let ([f (eval-leaf freq context)]
              [l (eval-leaf lo context)]
