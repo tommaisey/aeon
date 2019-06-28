@@ -1,9 +1,11 @@
 #!chezscheme ;; Needed for the extra symbols like +->
 
-(library (chain-nodes)
+(library (nodes-chains)
   (export o-> x-> +-> nowt off)
 
-  (import (chezscheme) (utilities) (context) (event) (node-eval))
+  (import (chezscheme) 
+          (utilities) (context) (event)
+          (node-eval))
 
   ;;--------------------------------------------------------------
   ;; Apply each node successively to the input context.

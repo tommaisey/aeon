@@ -16,7 +16,7 @@
 ;; Many of these actually return a special 'leaf' object, a function wrapped
 ;; with some metadata that may be needed to evaluate the graph accurately.
 ;;----------------------------------------------------------------------
-(library (value-nodes)
+(library (nodes-leafs)
   (export
     this next nearest
     c+ c- c* c/
@@ -24,8 +24,9 @@
     snap sine)
 
   (import
-    (chezscheme) (utilities) (context)
-    (node-eval) (event)
+    (chezscheme) 
+    (utilities)  (context) (event)
+    (node-eval) 
     (for (pdef) expand))
   
   ;;-------------------------------------------------------------------

@@ -61,7 +61,7 @@
       ((lst fn) (leaf-meta-ranged #f lst fn))
 
       ((subdivider? lst fn)
-       (let* ([lst (filter (lambda (x) (not (symbol? x))) lst)]
+       (let* ([lst (filter (lambda (x) (or (number? x) (leaf-meta? x))) lst)]
               [range-min (leaf-foldl leaf-meta-rng-min min +inf.0 lst)]
               [range-max (leaf-foldl leaf-meta-rng-max max -inf.0 lst)])
          (cond
@@ -79,9 +79,10 @@
   ;; we return false. Otherwise we return a primitive value.
   (define (maybe-leaf-meta v leaf-field)
     (cond
-      ((eq? v #f) #f)       ;; propagate failure
-      ((procedure? v) #f)   ;; undecorated fn, can't get metadata
-      ((unsafe-list? v) #f) ;; a list, can't get metadata
+      ((or (eq? v #f)        ;; propagate failure
+           (procedure? v)    ;; undecorated fn, can't get metadata
+           (unsafe-list? v)) ;; a list, can't get metadata
+       #f)
       ((leaf-meta? v) (leaf-field v))
       (else v)))
 

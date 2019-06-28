@@ -8,25 +8,25 @@
 ;; The cnodes can be chained and combined with fns in @trunk.
 ;; The 'leaves' of our system are described in @leaf.
 ;; ------------------------------------------------------------
-(library (basic-nodes)
+(library (nodes-ops)
   (export
-    sbdv step in! in:
+    in! in:
     to: to+ to- to* to/ to?
     rp: tr? cp: cp?)
 
   (import
     (chezscheme) (srfi s26 cut)
     (utilities) (event) (context)
-    (chunking)
     (node-eval)
-    (chain-nodes)
-    (value-nodes))
+    (nodes-subdivide)
+    (nodes-chains)
+    (nodes-leafs))
 
   ;; Adds blank events to the context.
   ;; A leaf value of 1 gives one event.
   ;; For values > 1, creates N subdivided values.
   ;; The symbol ~ creates a rest.
-  (define (in! pdef . ops)
+  (define (in! leaf . ops)
     (define (impl context value)
       (let* ([value (eval-leaf-early value (context-start context) context)]
              [num (max 1 value)]
@@ -37,28 +37,30 @@
         (fold-left (lambda (c i) (context-insert c (make i))) 
                    (context-resolve context) 
                    (reverse (iota num)))))
-    (apply o-> (wrap-subdivide-fn impl pdef) ops))
+    (apply o-> (wrap-subdivide-fn impl leaf) ops))
 
   ;; Adds events with a single specified property
-  (define (in: key pdef . ops)
+  (define (in: key leaf . ops)
     (define (impl context value)
       (let ([value (eval-leaf-early value (context-start context) context)])
         (context-insert (context-resolve context)
                         (make-event (context-start context)
                                     (:sustain (context-length context))
                                     (key value)))))
-    (apply o-> (wrap-subdivide-fn impl pdef) ops))
+    (apply o-> (wrap-subdivide-fn impl leaf) ops))
 
   ;; A node that replaces the input with the result of applying
   ;; it to each pattern member, which must all be functional nodes.
-  (define (rp: pdef)
+  (define (rp: leaf)
     (define (impl context value)
       (let* ([context (context-resolve context)]
              [value (eval-leaf-early value (context-start context) context)])
         (if (procedure? value)
             (value context)
-             context)))
-    (wrap-subdivide-fn impl pdef))
+             (begin
+               (warning 'rp: "got raw value, wants procedure" value)
+               context))))
+    (wrap-subdivide-fn impl leaf))
 
   ;; A node that sets a property of events according to the pattern.
   ;; key value ... -> (context -> context)
@@ -74,12 +76,12 @@
   (define (to math-op . kv-pairs)
     (define (impl key)
       (lambda (context value)
-        (context-map (lambda (c)
-                       (lif [current (event-get (context-event c) key #f)]
-                             current
-                            (set-or-rest c value key (lambda (v) (math-op current v)))
-                            (context-event c)))
-                     (context-resolve context))))
+        (context-map 
+         (lambda (c)
+           (lif (current (event-get (context-event c) key #f)) current
+                (set-or-rest c value key (lambda (v) (math-op current v)))
+                (context-event c)))
+         (context-resolve context))))
     (build-kv kv-pairs 'to-math impl))
 
   (define (to+ . kv-pairs) (apply to + kv-pairs))
@@ -118,16 +120,11 @@
         (contexts-merge unfiltered ((apply tr? pred nodes) context)))))
 
   ;;-------------------------------------------------------------------
-  ;; Implementation functions to be supplied to a chunking algorithm.
-  ;; These must return a list of events, not a context.
-
-  ;; Used in above in forms.
-  (define :sustain ':sustain)
+  ;; Helper functions
+  (define :sustain ':sustain) ;; Needed in above in forms.
 
   ;; Helper for 'to' forms below.
   (define (set-or-rest c leaf key val-transform)
-    (when (context-subdivide-fn c)
-          (error 'set-or-rest "got a transformer" (context-subdivide-fn c)))
     (let ([val (eval-leaf leaf c)])
       (when (context? val)
           (error 'set-or-rest "evaluated to context" leaf))

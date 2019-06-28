@@ -1,11 +1,12 @@
-(library (time-nodes)
+(library (nodes-ops-time)
   (export mv- mv+ mv/ mv*
           flip-time swing taps)
 
-  (import (chezscheme) (utilities) (context) (event)
-          (chunking)
+  (import (chezscheme) 
+          (utilities) (context) (event)
           (node-eval)
-          (chain-nodes)
+          (nodes-subdivide)
+          (nodes-chains)
           (rhythm))
 
   ;; A general 'mv', taking a math op and a def. The math op is

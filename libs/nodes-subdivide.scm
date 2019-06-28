@@ -1,12 +1,13 @@
 #!chezscheme ;; Needed for extra symbols like »
 
 ;; Implements algorithms that slice a context up into chunks according
-;; to several schemes, and call an implementation function for each
-;; chunk. The implementation function must take a context (which will
-;; have the required arc) and a 'leaf', which is either a value or a
-;; function that returns a value.
+;; to several schemes, and either return a value or call an implementation 
+;; function for each chunk.
+;; The implementation function will be retrieved from context-subdivide-fn 
+;; and must take a context (which will have the required arc) and a 'leaf'.
+;; See node-eval for information on leafs.
 
-(library (chunking)
+(library (nodes-subdivide)
   (export sbdv step
           is-rest? is-sustain?
           wrap-subdivide-fn)
@@ -38,48 +39,26 @@
   (tag-pdef-callable step)
 
   ;;-------------------------------------------------------------------
-  ;; Puts a wrapper around a leaf that sets a certain special subdivide-fn
-  ;; on the context, then unsets it on the returned context.
-  ;; This also wraps the leaf in a subdividing pattern, if it hasn't
-  ;; already declared that it is one.
-  (define (wrap-subdivide-fn fn leaf)
+  ;; Wraps a leaf in a subdividing pattern, if it hasn't already declared
+  ;; that it is one. Also sets a special subdivide-fn on the input context
+  ;; and restores the previous subdivide-fn on the returned context.
+  (define (wrap-subdivide-fn sub-fn leaf)
     (let* ([get-fn context-subdivide-fn]
            [set-fn context-with-subdivide-fn]
            [leaf (if (leaf-subdivider? leaf) leaf (subdivide 1 leaf))])
       (lambda (context)
-        (set-fn (eval-leaf leaf (set-fn context fn)) (get-fn context)))))
+        (set-fn (eval-leaf leaf (set-fn context sub-fn)) (get-fn context)))))
 
-  ;;-----------------------------------------------------------------------
-  ;; General helpers for main time-chunking routines like subdivider.
-
-  (define (maybe-repeat next last)
-    (if (eq? repeat-sym next) last next))
-
-  (define (is-rest? item)
-    (eq? item rest-sym))
-
-  (define (is-sustain? item)
-    (eq? item sustain-sym))
-
-  ;; Drops at least one value, more if the following values are sustains.
-  ;; -> (values num-dropped new-lst)
-  (define (drop-stretched lst)
-    (let loop ([lst lst] [n 0])
-      (if (and (not (null? lst))
-               (or (zero? n)
-                   (is-sustain? (car lst))))
-          (loop (cdr lst) (+ n 1))
-          (values n lst))))
-
-  ;;--------------------------------------------------------------------------------
-  ;; Iterates list 'vals', which is stretched over 'dur' with a subdividing pattern
-  ;; according to its sublists.
+  ;;----------------------------------------------------------------------------
+  ;; Iterates list 'vals', which is stretched over 'dur' with a subdividing
+  ;; pattern according to its sublists.
   ;;
-  ;; If the context has a subdivide-fn of #f, this simply returns a value from vals
-  ;; based on the context's pointed to event, or the context's start if empty.
-  ;; If the context has a subdivide-fn, it calls it for each slice with the same
-  ;; context except with its arc changed to represent the slice. The subdivide-fn 
-  ;; must return a subdivideed context with the same arc.
+  ;; If the context has a subdivide-fn of #f, this simply returns an element of
+  ;; from vals based on the time of the context's pointed to event (or its start
+  ;; if empty). 
+  ;; If the context has a subdivide-fn, this calls it with each slice of the
+  ;; input context and an associated leaf value. The subdivide-fn must return
+  ;; a transformed context with the same arc.
   (define (subdivide dur vals)
 
     ;; Basic checks
@@ -92,7 +71,7 @@
       (leaf-meta-ranged #t vals
        (lambda (ctxt)
 
-         (define (transform item subctxt subdivide-fn)
+         (define (call-sub-fn item subctxt subdivide-fn)
            (lif (arc (context-arc subctxt))
                 (arcs-overlap? (context-arc ctxt) arc)
                 (let* ([subctxt (context-to-event-after subctxt (arc-start arc))]
@@ -122,13 +101,34 @@
                         [next-t (+ t (* num-slices (/ dur len)))]
                         [arc (make-arc t next-t)]
                         [subctxt (rearc ctxt arc)]
-                        [tfn (context-subdivide-fn ctxt)])
+                        [sub-fn (context-subdivide-fn ctxt)])
                    (cond
-                     (tfn
-                      (loop (contexts-merge (transform item subctxt tfn) c)
+                     (sub-fn
+                      (loop (contexts-merge (call-sub-fn item subctxt sub-fn) c)
                             next-t next-vals item))
 
                      ((within-arc? arc (context-now ctxt)) item)
                      (else (loop subctxt next-t next-vals item))))))))))))
+
+  ;;-----------------------------------------------------------------------
+  ;; General helpers for main time-chunking routine subdivider.
+  (define (maybe-repeat next last)
+    (if (eq? repeat-sym next) last next))
+
+  (define (is-rest? item)
+    (eq? item rest-sym))
+
+  (define (is-sustain? item)
+    (eq? item sustain-sym))
+
+  ;; Drops at least one value, more if the following values are sustains.
+  ;; -> (values num-dropped new-lst)
+  (define (drop-stretched lst)
+    (let loop ([lst lst] [n 0])
+      (if (and (not (null? lst))
+               (or (zero? n)
+                   (is-sustain? (car lst))))
+          (loop (cdr lst) (+ n 1))
+          (values n lst))))
 
   )

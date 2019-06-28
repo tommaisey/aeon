@@ -18,15 +18,13 @@
           process-event-freq
           chord-offset
 
-          chord
           make-shape
           extend-shape)
+  
   (import (chezscheme)
           (utilities)
           (midinotes)
-          (event)
-          (chain-nodes)
-          (basic-nodes))
+          (event))
 
   (define (midicps midi freqA)
     (* freqA (expt 2 (/ (- midi 69) 12))))
@@ -67,10 +65,6 @@
       (+ semitone-offset
          (* oct-overflow 12)
          (* octave 12))))
-
-  (define (chord shape)
-    (apply +-> (map (lambda (x) (apply to: :chd x)) 
-                    (vector->list shape))))
 
   ;; Event key definitions
   (declare-keyword :octave)
