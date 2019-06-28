@@ -137,18 +137,24 @@
                      [choice (pick-index v cumulative-weights)])
                 (eval-leaf (list-ref lst choice) context)))))))))
 
+  ;; This short operator picks either rnd, pick or wpick depending
+  ;; on the arguments. Two lists gets wpick, one list gets pick, and
+  ;; two non-lists gets rnd. Any other combination of args is illegal.
   (define-syntax ?
     (syntax-rules ()
-      ((_ a b)
+      ((_ a b key/keys)
        (let ([ad (make-pdef-data a)]
              [bd (make-pdef-data b)])
          (if (unsafe-list? ad)
-             (wpick ad bd)
-             (rnd ad bd))))
-      
+             (wpick ad bd key/keys)
+             (rnd ad bd key/keys))))
+
+      ((_ a b)
+       (? a b '()))
+
       ((_ [a b ...])
        (pick [a b ...]))
-      
+
       ((_ a b ...)
        (syntax-error a "? has invalid arguments"))))
 
