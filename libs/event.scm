@@ -42,6 +42,8 @@
           arc-add
           arc-math
           arc-valid?
+          arc-eq?
+          arc-contains?
           within-arc?
           arcs-overlap?)
 
@@ -149,9 +151,15 @@
     (make-arc (arc-start a) new-end))
   (define (arc-valid? a)
     (< (arc-start a) (arc-end a)))
+  (define (arc-eq? a b)
+    (and (eqv? (arc-start a) (arc-start b))
+         (eqv? (arc-end a) (arc-end b))))
   (define (within-arc? a t)
     (between-inclusive t (arc-start a) (arc-end a)))
-  (define (arcs-overlap? a b)
+  (define (arc-contains? a b) ;; two arcs
+    (and (within-arc? a (arc-start b))
+         (within-arc? a (arc-end b))))
+  (define (arcs-overlap? a b) ;; two arcs
     (or (within-arc? b (arc-start a))
         (within-arc? b (arc-end a))
         (within-arc? a (arc-start b))
@@ -165,5 +173,6 @@
               (+ (arc-end a1) (arc-end a2))))
   (define (arc-math a proc val)
     (make-arc (proc (arc-start a) val) (proc (arc-end a) val)))
+  
 
   ) ; END module 'event'

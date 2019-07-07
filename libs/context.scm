@@ -21,8 +21,8 @@
     context-clear-events
     context-with-arc rearc
     context-with-chain
-    context-append-chain
     context-pop-chain
+    context-push-chain
     context-subdivide-fn
     context-with-subdivide-fn
     context-no-subdivide-fn
@@ -55,9 +55,9 @@
   ;; return a value based on the current position (as most do, see value-nodes).
   ;; In this case we change subdivide-fn from #f (the default) to a function
   ;; taking a sub-context of the original and a value. The subdivide-fn can
-  ;; then do its work to the subcontext, which will be pieced together back into
-  ;; a full length context and returned. See 'subdivide' for an example (at time of
-  ;; writing it's the only example).
+  ;; then do its work to the subcontext, which will be pieced together back
+  ;; into a full length context and returned. See 'subdivide' for an example
+  ;; (at time of writing it's the only example).
   (define-record-type context
     (fields (immutable events-next)
             (immutable events-prev)
@@ -82,9 +82,10 @@
   (define testc
     (case-lambda
       ((pattern) (testc pattern 0 1))
-      ((pattern start end) (put-datum (current-output-port)
-                                      (context-serialised
-                                       (pattern (make-empty-context start end)))))))
+      ((pattern start end) 
+       (put-datum (current-output-port)
+                  (context-serialised
+                   (pattern (make-empty-context start end)))))))
 
   (define (context-event c)
     (lif (n (context-events-next c)) (null? n) '() (car n)))
@@ -140,12 +141,13 @@
                   chain
                   (context-subdivide-fn c)))
 
-  (define (context-append-chain c chain)
-    (context-with-chain c (append chain (context-chain c))))
-
   ;; Pop the top lambda off the chain.
   (define (context-pop-chain c)
-    (context-with-chain c (lif [ch (context-chain c)] (null? ch) '() (cdr ch))))
+    (context-with-chain c (lif (ch (context-chain c)) (null? ch) '() (cdr ch))))
+
+  ;; Push a lambda or list of lambdas onto the chain.
+  (define (context-push-chain c node)
+    (context-with-chain c (push-front node (context-chain c))))
 
   (define (context-with-subdivide-fn c subdivide-fn)
     (make-context (context-events-next c)
@@ -203,7 +205,8 @@
       ((new-event-fn context reducer)
        (context-reduce
         context (lambda (c output)
-                  (lif [ev (new-event-fn c)] (null? ev) output (reducer ev output)))))))
+                  (lif (ev (new-event-fn c))
+                       (null? ev) output (reducer ev output)))))))
 
   ;; (context -> bool), context -> context
   (define (context-filter pred context)
@@ -273,7 +276,7 @@
           ((negative? x) (set! n (add1 n)) x)))))
 
   ;; direction-fn that drives context iteration to the event closest
-  ;; to the requested time.
+  ;; to the requested time. Assumes context's events are sorted by time.
   (define (to-closest time)
     (lambda (c)
       (define (get-delt bounds-check? default get-event)
@@ -285,7 +288,8 @@
             (if (< (abs prv) (abs cur)) -1 0) +1))))
 
   ;; direction-fn that moves a context to the first event that's greater
-  ;; than or equal to the requested time.
+  ;; than or equal to the requested time. Assumes context's events are sorted
+  ;; by time.
   (define (to-after time)
     (lambda (c)
       (define (get-delt bounds-check? default get-event)

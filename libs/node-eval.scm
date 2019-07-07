@@ -8,7 +8,8 @@
     maybe-leaf-meta
     leaf-meta-rng-max
     leaf-meta-rng-min
-    context-resolve)
+    context-resolve
+    make-caching-context)
 
   (import (scheme) (utilities) (event) (context))
 
@@ -43,6 +44,30 @@
   (define (context-resolve c)
     (lif (ch (context-chain c)) (null? ch) c
          (eval-leaf (car ch) (context-pop-chain c))))
+
+  ;; Makes a context with a special caching function added behind the top fn
+  ;; in the chain. Repeated requests for the same arc return a cached result.
+  (define (make-caching-context context)
+    (define (test-arc arc-fn c1 c2)
+      (arc-fn (context-arc c1) (context-arc c2)))
+    (define (make-cacher)
+      (let ([cached-list '()])
+        (lambda (ctxt)
+          (let loop ([cl cached-list])
+            (cond
+              ((null? cl)
+               (begin
+                 (set! cached-list (cons (context-resolve ctxt) cached-list))
+                 (car cached-list)))
+              ((test-arc arc-eq? (car cl) ctxt)
+               (car cl))
+              ((test-arc arc-contains? (car cl) ctxt)
+               (context-trim (rearc (car cl) (context-arc ctxt))))
+              (else (loop (cdr cl))))))))
+
+    (lif (chain (context-chain context)) (null? chain) context
+         (context-push-chain (context-pop-chain context)
+                             (list (car chain) (make-cacher)))))
 
   ;;-------------------------------------------------------------------
   ;; An object containing a contextual function as well as some metadata

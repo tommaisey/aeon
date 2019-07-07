@@ -124,13 +124,13 @@
   (define :sustain ':sustain) ;; Needed in above in forms.
 
   ;; Helper for 'to' forms below.
-  (define (set-or-rest c leaf key val-transform)
-    (let ([val (eval-leaf leaf c)])
+  (define (set-or-rest ctxt leaf key val-transform)
+    (let ([val (eval-leaf leaf ctxt)])
       (when (context? val)
           (error 'set-or-rest "evaluated to context" leaf))
       (if (is-rest? val)
-          (context-event c)
-          (event-set (context-event c) key (val-transform val)))))
+          (context-event ctxt)
+          (event-set (context-event ctxt) key (val-transform val)))))
 
   ;; Builds a list of transformers. Each one is built from the value of a key-value
   ;; pair, which should be an context op function, and a transform-fn, which is

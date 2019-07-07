@@ -4,15 +4,12 @@
     (to: :amp 0.3
          :root Bb
          :octave -1
-         :scd (step 2 [I IV -2 II])
-         :cutoff (? 0.0 1.0))
+         :scd (step 2 [I IV -2 II]))
 
-    (chord (sbdv 1 [9th 7th]))
-
-    (to* :sustain (? [1 3/2 2 4] [5 2 3 3] :cutoff))
+    (to* :sustain (? [1 3/2 2 3] [5 2 3 3] :chd))
 
     (to: :pan (? 0.4 0.6))
 
-    
+     main-swing
 
-    main-swing))
+    (chord (sbdv 1 [9th 7th]))))

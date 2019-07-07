@@ -6,22 +6,27 @@
   (import
     (scheme)
     (harmony)
+    (event)
+    (context)
     (node-eval)
     (nodes-chains)
     (nodes-subdivide)
     (nodes-ops))
 
-  ;; TODO: This implementation is very slow.
-  ;; It lets you use a pattern for 'shape', however,
-  ;; which is mighty useful. Find a more efficient way.
-  (define (chord shape)
+  ;; Originally this was a 3 liner using +-> and to: but that turned out
+  ;; to be slow. Perhaps too many levels of indirection? Hand-rolled instead.
+  (define (chord shape-pattern)
+    (define (cmap degrees)
+      (lambda (ctxt)
+        (map (lambda (d) (event-set (context-event ctxt) :chd d)) degrees)))
     (define (impl context val)
-        (let ([vec (eval-leaf val context)])
-          (when (not (vector? vec))
-            (error 'chord "expected vector" vec))
-          ((apply +-> (map (lambda (x) (to: :chd x))
-                          (vector->list vec)))
-           context)))
-    (wrap-subdivide-fn impl shape))
+      (let ([vec (eval-leaf val context)])
+        (cond
+         ((is-rest? vec) (context-resolve context))
+         ((not (vector? vec)) (error 'chord "expected vector" vec))
+         (else (context-map (cmap (vector->list vec))
+                            (context-resolve context)
+                             append)))))
+    (wrap-subdivide-fn impl shape-pattern))
 
   )

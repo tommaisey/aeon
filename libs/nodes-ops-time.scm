@@ -150,7 +150,7 @@
              [e (snap-next (context-end context) chunk)]
              [c (context-resolve (rearc context (make-arc s e)))]
              [c (context-sort (context-map (move-event s e) c))])
-        (context-trim (context-with-arc c (context-arc context))))))
+        (context-trim (rearc c (context-arc context))))))
 
   ;;-------------------------------------------------------------------
   ;; Implementation functions to be supplied to a chunking algorithm.

@@ -4,7 +4,7 @@
 ;; to several schemes, and either return a value or call an implementation 
 ;; function for each chunk.
 ;; The implementation function will be retrieved from context-subdivide-fn 
-;; and must take a context (which will have the required arc) and a 'leaf'.
+;; and must take a context (which will have the sliced arc) and a 'leaf'.
 ;; See node-eval for information on leafs.
 
 (library (nodes-subdivide)

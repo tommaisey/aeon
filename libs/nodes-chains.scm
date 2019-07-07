@@ -12,8 +12,7 @@
   ;; Replace the input.
   (define (x-> . nodes)
     (lambda (context)
-      (let ([added (context-append-chain context (reverse nodes))])
-        (context-resolve added))))
+      (context-resolve (context-push-chain context (reverse nodes)))))
 
   ;; Apply each node successively to a blank context.
   ;; Merge result with the input.
@@ -27,9 +26,10 @@
   ;; to a blank context. Replace the input.
   (define (+-> . nodes)
     (lambda (context)
-      (define (sum c node)
-        (contexts-merge (node context) c))
-      (fold-left sum context nodes)))
+      (let ([context (make-caching-context context)])
+        (define (sum c node)
+          (contexts-merge (node context) c))
+        (fold-left sum context nodes))))
 
   ;; Nodes wrapped in this will be skipped
   (define (off . nodes)
