@@ -145,18 +145,21 @@
       ((_ a b key/keys)
        (let ([ad (make-pdef-data a)]
              [bd (make-pdef-data b)])
+         (when (not (or (symbol? key/keys) (unsafe-list? key/keys)))
+           (error '? "3rd arg must be a key or key list;" ad bd key/keys))
          (if (unsafe-list? ad)
-             (wpick ad bd key/keys)
+             (begin
+               (when (not (unsafe-list? bd))
+                 (error '? "2nd arg must be a list if 1st is;"  ad bd))
+               (wpick ad bd key/keys))
              (rnd ad bd key/keys))))
 
-      ((_ a b)
-       (? a b '()))
+      ((_ a b) (? a b '()))
 
-      ((_ [a b ...])
-       (pick [a b ...]))
+      ((_ [a b ...]) (pick [a b ...]))
 
       ((_ a b ...)
-       (syntax-error a "? has invalid arguments"))))
+       (error '? "invalid number of args;" 'a 'b ...))))
 
   ;; Tag so pdef recognises as a macro
   (tag-pdef-callable pick)
