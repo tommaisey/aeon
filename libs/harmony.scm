@@ -42,9 +42,9 @@
             e ([oct :octave 0]
                [root :root C]
                [scale :scale minor]
-               [sc-deg :scale-degree 0]
-               [ch-deg :chord-degree 0])
-            (let* ([s (chord-offset oct sc-deg ch-deg scale)]
+               [scd :scale-degree 0]
+               [chd :chord-degree 0])
+            (let* ([s (chord-offset oct scd chd scale)]
                    [f (midicps (+ root s) 440)])
               (event-remove-multi (event-set e ':freq f)
                                   (list :scale :chord-shape :root))))))))

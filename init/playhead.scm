@@ -19,12 +19,10 @@
   (let ([t (utc)])
 
     ;; Dispatches all the events that were rendered.
-    (define (play-chunk now-beat context)
-      (for-each (lambda (e) (play-event e now-beat t))
-                (context-events-next context)))
-
     (define (pattern-player now-beat start end)
-      (lambda (p) (play-chunk now-beat (render p start end))))
+      (lambda (p)
+        (for-each (lambda (e) (play-event e now-beat t))
+                  (context-events-next (render p start end)))))
 
     (guard (x [else (handle-error x)])
       (let* ([now (+ last-process-beat (beats-since-last-process t))]

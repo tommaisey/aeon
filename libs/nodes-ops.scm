@@ -15,7 +15,7 @@
     rp: tr? cp: cp?)
 
   (import
-    (chezscheme) (srfi s26 cut)
+    (chezscheme)
     (utilities) (event) (context)
     (node-eval)
     (nodes-subdivide)
@@ -50,16 +50,16 @@
     (apply o-> (wrap-subdivide-fn impl leaf) ops))
 
   ;; A node that replaces the input with the result of applying
-  ;; it to each pattern member, which must all be functional nodes.
+  ;; it to a node or pattern of nodes.
   (define (rp: leaf)
     (define (impl context value)
       (let* ([context (context-resolve context)]
              [value (eval-leaf-early value (context-start context) context)])
         (if (procedure? value)
             (value context)
-             (begin
-               (warning 'rp: "got raw value, wants procedure" value)
-               context))))
+            (begin
+              (warning 'rp: "got raw value, wants procedure" value)
+              context))))
     (wrap-subdivide-fn impl leaf))
 
   ;; A node that sets a property of events according to the pattern.
@@ -76,7 +76,7 @@
   (define (to math-op . kv-pairs)
     (define (impl key)
       (lambda (context value)
-        (context-map 
+        (context-map
          (lambda (c)
            (lif (current (event-get (context-event c) key #f)) current
                 (set-or-rest c value key (lambda (v) (math-op current v)))
@@ -123,14 +123,13 @@
   ;; Helper functions
   (define :sustain ':sustain) ;; Needed in above in forms.
 
-  ;; Helper for 'to' forms below.
+  ;; Helper for 'to' forms above.
   (define (set-or-rest ctxt leaf key val-transform)
     (let ([val (eval-leaf leaf ctxt)])
-      (when (context? val)
-          (error 'set-or-rest "evaluated to context" leaf))
-      (if (is-rest? val)
-          (context-event ctxt)
-          (event-set (context-event ctxt) key (val-transform val)))))
+      (cond
+        ((context? val)  (error 'set-or-rest "evaluated to context" leaf))
+        ((is-rest? val)  (context-event ctxt))
+        (else (event-set (context-event ctxt) key (val-transform val))))))
 
   ;; Builds a list of transformers. Each one is built from the value of a key-value
   ;; pair, which should be an context op function, and a transform-fn, which is
@@ -141,7 +140,7 @@
       (define (make-subdivider key-value)
         (wrap-subdivide-fn (impl (car key-value)) (cdr key-value)))
 
-      (unless pairs (error err-symbol "invalid key value pairs" kv-pairs))
+      (unless pairs (error err-symbol "invalid key-value pairs" kv-pairs))
 
       (apply x-> (map make-subdivider pairs))))
 

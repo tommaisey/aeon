@@ -24,7 +24,6 @@
           for-any
           for-none
           combine-preds
-          list-nth
           list-index
           list-last
           remove-list
@@ -245,10 +244,6 @@
       (for-all/any/none (lambda (p) (p x)) preds)))
 
   ;;----------------------------------------------------------------------
-  ;; Get the nth element of a list. Linear time.
-  ;; DEPRECATED, duplicates list-ref
-  (alias list-nth list-ref)
-
   ;; Get the last element of a list. Linear time.
   (define (list-last l)
     (if (null? (cdr l))
@@ -271,9 +266,10 @@
   (define (push-front val list)
     ((if (unsafe-list? val) append cons) val list))
 
-  ;; Get multiple alist values in one go. Returns a new alist
-  ;; containing only the key/value pairs requested.
-  ;; More efficient than searching seperately for each value.
+  ;; Get multiple alist values in one go.
+  ;; Can be more efficient than searching seperately for each value.
+  ;; key-default-pairs should be a list of: (key default-val).
+  ;; Returns a new alist containing only the key/value pairs requested.
   (define (alist-get-multi alist key-default-pairs)
     (let* ([targets key-default-pairs]
            [found '()]
