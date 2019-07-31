@@ -96,7 +96,7 @@
       ((_ qlist) (pick qlist '()))
 
       ((_ qlist key/keys)
-       (let* ([lst (make-pdef-data qlist)]
+       (let* ([lst (pdef qlist)]
               [len (length lst)])
          (leaf-meta-ranged
           lst
@@ -111,7 +111,7 @@
 
       ((_ qlist weights key/keys)
 
-       (let ([lst (make-pdef-data qlist)])
+       (let ([lst (pdef qlist)])
          (define (to-cumulative lst)
            (let loop ([cnt 0] [o '()] [lst lst])
              (if (null? lst)
@@ -127,7 +127,7 @@
            (error 'wpick "requires 2 lists" lst weights))
 
          (let* ([len (length lst)]
-                [weights (extend-repeating-last (make-pdef-data weights) len)]
+                [weights (extend-repeating-last (pdef weights) len)]
                 [cumulative-weights (to-cumulative weights)]
                 [top (list-last cumulative-weights)])
            (leaf-meta-ranged
@@ -143,8 +143,8 @@
   (define-syntax ?
     (syntax-rules ()
       ((_ a b key/keys)
-       (let ([ad (make-pdef-data a)]
-             [bd (make-pdef-data b)])
+       (let ([ad (pdef a)]
+             [bd (pdef b)])
          (when (not (or (symbol? key/keys) (unsafe-list? key/keys)))
            (error '? "3rd arg must be a key or key list;" ad bd key/keys))
          (if (unsafe-list? ad)
@@ -173,7 +173,7 @@
   (define-syntax each
     (syntax-rules ()
       ((_ measures qlist)
-       (let* ([lst (make-pdef-data qlist)]
+       (let* ([lst (pdef qlist)]
               [len (length lst)])
          (when (< len 1)
            (error 'each "requires at least 1 value" len))
@@ -190,7 +190,7 @@
   (define-syntax every
     (syntax-rules ()
       ((_ n measures qlist)
-       (let* ([lst (make-pdef-data qlist)]
+       (let* ([lst (pdef qlist)]
               [len (length lst)])
          (when (< len 2)
            (error 'every "requires at least 2 values" len))

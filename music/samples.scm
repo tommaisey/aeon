@@ -1,6 +1,6 @@
 
 (define drum-dir
-  "/Users/tom/Dropbox/Music Production/Samples & Patches/Drum Samples/")
+  "/Users/tommaisey/Dropbox/Music Production/Samples & Patches/Drum Samples/")
 (define (tape-drum . fs)
   (apply string-append drum-dir "SM43 - Vinyl and Tape Drum Hits/" fs))
 (define (mbase-kik . fs)
@@ -16,10 +16,10 @@
 
 (samples-dir cy
   (string-append
-   "/Users/tom/Dropbox/Music Production/"
+   "/Users/tommaisey/Dropbox/Music Production/"
    "Samples & Patches/CC Samples/Real Instruments/Ghana Bells"))
 
 (samples-dir wind
   (string-append
-   "/Users/tom/Dropbox/Music Production/Samples & Patches/"
+   "/Users/tommaisey/Dropbox/Music Production/Samples & Patches/"
    "CC Samples/Real Instruments/Woodwind"))

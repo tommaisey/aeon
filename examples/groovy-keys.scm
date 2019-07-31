@@ -1,8 +1,6 @@
 
-(define bassln1
-  (make-pdef-data [[I V] II III [V VII]]))
-(define bassln2
-  (make-pdef-data [I IV III II]))
+(define bassln1 (pdef [[I V] II III [V VII]]))
+(define bassln2 (pdef [I IV III II]))
 
 (pattern p1
   (o->

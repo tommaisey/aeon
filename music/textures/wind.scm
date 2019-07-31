@@ -8,7 +8,7 @@
             :sustain 1/16
             :release 1/8
             :bus2-amt (every 23 1/16 [0 0.4])
-            :amp (sbdv 1/4 [0.2 0.5])
+            :amp (over 1/4 [0.2 0.5])
             :speed (? [1/3 0.5 2/3 1 1.5]))
        (to+ :sample-pos (? 0.0 0.15))
        main-swing))

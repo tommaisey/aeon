@@ -8,7 +8,7 @@
 ;; See node-eval for information on leafs.
 
 (library (nodes-subdivide)
-  (export sbdv step
+  (export over step
           is-rest? is-sustain?
           wrap-subdivide-fn)
 
@@ -20,22 +20,22 @@
           (for (pdef) expand))
 
   ;;-------------------------------------------------------------------
-  (define-syntax sbdv
+  (define-syntax over
     (syntax-rules ()
-      ((_ def) (sbdv 1 def))
+      ((_ def) (over 1 def))
 
       ((_ dur def)
-       (subdivide dur (make-pdef-data def)))))
+       (subdivide dur (pdef def)))))
 
   (define-syntax step
     (syntax-rules ()
       ((_ def) (step 1/4 def))
 
       ((_ slice-dur def)
-       (let* ([data (make-pdef-data def)])
+       (let* ([data (pdef def)])
          (subdivide (* slice-dur (length data)) data)))))
 
-  (tag-pdef-callable sbdv)
+  (tag-pdef-callable over)
   (tag-pdef-callable step)
 
   ;;-------------------------------------------------------------------

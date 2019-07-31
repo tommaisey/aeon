@@ -4,8 +4,8 @@
 (set-bpm! 100)
 
 (pattern bass
-  (in! (sbdv [[~ 1] [~ 1 » »] 1 [~ ~ 1 »]])
-       (to: :scd (sbdv 2 [II I II I])
+  (in! (divd [[~ 1] [~ 1 » »] 1 [~ ~ 1 »]])
+       (to: :scd (divd 2 [II I II I])
             :octave -1
             :root Bb
             :scale pent-major

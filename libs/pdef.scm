@@ -1,7 +1,7 @@
 #!chezscheme ;; Needed for the extra symbols like »
 
 (library (pdef)
-  (export make-pdef-data
+  (export pdef
           ~ » × !
           repeat-sym
           sustain-sym
@@ -34,14 +34,14 @@
   ;; (pdef [1 "hi" (+ 2 2) (5 (+ 5 5))]) => (1 "hi" 4 (5 10))
   ;; (pdef [0 (pick [2 3 ~]) (rnd 0 3)]) => (0 <proc> <proc>)
 
-  (define-syntax make-pdef-data
+  (define-syntax pdef
     (lambda (x)
       (syntax-case x (! ~ » ×)
 
-        ((_ (! v ...)) (syntax (list (make-pdef-data v) ...)))
-        ((_ (~ v ...)) (syntax (make-pdef-data (! ~ v ...))))
-        ((_ (» v ...)) (syntax (make-pdef-data (! » v ...))))
-        ((_ (× v ...)) (syntax (make-pdef-data (! × v ...))))
+        ((_ (! v ...)) (syntax (list (pdef v) ...)))
+        ((_ (~ v ...)) (syntax (pdef (! ~ v ...))))
+        ((_ (» v ...)) (syntax (pdef (! » v ...))))
+        ((_ (× v ...)) (syntax (pdef (! × v ...))))
 
         ((_ (v q ...))
          (identifier? (syntax v))
@@ -50,11 +50,11 @@
                (syntax (v q ...))
                (syntax (if (procedure? v)
                            (v q ...)
-                           (list (make-pdef-data v)
-                                 (make-pdef-data q) ...))))))
+                           (list (pdef v)
+                                 (pdef q) ...))))))
 
         ((_ (v ...))
-         (syntax (make-pdef-data (! v ...))))
+         (syntax (pdef (! v ...))))
 
         ((_ v)
          (syntax v)))))

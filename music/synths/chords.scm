@@ -1,6 +1,6 @@
 (pattern chords1
   (o->
-    (in! (sbdv [[~ 1] [2 (? [1 2 4 6] [3 4 2 1])] 1 4]))
+    (in! (over [[~ 1] [2 (? [1 2 4 6] [3 4 2 1])] 1 4]))
     (to: :amp 0.3
          :root Bb
          :octave -1
@@ -12,4 +12,4 @@
 
      main-swing
 
-    (chord (sbdv 1 [9th 7th]))))
+    (chord (over 1 [9th 7th]))))

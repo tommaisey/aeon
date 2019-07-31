@@ -1,8 +1,8 @@
 (pattern beep-arp
   (let ([v 24])
-    (in! (sbdv v)
+    (in! (over v)
          (to: :scd (step (/ 1 v) [0 5 2 3 4 2 6 9 8 1])
-              :octave (sbdv 4 [-1 0 1])
+              :octave (over 4 [-1 0 1])
               :scale pent-major
               :root Bb
               :amp 0.11

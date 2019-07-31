@@ -5,12 +5,12 @@
 
 (pattern bells
   (o->
-    (in! (sbdv [1 [~ ~ 1 ~] [~ 1 ~ 1] 1])
+    (in! (over [1 [~ ~ 1 ~] [~ 1 ~ 1] 1])
          (to: :sample cy
-              :sample-idx (sbdv [2 15 (? 10 14) (? 28 30)])
+              :sample-idx (over [2 15 (? 10 14) (? 28 30)])
               :amp 1.5
               :bus1-amt 0.9
-              :bus2-amt (sbdv 1/4 [(? 0.0 0.5) 0])
+              :bus2-amt (over 1/4 [(? 0.0 0.5) 0])
               :pan (? 0.25 0.75)
               :speed (? [0.25 0.5 1 2])
               :attack 0.005
