@@ -6,7 +6,8 @@
           repeat-sym
           sustain-sym
           rest-sym
-          tag-pdef-callable)
+          tag-pdef-callable
+          tag-pdef-dont-call)
 
   (import (scheme) (node-eval))
 
@@ -44,29 +45,35 @@
         ((_ (× v ...)) (syntax (pdef (! × v ...))))
 
         ((_ (v q ...))
-         (identifier? (syntax v))
+         (identifier? #'v)
          (lambda (property-lookup)
-           (if (property-lookup #'v #'pdef-call-tag)
-               (syntax (v q ...))
+           (cond
+             ((property-lookup #'v #'pdef-call-tag)
+              (syntax (v q ...)))
+             ((property-lookup #'v #'pdef-dont-call-tag)
+              (syntax (list v (pdef q) ...)))
+             (else
                (syntax (if (procedure? v)
                            (v q ...)
-                           (list (pdef v)
-                                 (pdef q) ...))))))
-
+                           (list (pdef v) 
+                                 (pdef q) ...)))))))
         ((_ (v ...))
          (syntax (pdef (! v ...))))
 
         ((_ v)
          (syntax v)))))
 
-
   ;;------------------------------------------------------------------
   ;; Used for compile-time tagging, see comment to pdef.
   (define pdef-call-tag)
+  (define pdef-dont-call-tag)
 
   (define-syntax tag-pdef-callable
     (syntax-rules ()
-      ((_ id)
-       (define-property id pdef-call-tag #t))))
+      ((_ id) (define-property id pdef-call-tag #t))))
+
+  (define-syntax tag-pdef-dont-call
+    (syntax-rules ()
+      ((_ id) (define-property id pdef-dont-call-tag #t))))
 
   )

@@ -62,16 +62,15 @@
       ((_ ...)
        (syntax-error "make-event syntax: (make-event 1/16 [:freq 100] [:pan 0]"))))
 
+  ;; Getters & setters
   (define (event-get event key default)
-    (let ([result (assq key event)])
-      (if result (cdr result) default)))
+    (alist-get event key default))
+
   (define (event-set event key value)
     (unless (symbol? key)
       (error 'event-set "trying to set a non-symbol event key" key))
-    (if (and (not (null? event))
-             (eq? key (caar event)) (eq? value (cadr event)))
-        event ;; optimise: don't set same value twice in a row
-        (cons (cons key value) event)))
+    (alist-set event key value))
+  
   (define (event-update event key update-fn default)
     (event-set event key (update-fn (event-get event key default))))
 

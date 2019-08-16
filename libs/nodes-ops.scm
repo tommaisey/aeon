@@ -47,6 +47,7 @@
                         (make-event (context-start context)
                                     (:sustain (context-length context))
                                     (key value)))))
+    (unless (symbol? key) (error 'in "expected a :key" key))
     (apply o-> (wrap-subdivide-fn impl leaf) ops))
 
   ;; A node that replaces the input with the result of applying
@@ -135,11 +136,11 @@
   ;; pair, which should be an context op function, and a transform-fn, which is
   ;; built by calling impl with the key.
   (define (build-kv kv-pairs err-symbol impl)
-    (let ([pairs (pairwise kv-pairs)])
 
-      (define (make-subdivider key-value)
+    (define (make-subdivider key-value)
         (wrap-subdivide-fn (impl (car key-value)) (cdr key-value)))
 
+    (let ([pairs (pairwise kv-pairs)])
       (unless pairs (error err-symbol "invalid key-value pairs" kv-pairs))
 
       (apply x-> (map make-subdivider pairs))))

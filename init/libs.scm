@@ -15,7 +15,6 @@
 (import (scheme))
 (import (rsc3))
 (import (sosc))
-(import (rhs))
 (import (utilities))
 (import (file-tools))
 (import (event))
@@ -28,7 +27,12 @@
 (import (nodes-ops))
 (import (nodes-ops-time))
 (import (nodes-ops-chords))
+; (import (controls)) ;; I'll come back to this
 (import (midinotes))
 (import (harmony))
+(import (rhythm))
 (import (playback))
 (import (samples))
+
+(tag-pdef-callable map)
+(tag-pdef-callable filter)

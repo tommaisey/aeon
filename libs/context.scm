@@ -84,8 +84,8 @@
       ((pattern) (testc pattern 0 1))
       ((pattern start end) 
        (put-datum (current-output-port)
-                  (context-serialised
-                   (pattern (make-empty-context start end)))))))
+                  (lif (c (pattern (make-empty-context start end)))
+                       (context? c) (context-serialised c) c)))))
 
   (define (context-event c)
     (lif (n (context-events-next c)) (null? n) '() (car n)))

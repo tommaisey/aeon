@@ -5,7 +5,7 @@
 (library (utilities)
   (export trunc-int round-down-f pseudo-rand inc dec
           nearly-divisible divisible on-each
-          above below
+          above below clamp
           between between-inclusive between-each
           equal nearly-equal
           range-sine
@@ -24,20 +24,23 @@
           for-any
           for-none
           combine-preds
+          compose
           list-index
           list-last
           remove-list
           unsafe-list?
           push-front
+          alist-get
+          alist-set
           alist-get-multi
           alist-let
           make-alist
           derecord
-          lif
+          lif asif
+          nor
           declare-keyword
           check-type
           println
-          define/optional
           make-safe-val
           safe-val?
           safe-val-apply
@@ -120,6 +123,12 @@
     (let ([m (mod x each)])
       (between m lower upper)))
 
+  (define (clamp value lo hi)
+    (cond
+      ((< value lo) lo)
+      ((> value hi) hi)
+      (else value)))
+
   (define pi 3.141592653589793)
 
   (define (range-sine freq lo hi val)
@@ -190,13 +199,12 @@
   ;; as consed pairs.
   ;; If the input list isn't even numbered, returns #f.
   (define (pairwise lst)
-    (if (not (zero? (mod (length lst) 2)))
-        #f
-        (let loop ([lst lst] [pairs '()])
-          (if (null? lst)
-              (reverse pairs)
-              (loop (cddr lst) 
-                    (cons (cons (car lst) (cadr lst)) pairs))))))
+    (nor (even? (length lst))
+         (let loop ([lst lst] [pairs '()])
+           (if (null? lst)
+               (reverse pairs)
+               (loop (cddr lst)
+                     (cons (cons (car lst) (cadr lst)) pairs))))))
 
   ;; Unzips an even-numbered list into two lists. 
   ;; If the input list isn't even numbered, returns two #f values.
@@ -243,6 +251,10 @@
     (lambda (x)
       (for-all/any/none (lambda (p) (p x)) preds)))
 
+  ;; Compose multiple functions that take and return the same arg.
+  (define (compose . fns)
+    (fold-left (lambda (a b) (lambda (x) (b (a x)))) identity fns))
+
   ;;----------------------------------------------------------------------
   ;; Get the last element of a list. Linear time.
   (define (list-last l)
@@ -265,6 +277,18 @@
   ;; Adds the element to the list. If the element is a list, it is appended.
   (define (push-front val list)
     ((if (unsafe-list? val) append cons) val list))
+
+  ;; Get an alist value, or default if not
+  (define (alist-get alist key default)
+    (let ([result (assq key alist)])
+      (if result (cdr result) default)))
+
+  ;; Set an alist value
+  (define (alist-set alist key value)
+    (if (and (not (null? alist))
+             (eq? key (caar alist)) (eq? value (cadr alist)))
+        alist ;; optimise: don't set same value twice in a row
+        (cons (cons key value) alist)))
 
   ;; Get multiple alist values in one go.
   ;; Can be more efficient than searching seperately for each value.
@@ -290,12 +314,11 @@
               [name (cdr (assq key found))] ...)
          body ...))))
 
+  ;; TODO: perhaps delete, hardly improves pairwise
   (define (make-alist . kv-pairs)
-    (if (even? (length kv-pairs))
-        (do ([pairs kv-pairs (cddr pairs)]
-             [alist '() (cons (cons (car pairs) (cadr pairs)) alist)])
-            ((null? pairs) (reverse alist)))
-        (raise "make-alist requires an even list of keys and values.")))
+    (asif (alist (pairwise kv-pairs))
+           alist
+          (error 'make-alist "requires an even list of keys and values.")))
 
   ;; Useful for destructuring records
   (define-syntax derecord
@@ -315,6 +338,18 @@
        (let ([name init])
          (if test t-branch f-branch)))))
 
+  ;; same, but no explicit test - tests the value directly
+  (define-syntax asif
+    (syntax-rules ()
+      ((_ [name init] t-branch f-branch)
+       (lif [name init] name t-branch f-branch))))
+
+  ;; return false if the test fails, execute body otherwise
+  (define-syntax nor
+    (syntax-rules ()
+      ((_ test body)
+       (if (not test) #f body))))
+
   ;;------------------------------------------------------------------------
   ;; Throw an error if the wrong type is used
   (define-syntax check-type
@@ -328,9 +363,10 @@
 
   ;; Helper for synthesising new identifiers in unhygenic macros.
   (define (gen-id template-id . args)
-    (let* ([str (lambda (x) (if (string? x) x (symbol->string (syntax->datum x))))]
-           [sym (string->symbol (apply string-append (map str args)))])
-      (datum->syntax template-id sym)))
+    (define (arg->string x)
+      (if (string? x) x (symbol->string (syntax->datum x))))
+    (let ([str (apply string-append (map arg->string args))])
+      (datum->syntax template-id (string->symbol str))))
   
   ;;------------------------------------------------------------------------
   ;; A value bound with a mutex to make it threadsafe. You should always

@@ -129,8 +129,8 @@
 
     ((_ ((name default) ...) expr rest ...)
      (let ((name (begin
-                   (define-top-level-value (quote name) (quote name))
-                   (make-control* (symbol->string (quote name)) default kr 0)))
+                   (define-top-level-value 'name 'name)
+                   (make-control* (symbol->string 'name) default kr 0)))
            ...)
        expr rest ...))))
 
@@ -138,9 +138,9 @@
 ;; The synthdef nursery - quite bare at the moment!
 (send-synth sc3 "sine-grain"
   (letc ([:freq 440] [:attack 0.01] [:sustain 1]
-                     [:amp 0.5] [:pan 0.5]
-                     [:bus1 :verb1]  [:bus1-amt 0]
-                     [:bus2 :delay1] [:bus2-amt 0])
+         [:amp 0.5] [:pan 0.5]
+         [:bus1 :verb1]  [:bus1-amt 0]
+         [:bus2 :delay1] [:bus2-amt 0])
 
     (let* ([osc (sin-osc ar (lag :freq 0.05) 0)]
            [env (env-perc :attack :sustain 1 (repeat -4 2))]
@@ -151,14 +151,34 @@
                     (pair (private-bus :bus1) :bus1-amt)
                     (pair (private-bus :bus2) :bus2-amt)))))
 
+(send-synth sc3 "fm-grain"
+  (letc ([:freq 440] [:attack 0.01] [:sustain 1]
+         [:amp 0.5] [:pan 0.5]
+         [:ratio 2] [:fm-amt 0.1]
+         [:bus1 :verb1]  [:bus1-amt 0]
+         [:bus2 :delay1] [:bus2-amt 0])
+
+    (let* ([frq (lag :freq 0.05)]
+           [mod (sin-osc ar (mul :ratio frq) 0.5)]
+           [fm-env (env-perc 0.0 (mul :sustain 1.5) :fm-amt (repeat -6 2))]
+           [fm-env (make-env-gen 1 fm-env remove-synth)]
+           [osc (sin-osc ar frq (mul-n mod fm-env))]
+           [env (env-perc :attack :sustain 1 (repeat -4 2))]
+           [env (make-env-gen 1 env remove-synth)]
+           [sig (mul env osc)])
+      (make-outputs sig :pan
+                    (pair 0 :amp)
+                    (pair (private-bus :bus1) :bus1-amt)
+                    (pair (private-bus :bus2) :bus2-amt)))))
+
 (send-synth sc3 "sampler"
   (letc ([:attack 0.01] [:sustain 1] [:release 0.25]
-                        [:sample 0] [:speed 1]
-                        [:amp 0.3] [:pan 0.5]
-                        [:resonance 0.0] [:cutoff 1.0]
-                        [:sample-pos 0.0]
-                        [:bus1 :verb1]  [:bus1-amt 0]
-                        [:bus2 :delay1] [:bus2-amt 0])
+         [:sample 0] [:speed 1]
+         [:amp 0.3] [:pan 0.5]
+         [:resonance 0.0] [:cutoff 1.0]
+         [:sample-pos 0.0]
+         [:bus1 :verb1]  [:bus1-amt 0]
+         [:bus2 :delay1] [:bus2-amt 0])
 
     (let* ([rate (mul :speed (buf-rate-scale kr :sample))]
            [frames (buf-frames kr :sample)]
@@ -196,10 +216,10 @@
 
 (send-synth sc3 "phase-tris"
   (letc ([:attack 0.4] [:sustain 1] [:release 1]
-                       [:freq 440] [:amp 0.2] [:pan 0.5]
-                       [:resonance 0.1] [:slop 0.05]
-                       [:bus1 :verb1]  [:bus1-amt 0]
-                       [:bus2 :delay1] [:bus2-amt 0])
+         [:freq 440] [:amp 0.2] [:pan 0.5]
+         [:resonance 0.1] [:slop 0.05]
+         [:bus1 :verb1]  [:bus1-amt 0]
+         [:bus2 :delay1] [:bus2-amt 0])
 
     (define (make-osc mag freq-mul time)
       (let ([freq (mul :freq freq-mul)])
@@ -217,10 +237,10 @@
 
 (send-synth sc3 "dual-lopass"
   (letc ([:attack 2.0] [:sustain 1] [:release 1]
-                       [:freq 440] [:amp 0.2] [:pan 0.5]
-                       [:resonance 0.1] [:cutoff1 1.0] [:cutoff2 2.0]
-                       [:bus1 :verb1]  [:bus1-amt 0]
-                       [:bus2 :delay1] [:bus2-amt 0])
+         [:freq 440] [:amp 0.2] [:pan 0.5]
+         [:resonance 0.1] [:cutoff1 1.0] [:cutoff2 2.0]
+         [:bus1 :verb1]  [:bus1-amt 0]
+         [:bus2 :delay1] [:bus2-amt 0])
 
     (define (make-osc freq flt-atk cutoff-prop)
       (let* ([pulse-lfo (sin-osc kr 0.5 0)]

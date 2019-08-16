@@ -1,5 +1,3 @@
-
-
 (pattern example1
   (in! (over 1 4)
        (to: :sample hh
