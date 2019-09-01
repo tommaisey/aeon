@@ -16,7 +16,7 @@
 ;; little extra ('jitter-overlap') to allow for the callback to
 ;; happen late.
 (define (process-chunk)
-  (let ([t (utc)])
+  (let ([t (sc/utc)])
 
     ;; Dispatches all the events that were rendered.
     (define (pattern-player now-beat start end)
@@ -48,7 +48,7 @@
 
 (define (pause-playhead)
   (start-waiting playback-thread-semaphore)
-  (send sc3 clear-sched)
+  (so/send sc3 sc/clear-sched)
   (set! rendered-point #f)
   (set! last-process-time #f)
   (playhead-sync-info))
@@ -66,7 +66,7 @@
       (secs->measures (- utc-time last-process-time) bpm)))
 
 (define (playhead-sync-info)
-  (let ([now (+ last-process-beat (beats-since-last-process (utc)))])
+  (let ([now (+ last-process-beat (beats-since-last-process (sc/utc)))])
     (println
      (format "(playhead-sync ~A (position ~A) (mps ~A))"
              (if (playing?) 'playing 'stopped) now (bpm->mps bpm)))))

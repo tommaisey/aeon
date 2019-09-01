@@ -13,8 +13,8 @@
        "./libs/third-party/rsc3"))
 
 (import (scheme))
-(import (rsc3))
-(import (sosc))
+        (prefix (rsc3) sc/)
+        (prefix (sosc) so/)
 (import (utilities))
 (import (file-tools))
 (import (event))

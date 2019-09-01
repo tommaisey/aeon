@@ -83,7 +83,7 @@
                     [time-flt (lambda (t-i) (between (car t-i) start end))]
                     [time-idx (lambda (i) (cons (+ src (* (inc i) sign period)) 
                                                 (inc i)))])
-               (filter time-flt (map time-idx (iota (abs (- num sign))))))))
+               (filter time-flt (map time-idx (iota (abs num)))))))
 
        ;; Sets the new time and repeatedly applies iterative-node to an event.
        ;; Has to wrap then unwrap the event in a context so iterative-node
@@ -94,7 +94,7 @@
                   [i (cdr time-and-idx)]
                   [c (make-context (list (event-set ev :beat t))
                                    (make-arc t (+ t period)))])
-             (context-event ((apply x-> (repeat iterative-node i)) c)))))
+             (context-event ((apply x-> (repeat i iterative-node)) c)))))
 
        ;; Builds a list of events (the taps) based on the context's current event.
        (define (build-taps start end)

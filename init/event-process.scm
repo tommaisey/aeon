@@ -5,7 +5,7 @@
 ;; the same time.
 (define play-event
   (case-lambda
-    ((event beat) (play-event event beat (utc)))
+    ((event beat) (play-event event beat (sc/utc)))
 
     ((event current-beat current-time)
      (let ([event (preprocess-event event)])
@@ -17,7 +17,7 @@
          (let* ([delay (secs-until beat current-beat bpm)]
                 [time (+ current-time delay playback-latency)]
                 [args (map make-synth-arg event)])
-           (create-group group add-to-head default-group)
+           (create-group group sc/add-to-head default-group)
            (if control
                (if (or (not (number? group)) (<= group 1))
                    (println "Error: control event didn't specify a valid group.")

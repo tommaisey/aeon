@@ -38,7 +38,7 @@
           derecord
           lif asif
           nor
-          declare-keyword
+          declare-keywords
           check-type
           println
           make-safe-val
@@ -161,7 +161,7 @@
   (define (concatenate col-list)
     (fold-right push-front '() col-list))
 
-  (define (repeat val n)
+  (define (repeat n val)
     (let loop ([x '()] [n n])
       (if (<= n 0) x (loop (cons val x) (- n 1)))))
 
@@ -327,9 +327,12 @@
        (let ([name (record-accessor rec)] ...)
          body-forms ...))))
 
-  (define-syntax declare-keyword
+  (define-syntax declare-keywords
     (syntax-rules ()
-      ((_ name) (define name 'name))))
+      ((_ name1 name2 ...) 
+       (begin
+         (define name1 'name1)
+         (define name2 'name2) ...))))
 
   ;; let+if in a more compact way
   (define-syntax lif

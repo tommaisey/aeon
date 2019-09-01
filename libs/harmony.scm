@@ -67,14 +67,11 @@
          (* octave 12))))
 
   ;; Event key definitions
-  (declare-keyword :octave)
-  (declare-keyword :midinote)
-  (declare-keyword :root)
-  (declare-keyword :scale)
-  (declare-keyword :tuning)
-  (declare-keyword :chord-shape)
-  (declare-keyword :scale-degree)
-  (declare-keyword :chord-degree)
+  (declare-keywords :octave :midinote
+                    :root :scale :tuning
+                    :chord-shape
+                    :scale-degree
+                    :chord-degree)
   (define :scd :scale-degree)
   (define :chd :chord-degree)
   (define :chs :chord-shape)
