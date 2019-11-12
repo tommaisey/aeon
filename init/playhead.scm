@@ -44,19 +44,19 @@
 (define (start-playhead)
   (start-thread playback-thread-semaphore)
   (stop-waiting playback-thread-semaphore)
-  (playhead-sync-info))
+  (put-playhead-sync-info))
 
 (define (pause-playhead)
   (start-waiting playback-thread-semaphore)
   (so/send sc3 sc/clear-sched)
   (set! rendered-point #f)
   (set! last-process-time #f)
-  (playhead-sync-info))
+  (put-playhead-sync-info))
 
 (define (stop-playhead)
   (pause-playhead)
   (set! last-process-beat 0)
-  (playhead-sync-info))
+  (put-playhead-sync-info))
 
 (define (playing?)
   (not (waiting? playback-thread-semaphore)))
@@ -67,9 +67,13 @@
 
 (define (playhead-sync-info)
   (let ([now (+ last-process-beat (beats-since-last-process (sc/utc)))])
-    (println
-     (format "(playhead-sync ~A (position ~A) (mps ~A))"
-             (if (playing?) 'playing 'stopped) now (bpm->mps bpm)))))
+    (list 'playhead-sync (if (playing?) 'playing 'stopped)
+          (list 'position now)
+          (list 'mps (bpm->mps bpm)))))
+
+(define (put-playhead-sync-info)
+  (put-datum (current-output-port) (playhead-sync-info))
+  (fresh-line))
 
 (define (set-bpm! n)
   (set! bpm n)
@@ -77,7 +81,7 @@
                        (:tempo (bpm->mps n))
                        (:control "tempo")
                        (:group bus-effect-group))])
-    (playhead-sync-info)
+    (put-playhead-sync-info)
     (play-event e 0)))
 
 (define (handle-error condition)

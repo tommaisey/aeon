@@ -3,8 +3,7 @@
 ;; Fundamental utilities
 ;; ---------------------------------------------------------
 (library (utilities)
-  (export λ
-          trunc-int round-down-f pseudo-rand inc dec
+  (export trunc-int round-down-f pseudo-rand inc dec
           nearly-divisible divisible on-each
           above below clamp
           between between-inclusive between-each
@@ -60,9 +59,6 @@
                 string-contains
                 string-contains-ci)
           (thunder-utils))
-
-  ;; Don't have emacs-like symbol replacement yet, so do this!
-  (alias λ lambda)
 
   ;; Truncate and integerize
   (define (trunc-int x)
@@ -142,7 +138,7 @@
   ;; More readable for users to write pair/first/rest
   (define pair cons)
   (define rest cdr)
-  (define identity (λ (x) x))
+  (define identity (lambda (x) x))
   (define (cons-r a b) (cons b a))
 
   ;;-------------------------------------------------------------------
@@ -156,11 +152,11 @@
 
   ;; ((1 2 3) (x y) (a b c)) -> (1 x a 2 y b)
   (define (merge-columns col-list)
-    (column-process col-list (λ (a b) (append a b))))
+    (column-process col-list (lambda (a b) (append a b))))
 
   ;; ((1 2 3) (x y) (a b c)) -> ((1 x a) (2 y b))
   (define (columns-to-rows col-list)
-    (reverse (column-process col-list (λ (a b) (cons b a)))))
+    (reverse (column-process col-list (lambda (a b) (cons b a)))))
 
   ;;  ((1 2 3) (x y) (a b c)) -> (1 2 3 x y a b c)
   (define (concatenate col-list)
@@ -253,12 +249,12 @@
   ;; list. e.g. Supplying for-all/any will check
   ;; all/any of the predicates return true for x.
   (define (combine-preds preds for-all/any/none)
-    (λ (x)
-      (for-all/any/none (λ (p) (p x)) preds)))
+    (lambda (x)
+      (for-all/any/none (lambda (p) (p x)) preds)))
 
   ;; Compose multiple functions that take and return the same arg.
   (define (compose . fns)
-    (fold-left (λ (a b) (λ (x) (b (a x)))) identity fns))
+    (fold-left (lambda (a b) (lambda (x) (b (a x)))) identity fns))
 
   ;;----------------------------------------------------------------------
   ;; Get the last element of a list. Linear time.
@@ -269,7 +265,7 @@
 
   ;; Remove matching items in b from a
   (define (remove-list a b)
-    (filter (λ (x) (not (member x b))) a))
+    (filter (lambda (x) (not (member x b))) a))
 
   ;; #t for any kind of list: null, proper, improper, or cyclic.
   ;; Faster than 'list?' but improper lists fail with e.g. append.
@@ -302,7 +298,7 @@
   (define (alist-get-multi alist key-default-pairs)
     (let* ([targets key-default-pairs]
            [found '()]
-           [setter (λ (entry)
+           [setter (lambda (entry)
                      (let ([t (assq (car entry) targets)])
                        (when t
                          (set! found (cons entry found))
@@ -334,7 +330,7 @@
   ;; whether it's an even-numbered list with symbol keys.
   (define (check-optionals err-sym kv-pairs)
     (asif (pairs (pairwise kv-pairs))
-          (if (for-all (λ (x) (symbol? (car x))) pairs)
+          (if (for-all (lambda (x) (symbol? (car x))) pairs)
                pairs
               (error err-sym optional-pairs-err pairs))
           (error err-sym kv-pairs-err kv-pairs)))
@@ -381,7 +377,7 @@
          (error context-id (format "~A should satisfy ~A" 'val 'pred) val)))))
 
   (define (println . objs)
-    (for-each (λ (x) (display x) (fresh-line)) objs))
+    (for-each (lambda (x) (display x) (fresh-line)) objs))
 
   ;; Helper for synthesising new identifiers in unhygenic macros.
   (define (gen-id template-id . args)
@@ -396,7 +392,7 @@
   (define-record-type safe-val
     (fields (immutable mutex)
             (mutable object))
-    (protocol (λ (new) (λ (object) (new (make-mutex) object)))))
+    (protocol (lambda (new) (lambda (object) (new (make-mutex) object)))))
 
   (define (safe-val-apply obj-method safe-obj . args)
     (with-mutex (safe-val-mutex safe-obj)

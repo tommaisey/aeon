@@ -12,9 +12,9 @@
        "./libs/third-party/thunderchez"
        "./libs/third-party/rsc3"))
 
-(import (scheme))
+(import (scheme)
         (prefix (rsc3) sc/)
-        (prefix (sosc) so/)
+        (prefix (sosc) so/))
 (import (utilities))
 (import (file-tools))
 (import (event))

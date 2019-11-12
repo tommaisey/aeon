@@ -1,11 +1,8 @@
-;; Stop a mutex in the innards of Chez from blocking in Emacs
-;; REPLs, which prevents our background thread from running.
-(define (fix-emacs-repl)
-  (let ([stdin (transcoded-port (standard-input-port)
-                                (make-transcoder (utf-8-codec)))])
-    (current-input-port stdin)
-    (console-input-port stdin)))
-(fix-emacs-repl)
+;; Prevent a chez global lock blocking on the playback thread.
+(let* ([stdin (transcoded-port (standard-input-port) 
+                               (make-transcoder (utf-8-codec)))])
+  (current-input-port stdin)
+  (console-input-port stdin))
 
 ;; Load libraries, top level functions and state.
 (source-directories (list "." "./init"))
@@ -16,9 +13,9 @@
 (load "patterns.scm")
 (load "playhead.scm")
 
-;; Load music files intended to be shared, but not clip files.
-(for-each (lambda (p) (when (valid-scheme-path? p) (load p)))
-          (child-file-paths "music/"))
-
 (set-bpm! bpm)
 (start)
+
+;; Load user's init files, but not clip files.
+(for-each (lambda (p) (when (valid-scheme-path? p) (load p)))
+          (child-file-paths "music/"))
