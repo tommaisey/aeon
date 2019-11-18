@@ -22,6 +22,27 @@
   (define (mv* . pdefs) (apply mv * / pdefs))
   (define (mv/ . pdefs) (apply mv / * pdefs))
 
+  ;; Resolves input context with an arc shifted by the leaf value,
+  ;; effectively moving a different slice of time into this one.
+  (define (mv-math-impl math-fn inv-math-fn)
+    (define (move-events delta)
+      (lambda (context)
+        (lif [e (event-move (context-event context) delta math-fn)] 
+             (or (eq? math-fn *) (eq? math-fn /))
+             (event-update e :sustain (lambda (s) (math-fn (abs delta) s)) 1/8) e)))
+    (lambda (context leaf)
+      (let* ([old-arc (context-arc context)]
+             [val (eval-leaf-early leaf (arc-start old-arc) context)])
+        (cond
+          ((is-rest? val) (context-resolve context))
+          ((not (number? val)) (error 'mv "number" val))
+          (else
+            (let* ([shifted (rearc context (arc-math old-arc inv-math-fn val))]
+                   [shifted (context-resolve shifted)]
+                   [shifted (context-map (move-events val) shifted)]
+                   [shifted (context-sort shifted)])
+              (context-trim (rearc shifted old-arc))))))))
+
   ;;-------------------------------------------------------------------
   ;; Swing - implemented as a sine wave, so that notes off the main beat
   ;; are moved progressively more as they get closer to it.
@@ -80,9 +101,9 @@
        (define (list-taps src period num start end)
          (if (zero? num) (list)
              (let* ([sign (if (> num 0) 1 -1)]
-                    [time-flt (lambda (t-i) (between (car t-i) start end))]
+                    [time-flt (lambda (ti) (between (car ti) start end))]
                     [time-idx (lambda (i) (cons (+ src (* (inc i) sign period)) 
-                                                (inc i)))])
+                                           (inc i)))])
                (filter time-flt (map time-idx (iota (abs num)))))))
 
        ;; Sets the new time and repeatedly applies iterative-node to an event.
@@ -151,25 +172,5 @@
              [c (context-resolve (rearc context (make-arc s e)))]
              [c (context-sort (context-map (move-event s e) c))])
         (context-trim (rearc c (context-arc context))))))
-
-  ;;-------------------------------------------------------------------
-  ;; Implementation functions to be supplied to a chunking algorithm.
-
-  ;; Resolves input context with an arc shifted by the leaf value,
-  ;; effectively moving a different slice of time into this one.
-  (define (mv-math-impl math-fn inv-math-fn)
-    (define (mapper new-val)
-      (lambda (context)
-        (event-move (context-event context) new-val math-fn)))
-    (lambda (context leaf)
-      (let* ([old-arc (context-arc context)]
-             [val (eval-leaf-early leaf (arc-start old-arc) context)])
-        (cond
-          ((is-rest? val) (context-resolve context))
-          ((not (number? val)) (error 'mv "number" val))
-          (else
-            (let* ([shifted (rearc context (arc-math old-arc inv-math-fn val))]
-                   [shifted (context-resolve shifted)])
-              (context-trim (rearc (context-map (mapper val) shifted) old-arc))))))))
 
   )

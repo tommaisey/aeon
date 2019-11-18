@@ -122,7 +122,6 @@
 
   ;;-------------------------------------------------------------------
   ;; Helper functions
-  (define :sustain ':sustain) ;; Needed in above in forms.
 
   ;; Helper for 'to' forms above.
   (define (set-or-rest ctxt leaf key val-transform)

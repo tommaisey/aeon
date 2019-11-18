@@ -9,7 +9,7 @@
 ;; returns a new list, the old one remains untouched.
 ;; ------------------------------------------------------------
 (library (event)
-  (export :beat
+  (export :beat :sustain
           time-key
           priority-keys
           make-event
@@ -41,6 +41,7 @@
           arc-negate
           arc-add
           arc-math
+          arc-correct
           arc-valid?
           arc-eq?
           arc-contains?
@@ -51,6 +52,7 @@
           (only (srfi s1 lists) delete-duplicates lset-difference))
 
   (define :beat ':beat)
+  (define :sustain ':sustain)
   (define time-key :beat)
   (define priority-keys '(:sustain :freq :beat))
 
@@ -92,7 +94,7 @@
   (define (event-beat event)
     (event-get event time-key 0))
   (define (event-move e n math-fn)
-    (event-update e time-key (lambda (beat) (math-fn beat n)) 0))
+    (event-update e time-key (lambda (t) (math-fn t n)) 0))
   (define (event-before? n1 n2)
     (< (event-beat n1) (event-beat n2)))
   
@@ -172,6 +174,8 @@
               (+ (arc-end a1) (arc-end a2))))
   (define (arc-math a proc val)
     (make-arc (proc (arc-start a) val) (proc (arc-end a) val)))
-  
+  (define (arc-correct arc)
+    (make-arc (min (arc-start arc) (arc-end arc))
+              (max (arc-start arc) (arc-end arc))))
 
   ) ; END module 'event'

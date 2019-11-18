@@ -126,7 +126,7 @@
   (define (context-with-arc c new-arc)
     (make-context (context-events-next c)
                   (context-events-prev c)
-                  new-arc
+                  (arc-correct new-arc)
                   (context-chain c)
                   (context-subdivide-fn c)))
   (define rearc context-with-arc) ; alias

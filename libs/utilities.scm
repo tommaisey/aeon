@@ -60,13 +60,20 @@
                 string-contains-ci)
           (thunder-utils))
 
+  ;; Base case for functional composition
+  (define identity (lambda (x) x))
+
+  ;; Compose multiple functions that take and return the same arg.
+  (define (compose . fns)
+    (fold-left (lambda (a b) (lambda (x) (b (a x)))) identity fns))
+
   ;; Truncate and integerize
-  (define (trunc-int x)
-    (exact (truncate x)))
+  (define trunc-int (compose exact truncate))
+  (define floor-int (compose exact floor))
 
   ;; Find the nearest whole multiple of divisor that's <= x.
   (define (round-down-f x divisor)
-    (* divisor (trunc-int (/ x divisor))))
+    (* divisor (floor-int (/ x divisor))))
 
   ;; A pseudo-random number generator that takes a seed.
   (define pseudo-rand-src (make-random-source))
@@ -138,7 +145,6 @@
   ;; More readable for users to write pair/first/rest
   (define pair cons)
   (define rest cdr)
-  (define identity (lambda (x) x))
   (define (cons-r a b) (cons b a))
 
   ;;-------------------------------------------------------------------
@@ -251,10 +257,6 @@
   (define (combine-preds preds for-all/any/none)
     (lambda (x)
       (for-all/any/none (lambda (p) (p x)) preds)))
-
-  ;; Compose multiple functions that take and return the same arg.
-  (define (compose . fns)
-    (fold-left (lambda (a b) (lambda (x) (b (a x)))) identity fns))
 
   ;;----------------------------------------------------------------------
   ;; Get the last element of a list. Linear time.
