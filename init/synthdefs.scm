@@ -233,12 +233,12 @@
       (let ([freq (*sc :freq freq-mul)])
         (sc/lf-tri sc/ar (+sc freq (make-rand-lfo (*sc freq mag) time)) 0)))
 
-    (let* ([cutoff (*+sc (+sc -1 :cutoff) 17000 200)]
-           [osc1 (make-osc (*sc :slop 0.05) 0.5 1/2)]
+    (let* ([osc1 (make-osc (*sc :slop 0.05) 0.5 1/2)]
            [osc2 (make-osc (*sc :slop 0.04) 1.0 4/3)]
            [osc3 (make-osc (*sc :slop 0.01) 1.5 3/2)]
            [env (make-asr 1 :attack :sustain :release -4)]
            [sig (*sc env (add-n osc1 osc2 osc3))]
+           [cutoff (*+sc (+sc -1 :cutoff) 17000 200)]
            [sig (sc/rlpf sig (clamp-cutoff cutoff) 1.0)])
       (make-outputs sig :pan
                     (pair 0 :amp)
@@ -274,6 +274,25 @@
                     (pair 0 :amp)
                     (pair (private-bus :bus1) :bus1-amt)
                     (pair (private-bus :bus2) :bus2-amt)))))
+
+(sc/send-synth sc3 "pulse-pluck"
+  (letc ([:freq 440] [:attack 0.01] [:sustain 1]
+         [:amp 0.5] [:pan 0.5] [:cutoff 0.5] [:resonance 0]
+         [:bus1 :verb1]  [:bus1-amt 0]
+         [:bus2 :delay1] [:bus2-amt 0])
+
+    (let* ([line (sc/line sc/kr (sc/rand 0.1 0.8) (sc/rand 0.1 0.8) :sustain sc/do-nothing)]
+           [osc (sc/lf-pulse sc/ar (sc/lag :freq 0.05) 0 line)]
+           [env (sc/env-perc :attack :sustain 1 (repeat 2 -4))]
+           [env (make-env-gen 1 env sc/remove-synth)]
+           [sig (*sc env osc)]
+           [cutoff (+sc 75 (*sc :cutoff 17000))]
+           [sig (sc/moog-ff sig cutoff :resonance 0)])
+      (make-outputs sig :pan
+                    (pair 0 :amp)
+                    (pair (private-bus :bus1) :bus1-amt)
+                    (pair (private-bus :bus2) :bus2-amt)))))
+
 
 ;; Time-based properties that will be preprocessed to be relative to the tempo.
 ;; They are paired with #f so this list can be used directly with alist-get-multi.
