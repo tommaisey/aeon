@@ -41,6 +41,7 @@
           arc-negate
           arc-add
           arc-math
+          arc-widen
           arc-correct
           arc-valid?
           arc-eq?
@@ -147,9 +148,11 @@
             (immutable end)))
 
   (define (arc-with-start a new-start)
-    (make-arc new-start (arc-end a)))
+    (arc-correct
+     (make-arc new-start (arc-end a))))
   (define (arc-with-end a new-end)
-    (make-arc (arc-start a) new-end))
+    (arc-correct
+     (make-arc (arc-start a) new-end)))
   (define (arc-valid? a)
     (< (arc-start a) (arc-end a)))
   (define (arc-eq? a b)
@@ -170,12 +173,16 @@
   (define (arc-negate a)
     (make-arc (- (arc-start a)) (- (arc-end a))))
   (define (arc-add a1 a2)
-    (make-arc (+ (arc-start a1) (arc-start a2))
-              (+ (arc-end a1) (arc-end a2))))
+    (arc-correct
+     (make-arc (+ (arc-start a1) (arc-start a2))
+               (+ (arc-end a1) (arc-end a2)))))
   (define (arc-math a proc val)
-    (make-arc (proc (arc-start a) val) (proc (arc-end a) val)))
-  (define (arc-correct arc)
-    (make-arc (min (arc-start arc) (arc-end arc))
-              (max (arc-start arc) (arc-end arc))))
+    (arc-correct
+     (make-arc (proc (arc-start a) val) (proc (arc-end a) val))))
+  (define (arc-widen a val)
+    (arc-correct
+     (arc-add a (make-arc (- val) val))))
+  (define (arc-correct a)
+    (if (arc-valid? a) a (make-arc (arc-end a) (arc-start a))))
 
   ) ; END module 'event'

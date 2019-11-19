@@ -25,23 +25,27 @@
   ;; Resolves input context with an arc shifted by the leaf value,
   ;; effectively moving a different slice of time into this one.
   (define (mv-math-impl math-fn inv-math-fn)
-    (define (move-events delta)
-      (lambda (context)
-        (lif [e (event-move (context-event context) delta math-fn)] 
-             (or (eq? math-fn *) (eq? math-fn /))
-             (event-update e :sustain (lambda (s) (math-fn (abs delta) s)) 1/8) e)))
-    (lambda (context leaf)
-      (let* ([old-arc (context-arc context)]
-             [val (eval-leaf-early leaf (arc-start old-arc) context)])
-        (cond
-          ((is-rest? val) (context-resolve context))
-          ((not (number? val)) (error 'mv "number" val))
-          (else
-            (let* ([shifted (rearc context (arc-math old-arc inv-math-fn val))]
-                   [shifted (context-resolve shifted)]
-                   [shifted (context-map (move-events val) shifted)]
-                   [shifted (context-sort shifted)])
-              (context-trim (rearc shifted old-arc))))))))
+    (let ([mul? (or (eq? math-fn *) (eq? math-fn /))])
+      (define (move-events delta)
+        (lambda (context)
+          (let ([e (event-move (context-event context) delta math-fn)]
+                [sus-spread (lambda (s) (math-fn (abs delta) s))])
+            (if mul? (event-update e :sustain sus-spread 1/8) e))))
+      (lambda (context leaf)
+        (let* ([old-arc (context-arc context)]
+               [val (eval-leaf-early leaf (arc-start old-arc) context)])
+          (cond
+            ((is-rest? val) (context-resolve context))
+            ((not (number? val)) (error 'mv "number" val))
+            (else
+              (let* ([new-arc (arc-math old-arc inv-math-fn val)]
+                     ;; When we flip time, start/end exclusivity is messed up!
+                     [new-arc (if (and mul? (< val 0)) (arc-widen new-arc 1/128) new-arc)]
+                     [shifted (rearc context new-arc)]
+                     [shifted (context-resolve shifted)]
+                     [shifted (context-map (move-events val) shifted)]
+                     [shifted (context-sort shifted)])
+                (context-trim (rearc shifted old-arc)))))))))
 
   ;;-------------------------------------------------------------------
   ;; Swing - implemented as a sine wave, so that notes off the main beat
