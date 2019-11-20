@@ -1,5 +1,5 @@
 (library (nodes-ops-time)
-  (export mv- mv+ mv/ mv*
+  (export mv- mv+ mv/ mv* tt+ tt- tt* tt/
           flip-time swing taps)
 
   (import (chezscheme) 
@@ -21,6 +21,11 @@
   (define (mv- . pdefs) (apply mv - + pdefs))
   (define (mv* . pdefs) (apply mv * / pdefs))
   (define (mv/ . pdefs) (apply mv / * pdefs))
+
+  (alias tt+ mv+)
+  (alias tt- mv-)
+  (alias tt* mv*)
+  (alias tt/ mv/)
 
   ;; Resolves input context with an arc shifted by the leaf value,
   ;; effectively moving a different slice of time into this one.
