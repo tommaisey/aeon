@@ -4,30 +4,30 @@
 
 (pattern p1
   (o->
-    (in! (sbdv 2 1)
+    (in! (over 2 1)
          (to: :group grp1
               :attack 0.01
               :release 0.1
               :amp 0.3
               :inst "dual-lopass"))
 
-    (in: :chd (sbdv 1/2 [I I (? [I III]) I])
-         (to+ :chd (sbdv 4 [I I I V]))
+    (in: :chd (over 1/2 [I I (? [I III]) I])
+         (to+ :chd (over 4 [I I I V]))
          (to: :group grp1 :control "pitchbend"
-              :scd (sbdv 2 [I (each 2 [VI III])])
-              :octave (sbdv 2 [-1 (? [0 1]) (? [0 1 -1])])
+              :scd (over 2 [I (each 2 [VI III])])
+              :octave (over 2 [-1 (? [0 1]) (? [0 1 -1])])
               :bus1-amt (rnd 0.0 0.125)
-              :pan (sbdv 1/2 [0.4 0.6])))
+              :pan (over 1/2 [0.4 0.6]))
+         (mv* (? [1 3/2 2])))
 
-    (in: :cutoff1 (sbdv 1/4 (? 4.0 12.0))
+    (in: :cutoff1 (over 1/4 (? 4.0 12.0))
          (to: :group grp1 :control "cutoff"
-              :resonance (? 0.3 1.8))
-         (mv+ 0))
+              :resonance (? 0.3 1.8)))
 
-    (in: :cutoff2 (sbdv 1/8 (? 1.0 3.0))
+    (in: :cutoff2 (over 1/8 (? 1.0 3.0))
          (to: :group grp1 :control "cutoff"
               :resonance (? 0.1 0.8))
-         (mv+ (sbdv 1/4 (? [0 0 1/16 1/8]))))
+         (mv+ (over 1/4 (? [0 0 1/16 1/8]))))
 
-    (to: :root -5
+    (to: :root 55
          :scale minor)))
