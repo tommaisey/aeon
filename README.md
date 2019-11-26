@@ -16,7 +16,7 @@ If you want to proceed anyway, you'll need to clone this repo (resolving any git
 
 It will probably fail to load! 
 Once you've fixed the errors you find, you _may_ be up and running.
-Try looking at the examples in `music/`, and reading implementation code in `libs/` to guess what things might do!
+Try looking at the examples in `examples/`, and reading implementation code in `libs/` to guess what things might do!
 
 I recommend interacting with your Scheme interpreter through Emacs and Geiser.
 

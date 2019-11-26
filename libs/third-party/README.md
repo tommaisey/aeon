@@ -14,6 +14,3 @@ as it doesn't appear to be maintained.
 
 Other libraries, such as 'thunderchez' and 'socket' are mostly unchanged from their original,
 so could be updated quite painlessly.
-
-Note: convenient use of these is easier if you put the "thunderchez" and "rsc3" folders onto your
-(library-directories), as well as the parent folder this README resides in.
