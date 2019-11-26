@@ -31,6 +31,10 @@
     (socket:close (udp*-fd u))
     (socket:cleanup)))
 
+(define udp:ready?
+  (lambda (u timeout)
+    (socket:ready? (udp*-fd u) timeout)))
+
 (define-record-type tcp* (fields fd h p))
 
 ;; any -> bool

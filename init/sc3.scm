@@ -1,6 +1,6 @@
 ;;-----------------------------------------------------------------
 ;; Some SuperCollider setup: a default server, synthdef & event sender.
-;; TODO: this blocks if SuperCollider isn't running!!
+(println "Connecting to SuperCollider...")
 (define sc3 (so/udp:open "127.0.0.1" 57110))
 
 ;; Helper for sending timestamped OSC bundles
@@ -52,12 +52,13 @@
 (define standard-group (make-unused-group-id))
 (define bus-effect-group (make-unused-group-id))
 
-(define (init-sc3)
+(begin
   (sleep-secs 0.25)
   (sc/reset sc3) ;; Make sure we start with a blank server
   (sleep-secs 0.25)
+  (with-exception-handler
+   (lambda (x) (when (error? x) (error "initialisation" "\nSuperCollider unavailable. Is it running?")))
+   (lambda () (sc/display-server-status sc3)))
   (create-group standard-group sc/add-to-head default-group)
   ;; Ensure fx synths have tempo
   (create-group bus-effect-group sc/add-to-tail default-group))
-
-(init-sc3)

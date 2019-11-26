@@ -12,5 +12,4 @@ is invoked in each project by `make`. The script essentially concatenates all th
 an r6rs library, adding exports for all the `define` forms it finds in the project.
 
 I have made some minimal changes to the `mk.scm` file for each project to get the libraries working in 
-Chez Scheme - this includes using the `socket` library from Raven (https://github.com/theschemer/socket) 
-to connect to SuperCollider via IPC.
+Chez Scheme.

@@ -121,7 +121,7 @@
 (define-syntax sub-n
   (syntax-rules ()
     ((_ x) x)
-    ((_ x y ...) (sub x (sub-n y ...)))))
+    ((_ x y ...) (sc/sub x (sub-n y ...)))))
 
 (define-syntax add-n
   (syntax-rules ()

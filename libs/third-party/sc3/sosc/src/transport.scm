@@ -5,7 +5,7 @@
       (cond ((udp:socket? fd)
              (udp:send fd b))
             ((tcp:socket? fd)
-	     (begin
+             (begin
                (tcp:send fd (encode-u32 (bytevector-length b)))
                (tcp:send fd b)))))))
 
@@ -13,6 +13,8 @@
 (define recv
   (lambda (fd)
     (cond ((udp:socket? fd)
+           (when (not (udp:ready? fd 1000))
+             (error "sosc:wait" "timed out after 1000ms" fd))
            (let ((b (udp:recv fd)))
              (and2 b (decode-osc b))))
           ((tcp:socket? fd)
@@ -22,9 +24,9 @@
 
 ;; port -> string -> osc
 (define wait
-  (lambda (fd s)
+  (lambda (fd str)
     (let ((p (recv fd)))
       (cond
-       ((not p) (error "wait" "timed out"))
-       ((not (string=? (head p) s)) (error "wait" "bad return packet" p s))
-       (else p)))))
+        ((not p) (error "sosc:wait" "timed out" fd))
+        ((not (string=? (head p) str)) (error "sosc:wait" "bad return packet" p str))
+        (else p)))))

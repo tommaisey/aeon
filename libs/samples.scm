@@ -25,7 +25,7 @@
                 [p (lambda (s) (and (p s) (valid-sample? s)))])
            (map (lambda (x) (path-append dir-path x))
                 (filter p (list-sort string<? (directory-list dir-path)))))
-         (string-append " from " dir-path)))
+         (string-append " from ..." (string-last dir-path 42))))
 
       ((_ name dir-path)
        (samples-dir name dir-path (lambda (x) #t)))))
@@ -53,7 +53,7 @@
 
                (println (string-append (symbol->string 'id) ": "
                                        (number->string id-num)
-                                       " samples defined"
+                                       " samples added"
                                        source-string))))))))
 
   (define (valid-sample? f)

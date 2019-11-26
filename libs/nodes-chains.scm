@@ -1,7 +1,7 @@
 #!chezscheme ;; Needed for the extra symbols like +->
 
 (library (nodes-chains)
-  (export o-> x-> +-> nowt off)
+  (export o-> x-> +-> nowt thru off)
 
   (import (chezscheme) 
           (utilities) (context) (event)
@@ -37,5 +37,6 @@
 
   ;; Sometimes we want to pass a function that 'does nothing'
   (define nowt (x->))
+  (define thru x->)
 
   )

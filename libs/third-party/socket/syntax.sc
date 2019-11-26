@@ -9,11 +9,13 @@
     socket:sendto
     socket:read
     socket:close
+    socket:ready?
     socket:shutdown
     socket:cleanup)
   (import 
     (scheme)
     (libc libc)
+    (timeout timeout)
     (socket ffi))
 
   (define os
@@ -110,20 +112,23 @@
   (define socket:read 
     (case-lambda
       ([socket]
-        (socket:read socket 1024))
+        (socket:read socket 512))
       ([socket len]
         (socket:read socket len (make-bytevector 0)))
       ([socket len rbv]
         (let* ([buff (make-bytevector len)]
-               [n (check 's-read (if nt?
-				     (c-recv socket buff len 0)
-				     (c-read socket buff len)))]
+               [n (check 's-read (if nt? 
+                                     (c-recv socket buff len 0)
+                                     (c-read socket buff len)))]
                [bv (make-bytevector n)])
           (bytevector-copy! buff 0 bv 0 n)
           (cond
             ([= n 0] rbv)
             ([< n len] (bytevector-append rbv bv))
             (else (socket:read socket len (bytevector-append rbv bv))))))))
+
+  ;; Takes socket descriptor and timeout (ms)
+  (define socket:ready? bytes-ready?)
 
   (define-syntax socket:shutdown
     (syntax-rules ()

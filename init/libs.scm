@@ -10,7 +10,7 @@
        "./libs/tests"
        "./libs/third-party"
        "./libs/third-party/thunderchez"
-       "./libs/third-party/rsc3"))
+       "./libs/third-party/sc3"))
 
 (import (scheme)
         (prefix (rsc3) sc/)

@@ -51,6 +51,7 @@
     socket:write
     socket:sendto
     socket:read
+    socket:ready?
     socket:close
     socket:shutdown
     socket:cleanup)

@@ -47,6 +47,7 @@
           safe-val-apply
           string-contains
           string-contains-ci
+          string-last
           gen-id)
 
   (import (chezscheme)
@@ -379,6 +380,7 @@
          (error context-id (format "~A should satisfy ~A" 'val 'pred) val)))))
 
   (define (println . objs)
+    (fresh-line)
     (for-each (lambda (x) (display x) (fresh-line)) objs))
 
   ;; Helper for synthesising new identifiers in unhygenic macros.
@@ -387,6 +389,11 @@
       (if (string? x) x (symbol->string (syntax->datum x))))
     (let ([str (apply string-append (map arg->string args))])
       (datum->syntax template-id (string->symbol str))))
+
+  ;;------------------------------------------------------------------------
+  (define (string-last str n)
+    (let ([len (string-length str)])
+      (substring str (max 0 (- len n)) len)))
   
   ;;------------------------------------------------------------------------
   ;; A value bound with a mutex to make it threadsafe. You should always

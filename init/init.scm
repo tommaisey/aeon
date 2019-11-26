@@ -6,7 +6,10 @@
 
 ;; Load libraries, top level functions and state.
 (source-directories (list "." "./init"))
+
 (load "libs.scm")
+(println "Welcome to [unnamed music system]!")
+
 (load "sc3.scm")
 (load "synthdefs.scm")
 (load "event-process.scm")
