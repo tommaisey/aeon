@@ -10,7 +10,7 @@ If you want to attempt to run it, good luck! Because it's currently set up to wo
 
 If you want to proceed anyway, you'll need to clone this repo (resolving any git submodules), download Chez Scheme 9.5 and SuperCollider 3.10.
 
-- First, navigate to the project directory, and run `cd libs/third-party; make`. (This step is only necessary the first time).
+- First, navigate to the project directory, and run `make` (only necessary the first time).
 - Then launch SuperCollider and boot its server.
 - Finally, launch Chez Scheme and call `(load "init/init.scm")`.
 
