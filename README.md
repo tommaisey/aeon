@@ -6,7 +6,7 @@ In essence, this is a placeholder!
 I was asked to share something after a talk at ADC 2019 for those interested in the project. 
 I didn't expect the level of interest, so this is a quick way to give the project a home.
 
-If you want to attempt to run it, good luck! Because it's currently set up to work on my own machine only (it contains paths to samples on my local machine, for example). And it will certainly only work on macOS at the moment.
+If you want to attempt to run it, good luck! Because it's only ever been run on my macOS machine...
 
 If you want to proceed anyway, you'll need to clone this repo (resolving any git submodules), download Chez Scheme 9.5 and SuperCollider 3.10.
 

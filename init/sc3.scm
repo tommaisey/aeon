@@ -58,7 +58,7 @@
   (sleep-secs 0.25)
   (with-exception-handler
    (lambda (x) (when (error? x) (error "initialisation" "\nSuperCollider unavailable. Is it running?")))
-   (lambda () (sc/display-server-status sc3)))
+   (lambda () (sc/server-sample-rate-nominal sc3)))
   (create-group standard-group sc/add-to-head default-group)
   ;; Ensure fx synths have tempo
   (create-group bus-effect-group sc/add-to-tail default-group))
