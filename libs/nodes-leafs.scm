@@ -31,9 +31,6 @@
     (for (pdef) expand))
 
   ;;-------------------------------------------------------------------
-  (define (get c key default)
-    (event-get (context-event c) key default))
-
   ;; Get values from the current or neighbouring events in the context.
   (define (this key default)
     (lambda (context)
@@ -235,6 +232,10 @@
          (fn init (event-get event key/keys 1)))
         ((unsafe-list? key/keys)
          (fold-left fn init (event-clean (filter matches-key? event)))))))
+
+  ;; Helper for `this`, `next` and `nearest`.
+  (define (get c key default)
+    (event-get (context-event c) key default))
 
 
   )

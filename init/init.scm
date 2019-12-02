@@ -16,6 +16,9 @@
 (load "patterns.scm")
 (load "playhead.scm")
 
+(tag-pdef-callable map)
+(tag-pdef-callable filter)
+
 (set-bpm! bpm)
 (start)
 

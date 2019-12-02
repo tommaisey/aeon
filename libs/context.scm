@@ -2,7 +2,6 @@
 (library (context)
   (export
     testc
-    context
     context?
     make-context
     make-empty-context
@@ -18,7 +17,6 @@
     context-insert
     context-with-events
     context-replace-event
-    context-clear-events
     context-with-arc rearc
     context-with-chain
     context-pop-chain
@@ -40,52 +38,48 @@
   (import (chezscheme) (utilities) (event))
 
   ;; ---------------------------------------------
-  ;; A context for a event in a series. events-next contains the
-  ;; remaining events (starting with 'this' event) and prev-events
-  ;; contains the previous events in reverse, starting with the one
-  ;; preceding 'this'.
+  ;; A context represents an arc of time, the events inside that arc, and
+  ;; also a 'cursor' pointing to one of those events.
   ;;
-  ;; The 'chain' is a list of context-lambdas. Calling the first one
-  ;; should render the context - it does so by calling the second one,
-  ;; etc. This 'inversion of control' allows each of the lambdas to call
+  ;; The events, if materialised, are stored in two lists:
+  ;; - events-next contains the current 'cursor' event and the following events.
+  ;; - events-prev contains the previous events in reverse order.
+  ;; Iteration consists of moving the current event into the 'prev' list.
+  ;;
+  ;; However, the context might be as-yet 'unresolved', meaning that it
+  ;; consists only of a list of functions which can materialise the events
+  ;; on request (see context-resolve in node-eval). This is the 'chain'.
+  ;;
+  ;; Calling the first fn in the chain should materialise the events - it does
+  ;; so by calling the second one, etc. This allows each of the fns to call
   ;; their ancestors with different time chunks, to acheive lookahead.
   ;;
-  ;; Sometimes we want to inform a function that operates on a context to
-  ;; call a callback for different chunks of a context rather than simply
-  ;; return a value based on the current position (as most do, see value-nodes).
-  ;; In this case we change subdivide-fn from #f (the default) to a function
-  ;; taking a sub-context of the original and a value. The subdivide-fn can
-  ;; then do its work to the subcontext, which will be pieced together back
-  ;; into a full length context and returned. See 'subdivide' for an example
-  ;; (at time of writing it's the only example).
+  ;; The 'subdivide-fn' allows a useful inversion-of-control. Often
+  ;; we want to give a context to some unknown time-slicing algorithm
+  ;; and have it call a callback for each chunk of the input context.
+  ;; For example, `in:`, `to:` etc. place such a callback in subdivide-fn,
+  ;; and call `over` or somesuch which controls where they add/change events.
   (define-record-type context
-    (fields (immutable events-next)
+    (fields (immutable arc)
+            (immutable events-next)
             (immutable events-prev)
-            (immutable arc)
             (immutable chain)
             (immutable subdivide-fn))
     (protocol
      (lambda (new)
-       (case-lambda ; events-prev is optional in ctor
-         ((events-next events-prev arc chain subdivide-fn)
-          (new events-next events-prev arc chain subdivide-fn))
-         ((events-next events-prev arc chain)
-          (new events-next events-prev arc chain #f))
-         ((events-next arc)
-          (new events-next '() arc '() #f))
-         ((arc)
-          (new '() '() arc '() #f))))))
+       (lambda* (arc [/opt [events-next '()]
+                           [events-prev '()]
+                           [chain '()]
+                           [subdivide-fn #f]])
+         (new arc events-next events-prev chain subdivide-fn)))))
 
   (define (make-empty-context start end)
     (make-context (make-arc start end)))
 
-  (define testc
-    (case-lambda
-      ((pattern) (testc pattern 0 1))
-      ((pattern start end) 
-       (put-datum (current-output-port)
-                  (lif (c (pattern (make-empty-context start end)))
-                       (context? c) (context-serialised c) c)))))
+  (define* (testc pattern-fn [/opt (start 0) (end 1)])
+    (put-datum (current-output-port)
+               (lif [c (pattern-fn (make-empty-context start end))]
+                    (context? c) (context-serialised c) c)))
 
   (define (context-event c)
     (lif (n (context-events-next c)) (null? n) '() (car n)))
@@ -105,13 +99,11 @@
           (cons 'events (event-clean (context-events-next c)))))
 
   ;; TODO: DRY up all these context-with... functions.
-  (define context-with-events
-    (case-lambda
-      ((c nxt) (context-with-events c nxt '()))
-      ((c nxt prv) (make-context nxt prv 
-                                 (context-arc c) 
-                                 (context-chain c)
-                                 (context-subdivide-fn c)))))
+  (define* (context-with-events c nxt [/opt (prv '())])
+    (make-context (context-arc c)
+                  nxt prv
+                  (context-chain c)
+                  (context-subdivide-fn c)))
 
   ;; Replaces the pointed-to event, or simply adds if there is none.
   (define (context-replace-event c new-event)
@@ -120,39 +112,36 @@
         (context-with-events c (cons new-event (cdr (context-events-next c)))
                                (context-events-prev c))))
 
-  (define (context-clear-events c)
-    (context-with-events c '()))
-
   (define (context-with-arc c new-arc)
-    (make-context (context-events-next c)
+    (make-context new-arc
+                  (context-events-next c)
                   (context-events-prev c)
-                   new-arc
                   (context-chain c)
                   (context-subdivide-fn c)))
-  (define rearc context-with-arc) ; alias
+  (alias rearc context-with-arc)
 
   (define (context-length c)
     (arc-length (context-arc c)))
 
   (define (context-with-chain c chain)
-    (make-context (context-events-next c)
+    (make-context (context-arc c)
+                  (context-events-next c)
                   (context-events-prev c)
-                  (context-arc c)
                   chain
                   (context-subdivide-fn c)))
 
   ;; Pop the top lambda off the chain.
   (define (context-pop-chain c)
-    (context-with-chain c (lif (ch (context-chain c)) (null? ch) '() (cdr ch))))
+    (context-with-chain c (lif [ch (context-chain c)] (null? ch) '() (cdr ch))))
 
   ;; Push a lambda or list of lambdas onto the chain.
   (define (context-push-chain c node)
     (context-with-chain c (push-front node (context-chain c))))
 
   (define (context-with-subdivide-fn c subdivide-fn)
-    (make-context (context-events-next c)
+    (make-context (context-arc c)
+                  (context-events-next c)
                   (context-events-prev c)
-                  (context-arc c)
                   (context-chain c)
                   subdivide-fn))
 
@@ -187,32 +176,31 @@
   ;; Transformations.
 
   ;; Used in context-map and context-filter.
-  ;; context, (context, result-list -> result-list) -> context
-  (define (context-reduce context event-reducer)
+  ;; The reducer takes a context pointing at a particular event
+  ;; and the current list of result events, and returns a new list
+  ;; of result events.
+  (define (context-reduce context event-reducer-fn)
     (let loop ([c context] [output '()])
       (if (context-it-end? c)
           (context-with-events c (reverse output))
-          (loop (context-move1-fwd c)
-                (event-reducer c output)))))
+          (loop (context-fwd1 c)
+                (event-reducer-fn c output)))))
 
-  ;; (context -> event), context -> context
-  ;; To return lists of events, supply 'append' for reducer.
-  (define context-map
-    (case-lambda
-      ((new-event-fn context)
-       (context-map new-event-fn context cons))
-
-      ((new-event-fn context reducer)
-       (context-reduce
-        context (lambda (c output)
-                  (lif (ev (new-event-fn c))
-                       (null? ev) output (reducer ev output)))))))
+  ;; new-event-fn is a function taking a context (pointing at a particular
+  ;; event) and returning a new event or nothing.
+  ;; If you want new-event-fn to return lists of events, 
+  ;; supply 'append' for the argument reducer.
+  (define* (context-map new-event-fn context [/opt (reducer cons)])
+    (define (rdc c events-list)
+      (lif [ev (new-event-fn c)]
+           (null? ev) events-list (reducer ev events-list)))
+    (context-reduce context rdc))
 
   ;; (context -> bool), context -> context
   (define (context-filter pred context)
-    (context-reduce
-     context (lambda (c output)
-               (if (pred c) (cons (context-event c) output) output))))
+    (define (rdc c events-list)
+      (if (pred c) (cons (context-event c) events-list) events-list))
+    (context-reduce context rdc))
 
   ;; Removes events from the context that don't fall within arc.
   (define (context-trim context)
@@ -226,20 +214,19 @@
   ;; be kept sorted in this way.
   (define (context-sort context)
     (let* ([events (context-events-next (context-rewind context))]
-           [before? (lambda (e1 e2) (< (event-beat e1) (event-beat e2)))]
-           [sorted (list-sort before? events)])
+           [sorted (list-sort event-before? events)])
       (context-with-events context sorted)))
 
   ;; Merge two contexts - the new context's events are kept sorted.
   (define (contexts-merge c1 c2)
     (let ([c1 (context-rewind c1)]
           [c2 (context-rewind c2)])
-      (make-context (merge-sorted (context-events-next c1)
-                                  (context-events-next c2)
-                                   event-before?)
-                    '()
-                    (make-arc (min (context-start c1) (context-start c2))
+      (make-context (make-arc (min (context-start c1) (context-start c2))
                               (max (context-end c1) (context-end c2)))
+                    (merge-sorted (context-events-next c1)
+                                  (context-events-next c2)
+                                  event-before?)
+                    (list)
                     (context-chain c2)
                     (context-subdivide-fn c2))))
 
@@ -251,15 +238,16 @@
     (let ([next (get-next c)] [prev (get-prev c)])
       (if (null? next) c
           (context-with-events c (cdr next) (cons (car next) prev)))))
-  (define (context-move1-fwd c)
+
+  (define (context-fwd1 c)
     (context-move1 c context-events-next context-events-prev))
-  (define (context-move1-bck c)
+  (define (context-bck1 c)
     (context-move1 c context-events-prev context-events-next))
 
   ;; direction-fn returns +1 for move fwd, -1 for back, 0 for stop.
   (define (context-it c direction-fn)
     (let* ([dir (direction-fn c)]
-           [mv (if (positive? dir) context-move1-fwd context-move1-bck)])
+           [mv (if (positive? dir) context-fwd1 context-bck1)])
       (if (zero? dir) c (context-it (mv c) direction-fn))))
 
   ;; direction-fn that drives context iteration forward/back n times,
@@ -280,7 +268,7 @@
   (define (to-closest time)
     (lambda (c)
       (define (get-delt bounds-check? default get-event)
-        (if (bounds-check? c) default (delta time (get-event c))))
+        (if (bounds-check? c) default (ev-delta time (get-event c))))
       (let ([cur (get-delt context-empty? 0 context-event)]
             [prv (get-delt context-first? -inf.0 context-prev-unchecked)]
             [nxt (get-delt context-last?  +inf.0 context-next-unchecked)])
@@ -293,7 +281,7 @@
   (define (to-after time)
     (lambda (c)
       (define (get-delt bounds-check? default get-event)
-        (if (bounds-check? c) default (delta time (get-event c))))
+        (if (bounds-check? c) default (ev-delta time (get-event c))))
       (let ([cur (get-delt context-empty? 0 context-event)]
             [prv (get-delt context-first? -inf.0 context-prev-unchecked)]
             [nxt (get-delt context-last?  +inf.0 context-next-unchecked)])
@@ -319,7 +307,7 @@
 
   (define (context-next-unchecked c) (cadr (context-events-next c)))
   (define (context-prev-unchecked c) (car (context-events-prev c)))
-  (define (delta t event) (- t (event-get event time-key +inf.0)))
+  (define (ev-delta t event) (- t (event-get event time-key +inf.0)))
 
   ;; Inserts the new event in a sorted fashion into the context, leaving the
   ;; context pointing to the new event, not the original one.
@@ -330,5 +318,5 @@
                [nxt (context-events-next moved)]
                [prv (context-events-prev moved)])
           (context-with-events c (cons new-event nxt) prv))))
-
+  
   ) ; end module context

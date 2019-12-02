@@ -69,6 +69,23 @@
 (define (+*sc x to-add to-mul)
   (mul (add x to-add) to-mul))
 
+;; N-arity versions of rsc3 mul, sub & add. Can DRY these once I
+;; understand macro composition better...
+(define-syntax mul-n
+  (syntax-rules ()
+    ((_ x) x)
+    ((_ x y ...) (*sc x (mul-n y ...)))))
+
+(define-syntax sub-n
+  (syntax-rules ()
+    ((_ x) x)
+    ((_ x y ...) (sc/sub x (sub-n y ...)))))
+
+(define-syntax add-n
+  (syntax-rules ()
+    ((_ x) x)
+    ((_ x y ...) (+sc x (add-n y ...)))))
+
 (define (private-bus i)
   (+sc i (+sc sc/num-output-buses sc/num-input-buses)))
 
@@ -76,13 +93,9 @@
   (sc/env-gen sc/kr 1 magnitude 0 1 action env))
 
 ;; TODO: Really should get into optional arguments to DRY these.
-(define make-asr
-  (case-lambda
-    ((mag atk sus rel) (make-asr mag atk sus rel -4))
-    ((mag atk sus rel crv) (make-asr mag atk sus rel crv sc/remove-synth))
-    ((mag atk sus rel crv action)
-     (let ([shape (sc/env-linen atk sus rel 1 (repeat 4 crv))])
-       (make-env-gen mag shape action)))))
+(define* (make-asr mag atk sus rel [/opt (curve -4) (action sc/remove-synth)])
+  (let ([shape (sc/env-linen atk sus rel 1 (repeat 4 curve))])
+       (make-env-gen mag shape action)))
 
 (define (make-rand-lfo mag time)
   (*sc (sc/lfd-noise1 sc/ar time) mag))
@@ -110,23 +123,6 @@
 ;; cutoff frequencies in a safe range.
 (define (clamp-cutoff cutoff)
   (sc/clip cutoff 30 19000))
-
-;; N-arity versions of rsc3 mul, sub & add. Can DRY these once I
-;; understand macro composition better...
-(define-syntax mul-n
-  (syntax-rules ()
-    ((_ x) x)
-    ((_ x y ...) (*sc x (mul-n y ...)))))
-
-(define-syntax sub-n
-  (syntax-rules ()
-    ((_ x) x)
-    ((_ x y ...) (sc/sub x (sub-n y ...)))))
-
-(define-syntax add-n
-  (syntax-rules ()
-    ((_ x) x)
-    ((_ x y ...) (+sc x (add-n y ...)))))
 
 ;; Override this rsc3 macro (which defines synthdef args) to also make
 ;; a top level 'keyword' (i.e. self-evaluating symbol) out of the name.

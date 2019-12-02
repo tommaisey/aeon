@@ -2,7 +2,7 @@
   (export mv- mv+ mv/ mv* tt+ tt- tt* tt/
           flip-time swing taps)
 
-  (import (chezscheme) 
+  (import (chezscheme)
           (utilities) (context) (event)
           (node-eval)
           (nodes-subdivide)
@@ -84,73 +84,69 @@
   ;; The optional node arguments are applied to the taps differently.
   ;; `iterative-node` is applied once to the 1st tap, twice to the 2nd, etc.
   ;; `once-node` is applied once to all taps but not the original.
-  (define taps
-    (case-lambda
-      ((period num) (taps period num nowt))
-      ((period num iterative-node) (taps period num iterative-node nowt))
-      ((period num iterative-node once-node)
+  (define* (taps period num [/opt (iterative-node nowt) (once-node nowt)])
 
-       ;; Compute furthest lookahead/lookback that might be required.
-       (define possible-range
-         (let ([min-p (maybe-leaf-meta period leaf-meta-rng-min)]
-               [max-p (maybe-leaf-meta period leaf-meta-rng-max)]
-               [min-n (maybe-leaf-meta num leaf-meta-rng-min)]
-               [max-n (maybe-leaf-meta num leaf-meta-rng-max)])
-           (if (for-all identity (list min-p max-p min-n max-n))
-               (let ([values (list (* min-p min-n)
-                                   (* min-p max-n)
-                                   (* max-p min-n)
-                                   (* max-p max-n))])
-                 (list (apply min values) (apply max values)))
-               (error 'taps "period and num must specify definite ranges" 
-                      (list period num)))))
+    ;; Compute furthest lookahead/lookback that might be required.
+    (define possible-range
+      (let ([min-p (maybe-leaf-meta period leaf-meta-rng-min)]
+            [max-p (maybe-leaf-meta period leaf-meta-rng-max)]
+            [min-n (maybe-leaf-meta num leaf-meta-rng-min)]
+            [max-n (maybe-leaf-meta num leaf-meta-rng-max)])
+        (if (for-all identity (list min-p max-p min-n max-n))
+            (let ([values (list (* min-p min-n)
+                                (* min-p max-n)
+                                (* max-p min-n)
+                                (* max-p max-n))])
+              (list (apply min values) (apply max values)))
+            (error 'taps "period and num must specify definite ranges"
+                   (list period num)))))
 
-       ;; Builds a list of pairs of times and their indeces.
-       ;; Omits the original 'src' time.
-       (define (list-taps src period num start end)
-         (if (zero? num) (list)
-             (let* ([sign (if (> num 0) 1 -1)]
-                    [time-flt (lambda (ti) (between (car ti) start end))]
-                    [time-idx (lambda (i) (cons (+ src (* (inc i) sign period)) 
-                                           (inc i)))])
-               (filter time-flt (map time-idx (iota (abs num)))))))
+    ;; Builds a list of pairs of times and their indeces.
+    ;; Omits the original 'src' time.
+    (define (list-taps src period num start end)
+      (if (zero? num) (list)
+          (let* ([sign (if (> num 0) 1 -1)]
+                 [time-flt (lambda (ti) (between (car ti) start end))]
+                 [time-idx (lambda (i) (cons (+ src (* (inc i) sign period))
+                                             (inc i)))])
+            (filter time-flt (map time-idx (iota (abs num)))))))
 
-       ;; Sets the new time and repeatedly applies iterative-node to an event.
-       ;; Has to wrap then unwrap the event in a context so iterative-node
-       ;; can work on it individually.
-       (define (tap-maker ev period)
-         (lambda (time-and-idx)
-           (let* ([t (car time-and-idx)]
-                  [i (cdr time-and-idx)]
-                  [c (make-context (list (event-set ev :beat t))
-                                   (make-arc t (+ t period)))])
-             (context-event ((apply x-> (repeat i iterative-node)) c)))))
+    ;; Sets the new time and repeatedly applies iterative-node to an event.
+    ;; Has to wrap then unwrap the event in a context so iterative-node
+    ;; can work on it individually.
+    (define (tap-maker ev period)
+      (lambda (time-and-idx)
+        (let* ([t (car time-and-idx)]
+               [i (cdr time-and-idx)]
+               [c (make-context (make-arc t (+ t period))
+                                (list (event-set ev :beat t)))])
+          (context-event ((apply x-> (repeat i iterative-node)) c)))))
 
-       ;; Builds a list of events (the taps) based on the context's current event.
-       (define (build-taps start end)
-         (lambda (context)
-           (let* ([t (context-now context)]
-                  [period (eval-leaf period context)]
-                  [num (eval-leaf num context)]
-                  [times-and-indeces (list-taps t period num start end)])
-             (map (tap-maker (context-event context) period) times-and-indeces))))
+    ;; Builds a list of events (the taps) based on the context's current event.
+    (define (build-taps start end)
+      (lambda (context)
+        (let* ([t (context-now context)]
+               [period (eval-leaf period context)]
+               [num (eval-leaf num context)]
+               [times-and-indeces (list-taps t period num start end)])
+          (map (tap-maker (context-event context) period) times-and-indeces))))
 
-       ;; Just catches a common error (reversing period and num).
-       (if (and (number? num) (not (integer? num)))
-           (error 'taps "number of taps should be an integer" num))
+    ;; Just catches a common error (reversing period and num).
+    (if (and (number? num) (not (integer? num)))
+        (error 'taps "number of taps should be an integer" num))
 
-       (lambda (context)
-         (let* ([orig-arc (context-arc context)]
-                [s (arc-start orig-arc)]
-                [e (arc-end orig-arc)]
-                [a (make-arc (- s (apply max 0 possible-range))
-                             (- e (apply min 0 possible-range)))]
-                [c (context-resolve (rearc context a))]
-                [c-taps (context-map (build-taps s e) c append)])
+    (lambda (context)
+      (let* ([orig-arc (context-arc context)]
+             [s (arc-start orig-arc)]
+             [e (arc-end orig-arc)]
+             [a (make-arc (- s (apply max 0 possible-range))
+                          (- e (apply min 0 possible-range)))]
+             [c (context-resolve (rearc context a))]
+             [c-taps (context-map (build-taps s e) c append)])
 
-           (contexts-merge
-            (rearc c orig-arc)
-            (once-node (rearc c-taps orig-arc))))))))
+        (contexts-merge
+         (rearc c orig-arc)
+         (once-node (rearc c-taps orig-arc))))))
 
   ;;-------------------------------------------------------------------
   ;; Flips time of events within each chunk.

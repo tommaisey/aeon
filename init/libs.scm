@@ -34,5 +34,11 @@
 (import (playback))
 (import (samples))
 
-(tag-pdef-callable map)
-(tag-pdef-callable filter)
+
+(define (run-tests)
+  (load "libs/tests/pattern-tests.scm")
+  (load "libs/tests/harmony-tests.scm"))
+
+;; Uncomment to run tests on engine init.
+;; (run-tests)
+

@@ -96,8 +96,8 @@
     (event-get event time-key 0))
   (define (event-move e n math-fn)
     (event-update e time-key (lambda (t) (math-fn t n)) 0))
-  (define (event-before? n1 n2)
-    (< (event-beat n1) (event-beat n2)))
+  (define (event-before? e1 e2)
+    (< (event-beat e1) (event-beat e2)))
   
   ;; Checks there is an item at the key and that it
   ;; satisfies the predicate (which may have extra args)

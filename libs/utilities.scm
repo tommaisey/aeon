@@ -23,7 +23,6 @@
           sorted?
           for-any
           for-none
-          combine-preds
           compose
           list-index
           list-last
@@ -48,7 +47,10 @@
           string-contains
           string-contains-ci
           string-last
-          gen-id)
+          gen-id
+          lambda*
+          define*
+          /opt)
 
   (import (chezscheme)
           (only (srfi s1 lists)
@@ -61,6 +63,13 @@
                 string-contains-ci)
           (thunder-utils))
 
+  ;;-------------------------------------------------------------------
+  ;; Optional arguments
+  (alias lambda* lambda/optional) ;; from thunderutils
+  (alias define* define/optional) ;; from thunderutils
+  (alias /opt /optional)
+
+  ;;-------------------------------------------------------------------
   ;; Base case for functional composition
   (define identity (lambda (x) x))
 
@@ -68,14 +77,7 @@
   (define (compose . fns)
     (fold-left (lambda (a b) (lambda (x) (b (a x)))) identity fns))
 
-  ;; Truncate and integerize
-  (define trunc-int (compose exact truncate))
-  (define floor-int (compose exact floor))
-
-  ;; Find the nearest whole multiple of divisor that's <= x.
-  (define (round-down-f x divisor)
-    (* divisor (floor-int (/ x divisor))))
-
+  ;;-------------------------------------------------------------------
   ;; A pseudo-random number generator that takes a seed.
   (define pseudo-rand-src (make-random-source))
 
@@ -91,9 +93,18 @@
                     ((random-source-make-integers pseudo-rand-src) len)
                     (* len ((random-source-make-reals pseudo-rand-src))))))))
 
-  ;; Some 'english sounding' math operators.
+  ;;-------------------------------------------------------------------
+  ;; Maths
   (define (inc val) (+ val 1))
   (define (dec val) (- val 1))
+
+  ;; Truncate and integerize
+  (define trunc-int (compose exact truncate))
+  (define floor-int (compose exact floor))
+
+  ;; Find the nearest whole multiple of divisor that's <= x.
+  (define (round-down-f x divisor)
+    (* divisor (floor-int (/ x divisor))))
 
   (define (nearly-divisible val div error)
     (let* ([remain (/ val div)]
@@ -243,25 +254,47 @@
           (else (loop (dec num) (cons to-repeat end)))))))
 
   ;;--------------------------------------------------------------------
-  ;; R6RS provides for-all, which checks all items in a
-  ;; list return true for pred. Here's the 'none' and
-  ;; 'any' versions.
+  ;; Logic
+  
+  ;; R6RS provides for-all.
   (define (for-any pred lst)
     (exists pred lst))
 
   (define (for-none pred lst)
     (not (for-any pred lst)))
 
-  ;; Get a lambda that combines all of the predicates in the
-  ;; list. e.g. Supplying for-all/any will check
-  ;; all/any of the predicates return true for x.
-  (define (combine-preds preds for-all/any/none)
-    (lambda (x)
-      (for-all/any/none (lambda (p) (p x)) preds)))
+  ;; let+if in a more compact way
+  (define-syntax lif
+    (syntax-rules ()
+      ((_ [name init] test t-branch f-branch)
+       (let ([name init])
+         (if test t-branch f-branch)))))
+
+  ;; same, but no explicit test - tests the value directly
+  (define-syntax asif
+    (syntax-rules ()
+      ((_ [name init] t-branch f-branch)
+       (lif [name init] name t-branch f-branch))))
+
+  ;; return false if the test fails, execute body otherwise
+  (define-syntax nor
+    (syntax-rules ()
+      ((_ test body)
+       (if (not test) #f body))))
 
   ;;----------------------------------------------------------------------
-  ;; Get the last element of a list. Linear time.
-  (define (list-last l)
+  ;; Lists
+
+  ;; #t for any kind of list: null, proper, improper, or cyclic.
+  ;; Faster than 'list?' but improper lists (which return true)
+  ;; are dangerous and shouldn't be used with e.g. append.
+  (define (unsafe-list? x)
+    (or (null? x)
+        (and (pair? x)
+             (or (null? (cdr x))
+                 (pair? (cdr x))))))
+  
+  (define (list-last l) ; Linear time.
     (if (null? (cdr l))
         (car l)
         (list-last (cdr l))))
@@ -269,14 +302,6 @@
   ;; Remove matching items in b from a
   (define (remove-list a b)
     (filter (lambda (x) (not (member x b))) a))
-
-  ;; #t for any kind of list: null, proper, improper, or cyclic.
-  ;; Faster than 'list?' but improper lists fail with e.g. append.
-  (define (unsafe-list? x)
-    (or (null? x)
-        (and (pair? x)
-             (or (null? (cdr x))
-                 (pair? (cdr x))))))
 
   ;; Adds the element to the list. If the element is a list, it is appended.
   (define (push-front val list)
@@ -294,6 +319,9 @@
         alist ;; optimise: don't set same value twice in a row
         (cons (cons key value) alist)))
 
+  ;;----------------------------------------------------------------------
+  ;; Alists - i.e. association lists
+  
   ;; Get multiple alist values in one go.
   ;; Can be more efficient than searching seperately for each value.
   ;; key-default-pairs should be a list of: (key default-val).
@@ -338,6 +366,7 @@
               (error err-sym optional-pairs-err pairs))
           (error err-sym kv-pairs-err kv-pairs)))
 
+  ;;------------------------------------------------------------------------
   ;; Useful for destructuring records
   (define-syntax derecord
     (syntax-rules ()
@@ -352,24 +381,15 @@
          (define name1 'name1)
          (define name2 'name2) ...))))
 
-  ;; let+if in a more compact way
-  (define-syntax lif
-    (syntax-rules ()
-      ((_ [name init] test t-branch f-branch)
-       (let ([name init])
-         (if test t-branch f-branch)))))
+  ;;------------------------------------------------------------------------
+  ;; Strings
+  (define (string-last str n)
+    (let ([len (string-length str)])
+      (substring str (max 0 (- len n)) len)))
 
-  ;; same, but no explicit test - tests the value directly
-  (define-syntax asif
-    (syntax-rules ()
-      ((_ [name init] t-branch f-branch)
-       (lif [name init] name t-branch f-branch))))
-
-  ;; return false if the test fails, execute body otherwise
-  (define-syntax nor
-    (syntax-rules ()
-      ((_ test body)
-       (if (not test) #f body))))
+  (define (println . objs)
+    (fresh-line)
+    (for-each (lambda (x) (display x) (fresh-line)) objs))
 
   ;;------------------------------------------------------------------------
   ;; Throw an error if the wrong type is used
@@ -379,21 +399,12 @@
        (unless (pred val) 
          (error context-id (format "~A should satisfy ~A" 'val 'pred) val)))))
 
-  (define (println . objs)
-    (fresh-line)
-    (for-each (lambda (x) (display x) (fresh-line)) objs))
-
   ;; Helper for synthesising new identifiers in unhygenic macros.
   (define (gen-id template-id . args)
     (define (arg->string x)
       (if (string? x) x (symbol->string (syntax->datum x))))
     (let ([str (apply string-append (map arg->string args))])
       (datum->syntax template-id (string->symbol str))))
-
-  ;;------------------------------------------------------------------------
-  (define (string-last str n)
-    (let ([len (string-length str)])
-      (substring str (max 0 (- len n)) len)))
   
   ;;------------------------------------------------------------------------
   ;; A value bound with a mutex to make it threadsafe. You should always
