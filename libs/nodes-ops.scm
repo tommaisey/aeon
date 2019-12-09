@@ -47,7 +47,7 @@
                         (make-event (context-start context)
                                     (:sustain (context-length context))
                                     (key value)))))
-    (unless (symbol? key) (error 'in "expected a :key" key))
+    (unless (symbol? key) (error 'in: "expected a :key" key))
     (apply o-> (wrap-subdivide-fn impl leaf) ops))
 
   ;; A node that replaces the input with the result of applying

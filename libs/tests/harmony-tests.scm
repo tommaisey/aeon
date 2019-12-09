@@ -9,11 +9,10 @@
     (define result
       (map (lambda (c) (+ midi-root (chord-offset 0 scale-root c scale)))
            (vector->list chord-shape)))
-    (define n (string-append "chord: " name))
-    (test-list n eqv? midi-note-list result))
+    (test-list (string-append "chord: " name) eqv? midi-note-list result))
 
-  (define (make-chord octave . chord-notes)
-    (map (lambda (x) (+ x (* 12 (+ octave 2)))) chord-notes))
+  (define (make-chord . chord-notes)
+    (map (lambda (x) (+ x)) chord-notes))
 
   ;; Test the chord-offset function
   (test-eqv "chord-offset"
@@ -50,37 +49,36 @@
 
   ;; Test some triads in C major
   (test-chord "C major" 60 I major triad
-              (make-chord 3 C E G))
+              (list C E G))
   (test-chord "D minor" 60 II major triad
-              (make-chord 3 D F A))
+              (list D F A))
   (test-chord "E minor" 60 III major triad
-              (make-chord 3 E G B))
+              (list E G B))
   (test-chord "A minor" 60 VI major triad
-              (make-chord 3 A (+ 12 C) (+ 12 E)))
+              (list A C4 E4))
   (test-chord "B diminished" 60 VII major triad
-              (make-chord 3 B (+ 12 D) (+ 12 F)))
+              (list B D4 F4))
 
   ;; Test some 7ths in C major
   (test-chord "C major 7th" 60 I major 7th
-              (make-chord 3 C E G B))
+              (list C E G B))
   (test-chord "D minor 7th" 60 II major 7th
-              (make-chord 3 D F A (+ 12 C)))
+              (list D F A C4))
   (test-chord "B minor 7th flat 5" 60 VII major 7th
-              (make-chord 3 B (+ 12 D) (+ 12 F) (+ 12 A)))
+              (list B D4 F4 A4))
 
   ;; Test some triads in Ab minor
   (test-chord "Ab minor" 68 I minor triad
-              (make-chord 3 Ab B (+ 12 Eb)))
+              (list Ab B Eb4))
   (test-chord "Bb diminshed" 68 II minor triad
-              (make-chord 3 Bb (+ 12 Db) (+ 12 E)))
+              (list Bb Db4 E4))
   (test-chord "Eb minor" 68 V minor triad
-              (make-chord 4 Eb Gb Bb))
+              (list Eb4 Gb4 Bb4))
 
   ;; Test some 7ths in F# minor
   (test-chord "F# minor 7th" 66 I minor 7th
-              (make-chord 3 Fs A (+ 12 Cs) (+ 12 E)))
+              (list Fs A Cs4 E4))
   (test-chord "G# minor seventh flat 5" 66 II minor 7th
-              (make-chord 3 Gs B (+ 12 D) (+ 12 Fs)))
+              (list Gs B D4 Fs4))
 
   )
-

@@ -22,7 +22,7 @@
     (define (pattern-player now-beat start end)
       (lambda (p)
         (for-each (lambda (e) (play-event e now-beat t))
-                  (context-events-next (render p start end)))))
+                  (context-events-next (render-arc p start end)))))
 
     (guard (x [else (handle-error x)])
       (let* ([now (+ last-process-beat (beats-since-last-process t))]
@@ -33,6 +33,13 @@
         (set! last-process-time t)
         (set! last-process-beat now)
         (set! rendered-point end)))))
+
+(define (handle-error condition)
+  (let ([p (console-output-port)])
+    (display-condition condition p)
+    (newline p)
+    (flush-output-port p)
+    (clear-patterns pattern-dict)))
 
 ;; Only creates new thread if one isn't already in playback-thread.
 (define (start-thread semaphore)
@@ -83,10 +90,3 @@
                        (:group bus-effect-group))])
     (put-playhead-sync-info)
     (play-event e 0)))
-
-(define (handle-error condition)
-  (let ([p (console-output-port)])
-    (display-condition condition p)
-    (newline p)
-    (flush-output-port p)
-    (clear-patterns pattern-dict)))

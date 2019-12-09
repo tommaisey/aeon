@@ -1,6 +1,6 @@
 (library (node-eval)
   (export
-    render
+    render-arc
     eval-leaf
     eval-leaf-early
     leaf-meta-ranged
@@ -15,11 +15,8 @@
 
   ;;--------------------------------------------------------------
   ;; Call on the root of a tree to fill a context with events.
-  (define (render p start end)
-    (render-ctxt p (make-context (make-arc start end))))
-
-  (define (render-ctxt item context)
-    (context-trim (item context)))
+  (define (render-arc pattern-fn start end)
+    (context-trim (pattern-fn (make-context (make-arc start end)))))
 
   ;;--------------------------------------------------------------
   ;; Get a value from a leaf. The source leaf v might be a plain value, a
