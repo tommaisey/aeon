@@ -16,14 +16,18 @@
 
   ;;--------------------------------------------------------------
   ;; Call on the root of a tree to fill a context with events.
-  (define (render-arc pattern-fn start end)
-    (context-trim (pattern-fn (make-context (make-arc start end)))))
-
+  (define render-arc
+    (case-lambda
+      ((pattern-fn arc) 
+       (context-trim (pattern-fn (make-context arc))))
+      
+      ((pattern-fn start end) 
+       (render-arc pattern-fn (make-arc start end)))))
 
   ;; Call to serialise a test render of a pattern
   (define* (testp pattern-fn [/opt (start 0) (end 1)])
     (put-datum (current-output-port)
-               (lif [c (pattern-fn (make-empty-context start end))]
+               (lif [c (render-arc pattern-fn start end)]
                     (context? c) (context-serialised c) c)))
 
   ;;--------------------------------------------------------------

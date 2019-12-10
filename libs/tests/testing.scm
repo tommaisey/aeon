@@ -3,7 +3,7 @@
           test-eqv
           test-list
           test-impl
-          ptest)
+          testp)
 
   (import (chezscheme)
           (only (srfi s1 lists) list=)
@@ -65,12 +65,12 @@
   ;; The events-props form is a list of flattened key/value pairs.
   ;; Note that the result can contain extra key/values to the ones tested,
   ;; but if it's missing any of the specified events-props values it will fail.
-  (define-syntax ptest
+  (define-syntax testp
     (syntax-rules ()
-      ((_ name start end pattern-expr ((events-props ...) ...))
+      ((_ name arc  pattern-expr ((events-props ...) ...))
        (let ([expected (list (make-alist events-props ...) ...)])
          (test-impl name result 
-          (render-arc pattern-expr start end)
+          (render-arc pattern-expr arc)
           (test-events result expected)
           (let* ([rendered (context-events-next result)]
                  [cleaned (map (lambda (e) (event-optimise e)) rendered)]
