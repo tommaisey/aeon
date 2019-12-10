@@ -16,7 +16,6 @@
           concatenate
           merge-sorted
           pairwise
-          unzip-pairs
           extend-repeating-last
           take
           repeat
@@ -26,18 +25,15 @@
           compose
           list-index
           list-last
-          remove-list
           unsafe-list?
           push-front
+          make-alist
           alist-get
           alist-set
           alist-get-multi
           alist-let
-          make-alist
-          check-optionals
           derecord
-          lif asif
-          nor
+          lif lest
           declare-keywords
           check-type
           println
@@ -218,27 +214,12 @@
   ;; as consed pairs.
   ;; If the input list isn't even numbered, returns #f.
   (define (pairwise lst)
-    (nor (even? (length lst))
+    (and (even? (length lst))
          (let loop ([lst lst] [pairs '()])
            (if (null? lst)
                (reverse pairs)
                (loop (cddr lst)
                      (cons (cons (car lst) (cadr lst)) pairs))))))
-
-  ;; Unzips an even-numbered list into two lists. 
-  ;; If the input list isn't even numbered, returns two #f values.
-  ;; (1 2 3 4 5 6 7 8) ->
-  ;; (values (1 3 5 7)
-  ;;         (2 4 6 8))
-  (define (unzip-pairs pairs)
-    (if (not (zero? (mod (length pairs) 2)))
-        (values #f #f)
-        (let loop ([pairs pairs] [keys '()] [vals '()])
-          (if (null? pairs)
-              (values (reverse keys) (reverse vals))
-              (loop (cddr pairs) 
-                    (cons (car pairs) keys)
-                    (cons (cadr pairs) vals))))))
 
   ;; Makes the input list have a length of desired-len, either
   ;; by dropping elements at the end or repeating the last list element.
@@ -271,16 +252,10 @@
          (if test t-branch f-branch)))))
 
   ;; same, but no explicit test - tests the value directly
-  (define-syntax asif
+  (define-syntax lest
     (syntax-rules ()
       ((_ [name init] t-branch f-branch)
        (lif [name init] name t-branch f-branch))))
-
-  ;; return false if the test fails, execute body otherwise
-  (define-syntax nor
-    (syntax-rules ()
-      ((_ test body)
-       (if (not test) #f body))))
 
   ;;----------------------------------------------------------------------
   ;; Lists
@@ -338,13 +313,14 @@
       (append found targets))) ;; Add defaults for those not found.
 
   ;; A helpful macro to bind to multiple values in an alist.
+  ;; TODO: could this be faster using a vector internally?
   (define-syntax alist-let
     (syntax-rules ()
       ((_ alist ([name key default] ...)
           body ...)
-       (let* ([found (alist-get-multi alist (list (cons key default) ...))]
-              [name (cdr (assq key found))] ...)
-         body ...))))
+       (let ([found (alist-get-multi alist (list (cons key default) ...))])
+         (let ([name (cdr (assq key found))] ...)
+           body ...)))))
 
   ;; Some error strings used in alist functions below:
   (define kv-pairs-err "requires an even list of keys and values.")
@@ -353,18 +329,8 @@
 
   ;; Turns a flat list into an alist, or emits an error if they aren't pairs
   (define (make-alist . kv-pairs)
-    (asif (alist (pairwise kv-pairs))
-           alist
+    (lest (alist (pairwise kv-pairs)) alist
           (error 'make-alist kv-pairs-err kv-pairs)))
-
-  ;; Turns a flat list into an alist, checking along the way
-  ;; whether it's an even-numbered list with symbol keys.
-  (define (check-optionals err-sym kv-pairs)
-    (asif (pairs (pairwise kv-pairs))
-          (if (for-all (lambda (x) (symbol? (car x))) pairs)
-               pairs
-              (error err-sym optional-pairs-err pairs))
-          (error err-sym kv-pairs-err kv-pairs)))
 
   ;;------------------------------------------------------------------------
   ;; Useful for destructuring records
@@ -380,7 +346,7 @@
        (begin
          (define name1 'name1)
          (define name2 'name2) ...))))
-
+  
   ;;------------------------------------------------------------------------
   ;; Strings
   (define (string-last str n)

@@ -66,9 +66,6 @@
 (alias *sc sc/mul)
 (alias *+sc sc/mul-add)
 
-(define (+*sc x to-add to-mul)
-  (mul (add x to-add) to-mul))
-
 ;; N-arity versions of rsc3 mul, sub & add. Can DRY these once I
 ;; understand macro composition better...
 (define-syntax mul-n

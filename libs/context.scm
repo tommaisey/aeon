@@ -1,7 +1,6 @@
 ;; -*- geiser-scheme-implementation: chez-*-
 (library (context)
   (export
-    testc
     context?
     make-context
     make-empty-context
@@ -75,11 +74,6 @@
 
   (define (make-empty-context start end)
     (make-context (make-arc start end)))
-
-  (define* (testc pattern-fn [/opt (start 0) (end 1)])
-    (put-datum (current-output-port)
-               (lif [c (pattern-fn (make-empty-context start end))]
-                    (context? c) (context-serialised c) c)))
 
   (define (context-event c)
     (lif (n (context-events-next c)) (null? n) '() (car n)))

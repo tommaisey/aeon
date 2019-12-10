@@ -31,19 +31,17 @@
 
   ;; Reads :octave :root :scale :scd and :chd to generate a :freq value.
   (define (process-event-freq e)
-    (alist-let
-      e ([freq ':freq #f]
-         [midi :midinote #f])
+    (alist-let e ([freq ':freq #f]
+                  [midi :midinote #f])
       (cond
         (freq e)
         (midi (event-set e ':freq (midicps midi 440)))
         (else
-          (alist-let
-            e ([oct :octave 0]
-               [root :root C]
-               [scale :scale minor]
-               [scd :scale-degree 0]
-               [chd :chord-degree 0])
+          (alist-let e ([oct :octave 0]
+                        [root :root C]
+                        [scale :scale minor]
+                        [scd :scale-degree 0]
+                        [chd :chord-degree 0])
             (let* ([s (chord-offset oct scd chd scale)]
                    [f (midicps (+ root s) 440)])
               (event-remove-multi (event-set e ':freq f)

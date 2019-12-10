@@ -9,42 +9,42 @@
     (define result
       (map (lambda (c) (+ midi-root (chord-offset 0 scale-root c scale)))
            (vector->list chord-shape)))
-    (test-list (string-append "chord: " name) eqv? midi-note-list result))
+    (test-list (string-append "[chord] " name) eqv? midi-note-list result))
 
   (define (make-chord . chord-notes)
     (map (lambda (x) (+ x)) chord-notes))
 
   ;; Test the chord-offset function
-  (test-eqv "chord-offset"
+  (test-eqv "[chord-offset] I"
     0 (chord-offset 0 I I major))
-  (test-eqv "chord-offset"
+  (test-eqv "[chord-offset] III"
     4 (chord-offset 0 I III major))
-  (test-eqv "chord-offset"
+  (test-eqv "[chord-offset] V"
     7 (chord-offset 0 I V major))
-  (test-eqv "chord-offset"
+  (test-eqv "[chord-offset] II"
     2 (chord-offset 0 I II major))
 
   ;; With octaves
-  (test-eqv "chord-offset, octaves"
+  (test-eqv "[chord-offset] octaves positive"
     17 (chord-offset 1 IV I major))
-  (test-eqv "chord-offset, octaves"
+  (test-eqv "[chord-offset] octaves negative"
     -10 (chord-offset -2 IX I major))
 
   ;; With negative & large scale degrees
-  (test-eqv "chord-offset, negative scd"
+  (test-eqv "[chord-offset] negative scd"
     -1 (chord-offset 0 -1 I major))
-  (test-eqv "chord-offset, negative scd"
+  (test-eqv "[chord-offset] negative scd"
     -3 (chord-offset 0 -2 I major))
-  (test-eqv "chord-offset, negative scd"
+  (test-eqv "[chord-offset] negative scd"
     -12 (chord-offset 0 -7 I major))
-  (test-eqv "chord-offset, negative scd"
+  (test-eqv "[chord-offset] negative scd"
     -13 (chord-offset 0 -8 I major))
-  (test-eqv "chord-offset, negative scd and octave"
+  (test-eqv "[chord-offset] negative scd and octave"
     -13 (chord-offset -1 -1 I major))
 
-  (test-eqv "chord-offset, negative scd plus chd"
+  (test-eqv "[chord-offset] negative scd plus chd"
     2 (chord-offset 0 -2 3 major))
-  (test-eqv "chord-offset, negative scd plus chd"
+  (test-eqv "[chord-offset] negative scd plus chd"
     -8 (chord-offset 0 -8 3 major))
 
   ;; Test some triads in C major

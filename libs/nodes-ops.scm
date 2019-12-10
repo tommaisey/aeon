@@ -12,7 +12,7 @@
   (export
     in! in:
     to: to+ to- to* to/ to?
-    rp: tr? cp: cp?)
+    sq: tr? cp: cp?)
 
   (import
     (chezscheme)
@@ -47,21 +47,8 @@
                         (make-event (context-start context)
                                     (:sustain (context-length context))
                                     (key value)))))
-    (unless (symbol? key) (error 'in: "expected a :key" key))
+    (unless (symbol? key) (error 'in: "expected :key" key))
     (apply o-> (wrap-subdivide-fn impl leaf) ops))
-
-  ;; A node that replaces the input with the result of applying
-  ;; it to a node or pattern of nodes.
-  (define (rp: leaf)
-    (define (impl context value)
-      (let* ([context (context-resolve context)]
-             [value (eval-leaf-early value (context-start context) context)])
-        (if (procedure? value)
-            (value context)
-            (begin
-              (warning 'rp: "got raw value, wants procedure" value)
-              context))))
-    (wrap-subdivide-fn impl leaf))
 
   ;; A node that sets a property of events according to the pattern.
   ;; key value ... -> (context -> context)
@@ -90,6 +77,21 @@
   (define (to* . kv-pairs) (apply to * kv-pairs))
   (define (to/ . kv-pairs) (apply to / kv-pairs))
 
+  ;; A node that replaces the input with the result of applying
+  ;; it to a node or pattern of nodes.
+  (define (sq: leaf)
+    (define (impl context value)
+      (let* ([value (eval-leaf value context)])
+        (cond
+          ((context? value) value)
+          ((is-rest? value) context)
+          ((procedure? value) (value context))
+          (else
+            (begin
+              (warning 'seq "got raw value, wants procedure or ~" value)
+              context)))))
+    (wrap-subdivide-fn impl leaf))
+  
   ;;---------------------------------------------------------------
   ;; Composite chaining operators.
 

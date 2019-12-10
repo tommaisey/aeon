@@ -1,5 +1,6 @@
 (library (node-eval)
   (export
+    testp
     render-arc
     eval-leaf
     eval-leaf-early
@@ -17,6 +18,13 @@
   ;; Call on the root of a tree to fill a context with events.
   (define (render-arc pattern-fn start end)
     (context-trim (pattern-fn (make-context (make-arc start end)))))
+
+
+  ;; Call to serialise a test render of a pattern
+  (define* (testp pattern-fn [/opt (start 0) (end 1)])
+    (put-datum (current-output-port)
+               (lif [c (pattern-fn (make-empty-context start end))]
+                    (context? c) (context-serialised c) c)))
 
   ;;--------------------------------------------------------------
   ;; Get a value from a leaf. The source leaf v might be a plain value, a
