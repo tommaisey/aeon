@@ -18,6 +18,7 @@
 (import (utilities))
 (import (file-tools))
 (import (event))
+(import (arc))
 (import (context))
 (import (pdef))
 (import (node-eval))

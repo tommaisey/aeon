@@ -70,9 +70,9 @@
                     :chord-shape
                     :scale-degree
                     :chord-degree)
-  (define :scd :scale-degree)
-  (define :chd :chord-degree)
-  (define :chs :chord-shape)
+  (alias :scd :scale-degree)
+  (alias :chd :chord-degree)
+  (alias :chs :chord-shape)
 
   (define I    0)
   (define II   1)

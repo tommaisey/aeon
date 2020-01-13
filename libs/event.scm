@@ -20,6 +20,7 @@
           event-clean
           event-optimise
           event-prioritise
+          event-symbols->strings
           event-set-multi
           event-get-multi
           event-remove-multi
@@ -29,25 +30,7 @@
           event-move
           print-event
           print-events
-          make-events-with-times
-
-          arc arc?
-          make-arc
-          arc-with-start
-          arc-with-end
-          arc-start
-          arc-end
-          arc-length
-          arc-negate
-          arc-add
-          arc-math
-          arc-widen
-          arc-correct
-          arc-valid?
-          arc-eq?
-          arc-contains?
-          within-arc?
-          arcs-overlap?)
+          make-events-with-times)
 
   (import (chezscheme) (utilities) (srfi s26 cut)
           (only (srfi s1 lists) delete-duplicates lset-difference))
@@ -91,9 +74,11 @@
   (define (event-remove-multi event key-list)
     (lset-difference (lambda (entry k) (eq? k (car entry))) event key-list))
 
-  ;; Some time-related helpers
+  ;; Time-related helpers
   (define (event-beat event)
-    (event-get event time-key 0))
+    (lest [result (assq time-key event)]
+          (cdr result)
+          (error 'event-beat "no :beat key in event!" event)))
   (define (event-move e n math-fn)
     (event-update e time-key (lambda (t) (math-fn t n)) 0))
   (define (event-before? e1 e2)
@@ -120,6 +105,12 @@
     (let ([n (fold-left (cut event-prioritise <> <>) event priority-keys)])
       (event-clean n)))
 
+  ;; Turn all the symbol keys into string keys
+  (define (event-symbols->strings e)
+    (define (pair-symbol->string kv-pair)
+      (cons (symbol->string (car kv-pair)) (cdr kv-pair)))
+    (map pair-symbol->string e))
+
   ;; Some event convenience functions
   (define (print-event event port)
     (define (format-val v)
@@ -140,49 +131,5 @@
 
   (define (make-events-with-times times-list)
     (map (lambda (t) (make-event t)) times-list))
-
-  ;;--------------------------------------------------
-  ;; A range of time (in beats)
-  (define-record-type arc
-    (fields (immutable start)
-            (immutable end)))
-
-  (define (arc-with-start a new-start)
-    (arc-correct
-     (make-arc new-start (arc-end a))))
-  (define (arc-with-end a new-end)
-    (arc-correct
-     (make-arc (arc-start a) new-end)))
-  (define (arc-valid? a)
-    (< (arc-start a) (arc-end a)))
-  (define (arc-eq? a b)
-    (and (eqv? (arc-start a) (arc-start b))
-         (eqv? (arc-end a) (arc-end b))))
-  (define (within-arc? a t)
-    (between-inclusive t (arc-start a) (arc-end a)))
-  (define (arc-contains? a b) ;; two arcs
-    (and (within-arc? a (arc-start b))
-         (within-arc? a (arc-end b))))
-  (define (arcs-overlap? a b) ;; two arcs
-    (or (within-arc? b (arc-start a))
-        (within-arc? b (arc-end a))
-        (within-arc? a (arc-start b))
-        (within-arc? a (arc-end b))))
-  (define (arc-length a)
-    (- (arc-end a) (arc-start a)))
-  (define (arc-negate a)
-    (make-arc (- (arc-start a)) (- (arc-end a))))
-  (define (arc-add a1 a2)
-    (arc-correct
-     (make-arc (+ (arc-start a1) (arc-start a2))
-               (+ (arc-end a1) (arc-end a2)))))
-  (define (arc-math a proc val)
-    (arc-correct
-     (make-arc (proc (arc-start a) val) (proc (arc-end a) val))))
-  (define (arc-widen a val)
-    (arc-correct
-     (arc-add a (make-arc (- val) val))))
-  (define (arc-correct a)
-    (if (arc-valid? a) a (make-arc (arc-end a) (arc-start a))))
 
   ) ; END module 'event'

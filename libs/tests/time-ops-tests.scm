@@ -122,4 +122,18 @@
          (:beat (+ n 2/3)   :scd X))))
     (iota 20))
 
+  ;;----------------------------------------------------------
+  ;; legato
+
+  (testp "[legato]" (make-arc 0 1)
+     (o->
+       (in! (over 1 [1 ~ ~ [1 ~ 1 ~] ~ ~ ~ 1]))
+       (legato 1))
+     ((:beat 0    :sustain 3/8)
+      (:beat 3/8  :sustain 1/16)
+      (:beat 7/16 :sustain 7/16)
+      (:beat 7/8  :sustain 1/8)))
+
+  ;; TODO: test legato threshold
+
   )

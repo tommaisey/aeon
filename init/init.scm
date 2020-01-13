@@ -12,8 +12,10 @@
 
 (load "sc3.scm")
 (load "synthdefs.scm")
+(load "buffers.scm")
 (load "event-process.scm")
 (load "patterns.scm")
+(load "recording.scm")
 (load "playhead.scm")
 
 (tag-pdef-callable map)

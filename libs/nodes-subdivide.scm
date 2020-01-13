@@ -15,6 +15,7 @@
   (import (scheme)
           (utilities)
           (event)
+          (arc)
           (context)
           (node-eval)
           (for (pdef) expand))
@@ -86,7 +87,7 @@
                 subctxt))
 
          (let loop ([c (make-context (context-arc ctxt))]
-                    [t (round-down-f (context-start ctxt) dur)]
+                    [t (round-down (context-start ctxt) dur)]
                     [next vals]
                     [prev #f])
            (cond

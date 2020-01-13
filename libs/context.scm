@@ -25,7 +25,6 @@
     context-no-subdivide-fn
     context-length
     context-move
-    context-to-closest-event
     context-to-event-after
     context-rewind
     context-map
@@ -33,14 +32,17 @@
     context-trim
     context-sort
     context-empty?
+    context-first?
+    context-last?
+    context-it-end?
     contexts-merge)
-  (import (chezscheme) (utilities) (event))
+  (import (chezscheme) (utilities) (arc) (event))
 
   ;; ---------------------------------------------
   ;; A context represents an arc of time, the events inside that arc, and
   ;; also a 'cursor' pointing to one of those events.
   ;;
-  ;; The events, if materialised, are stored in two lists:
+  ;; The events, if resolved, are stored in two lists:
   ;; - events-next contains the current 'cursor' event and the following events.
   ;; - events-prev contains the previous events in reverse order.
   ;; Iteration consists of moving the current event into the 'prev' list.
@@ -58,22 +60,20 @@
   ;; and have it call a callback for each chunk of the input context.
   ;; For example, `in:`, `to:` etc. place such a callback in subdivide-fn,
   ;; and call `over` or somesuch which controls where they add/change events.
-  (define-record-type context
-    (fields (immutable arc)
-            (immutable events-next)
-            (immutable events-prev)
-            (immutable chain)
-            (immutable subdivide-fn))
-    (protocol
-     (lambda (new)
-       (lambda* (arc [/opt [events-next '()]
-                           [events-prev '()]
-                           [chain '()]
-                           [subdivide-fn #f]])
-         (new arc events-next events-prev chain subdivide-fn)))))
+  (define-immutable-record context
+    [arc (make-arc 0 1)]
+    [events-next '()]
+    [events-prev '()]
+    [chain '()]
+    [subdivide-fn #f])
 
   (define (make-empty-context start end)
     (make-context (make-arc start end)))
+
+  (define* (context-with-events c nxt [/opt (prv '())])
+    (context-with-events-prev (context-with-events-next c nxt) prv))
+
+  (alias rearc context-with-arc)
 
   (define (context-event c)
     (lif (n (context-events-next c)) (null? n) '() (car n)))
@@ -92,13 +92,6 @@
           (list 'arc (context-start c) (context-end c))
           (cons 'events (event-clean (context-events-next c)))))
 
-  ;; TODO: DRY up all these context-with... functions.
-  (define* (context-with-events c nxt [/opt (prv '())])
-    (make-context (context-arc c)
-                  nxt prv
-                  (context-chain c)
-                  (context-subdivide-fn c)))
-
   ;; Replaces the pointed-to event, or simply adds if there is none.
   (define (context-replace-event c new-event)
     (if (context-it-end? c)
@@ -106,23 +99,8 @@
         (context-with-events c (cons new-event (cdr (context-events-next c)))
                                (context-events-prev c))))
 
-  (define (context-with-arc c new-arc)
-    (make-context new-arc
-                  (context-events-next c)
-                  (context-events-prev c)
-                  (context-chain c)
-                  (context-subdivide-fn c)))
-  (alias rearc context-with-arc)
-
   (define (context-length c)
     (arc-length (context-arc c)))
-
-  (define (context-with-chain c chain)
-    (make-context (context-arc c)
-                  (context-events-next c)
-                  (context-events-prev c)
-                  chain
-                  (context-subdivide-fn c)))
 
   ;; Pop the top lambda off the chain.
   (define (context-pop-chain c)
@@ -131,13 +109,6 @@
   ;; Push a lambda or list of lambdas onto the chain.
   (define (context-push-chain c node)
     (context-with-chain c (push-front node (context-chain c))))
-
-  (define (context-with-subdivide-fn c subdivide-fn)
-    (make-context (context-arc c)
-                  (context-events-next c)
-                  (context-events-prev c)
-                  (context-chain c)
-                  subdivide-fn))
 
   (define (context-no-subdivide-fn c)
     (context-with-subdivide-fn c #f))
@@ -160,9 +131,6 @@
   (define (context-move c n)
     (context-it c (until-zero-or-end n)))
 
-  (define (context-to-closest-event c time)
-    (context-it c (to-closest time)))
-
   (define (context-to-event-after c time)
     (context-it c (to-after time)))
 
@@ -182,7 +150,7 @@
 
   ;; new-event-fn is a function taking a context (pointing at a particular
   ;; event) and returning a new event or nothing.
-  ;; If you want new-event-fn to return lists of events, 
+  ;; If you want new-event-fn to return lists of events,
   ;; supply 'append' for the argument reducer.
   (define* (context-map new-event-fn context [/opt (reducer cons)])
     (define (rdc c events-list)
@@ -257,31 +225,24 @@
           ((positive? x) (set! n (sub1 n)) x)
           ((negative? x) (set! n (add1 n)) x)))))
 
-  ;; direction-fn that drives context iteration to the event closest
-  ;; to the requested time. Assumes context's events are sorted by time.
-  (define (to-closest time)
-    (lambda (c)
-      (define (get-delt bounds-check? default get-event)
-        (if (bounds-check? c) default (ev-delta time (get-event c))))
-      (let ([cur (get-delt context-empty? 0 context-event)]
-            [prv (get-delt context-first? -inf.0 context-prev-unchecked)]
-            [nxt (get-delt context-last?  +inf.0 context-next-unchecked)])
-        (if (<= (abs cur) (abs nxt))
-            (if (< (abs prv) (abs cur)) -1 0) +1))))
+  ;; Returns delta of current event, next event and prev event.
+  ;; If no next: +inf, if no prev: -inf.
+  (define (get-deltas c time)
+    (let ([delta (lambda (event) (- time (event-beat event)))])
+      (values
+       (if (context-empty? c) #f (delta (context-event c)))
+       (if (context-last?  c) #f (delta (context-next-unchecked c)))
+       (if (context-first? c) #f (delta (context-prev-unchecked c))))))
 
   ;; direction-fn that moves a context to the first event that's greater
   ;; than or equal to the requested time. Assumes context's events are sorted
   ;; by time.
   (define (to-after time)
     (lambda (c)
-      (define (get-delt bounds-check? default get-event)
-        (if (bounds-check? c) default (ev-delta time (get-event c))))
-      (let ([cur (get-delt context-empty? 0 context-event)]
-            [prv (get-delt context-first? -inf.0 context-prev-unchecked)]
-            [nxt (get-delt context-last?  +inf.0 context-next-unchecked)])
+      (let-values ([(cur nxt prv) (get-deltas c time)])
         (cond
-          ((and (> cur 0) (>= nxt 0) (< nxt cur)) +1)
-          ((and (< cur 0) (<= prv 0) (> prv cur)) -1)
+          ((and cur nxt (> cur 0)) +1)
+          ((and prv (< prv 0)) -1)
           (else 0)))))
 
   (define (context-first? c)
@@ -301,7 +262,6 @@
 
   (define (context-next-unchecked c) (cadr (context-events-next c)))
   (define (context-prev-unchecked c) (car (context-events-prev c)))
-  (define (ev-delta t event) (- t (event-get event time-key +inf.0)))
 
   ;; Inserts the new event in a sorted fashion into the context, leaving the
   ;; context pointing to the new event, not the original one.

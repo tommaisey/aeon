@@ -18,10 +18,10 @@
 (define (process-chunk)
   (let ([t (sc/utc)])
 
-    ;; Dispatches all the events that were rendered.
-    (define (pattern-player now-beat start end)
+    ;; Make a dispatcher for all the events rendered from a pattern.
+    (define (pattern-player beat-now start end)
       (lambda (p)
-        (for-each (lambda (e) (play-event e now-beat t))
+        (for-each (lambda (e) (play-event e beat-now t))
                   (context-events-next (render-arc p start end)))))
 
     (guard (x [else (handle-error x)])
@@ -30,6 +30,7 @@
              [end (+ now playback-chunk jitter-overlap)]
              [player (pattern-player now start end)])
         (iterate-patterns pattern-dict player)
+        (update-recording now (make-arc start end) t)
         (set! last-process-time t)
         (set! last-process-beat now)
         (set! rendered-point end)))))
@@ -56,6 +57,7 @@
 (define (pause-playhead)
   (start-waiting playback-thread-semaphore)
   (so/send sc3 sc/clear-sched)
+  (cancel-recording)
   (set! rendered-point #f)
   (set! last-process-time #f)
   (put-playhead-sync-info))

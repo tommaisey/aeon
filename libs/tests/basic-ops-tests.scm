@@ -10,6 +10,8 @@
           (nodes-chains)
           (nodes-subdivide))
 
+  (declare-keywords :cutoff)
+
   ;;----------------------------------------------------------
   (testp "[in!] numeric 1" (make-arc 0 1)
     (in! 1)

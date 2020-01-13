@@ -17,9 +17,7 @@
     start-waiting stop-waiting waiting?
     start-suspendable-thread)
 
-  (import (context) (rsc3) (sosc)
-          (except (scheme) reset random)
-          (utilities) (file-tools))
+  (import (scheme) (context) (utilities) (file-tools))
 
   ;;------------------------------------------------
   ;; Some useful functions for dealing with time.
@@ -37,8 +35,8 @@
     (/ (- beat current-beat) (bpm->mps bpm)))
 
   (define (sleep-secs secs)
-    (let* ([secs-whole (exact (truncate secs))]
-           [ns (exact (truncate (* (- secs secs-whole) 10e8)))])
+    (let* ([secs-whole (trunc-int secs)]
+           [ns (trunc-int (* (- secs secs-whole) 10e8))])
       (sleep (make-time 'time-duration ns secs-whole))))
 
   ;;------------------------------------------------
@@ -71,7 +69,7 @@
     (definitions-in-file file-path pattern-form? (lambda (f) (cadr f))))
 
   (define (list-files-with-playing-patterns root-path pattern-dict pattern-form?)
-    
+
     (define (contains-playing? file)
       (and (string=? (path-extension file) "scm")
            (for-any (lambda (p) (get-pattern pattern-dict p))

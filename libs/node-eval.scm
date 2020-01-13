@@ -12,7 +12,7 @@
     context-resolve
     make-caching-context)
 
-  (import (scheme) (utilities) (event) (context))
+  (import (scheme) (utilities) (arc) (event) (context))
 
   ;;--------------------------------------------------------------
   ;; Call on the root of a tree to fill a context with events.
@@ -20,7 +20,7 @@
     (case-lambda
       ((pattern-fn arc) 
        (context-trim (pattern-fn (make-context arc))))
-      
+
       ((pattern-fn start end) 
        (render-arc pattern-fn (make-arc start end)))))
 

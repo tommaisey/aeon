@@ -3,13 +3,14 @@
 ;; Fundamental utilities
 ;; ---------------------------------------------------------
 (library (utilities)
-  (export trunc-int round-down-f pseudo-rand inc dec
+  (export identity compose
+          pseudo-rand
+          trunc-int round-down round-up round-nearest 
+          inc dec clamp
           nearly-divisible divisible on-each
-          above below clamp
           between between-inclusive between-each
           equal nearly-equal
           range-sine
-          identity
           pair first rest cons-r
           merge-columns
           columns-to-rows
@@ -22,20 +23,22 @@
           sorted?
           for-any
           for-none
-          compose
           list-index
           list-last
           unsafe-list?
           push-front
+          find-first-slot
           make-alist
           alist-get
           alist-set
           alist-get-multi
           alist-let
-          derecord
           lif lest
           declare-keywords
           check-type
+          maybe-convert
+          derecord
+          define-immutable-record
           println
           make-safe-val
           safe-val?
@@ -97,10 +100,19 @@
   ;; Truncate and integerize
   (define trunc-int (compose exact truncate))
   (define floor-int (compose exact floor))
+  (define ceil-int  (compose exact ceiling))
 
   ;; Find the nearest whole multiple of divisor that's <= x.
-  (define (round-down-f x divisor)
+  (define (round-down x divisor)
     (* divisor (floor-int (/ x divisor))))
+
+  (define (round-up x divisor)
+    (* divisor (ceil-int (/ x divisor))))
+
+  (define (round-nearest x divisor)
+    (let ([down (round-down x divisor)]
+          [up (round-up x divisor)])
+      (if (< (- up x) (- x down)) up down)))
 
   (define (nearly-divisible val div error)
     (let* ([remain (/ val div)]
@@ -113,12 +125,6 @@
   (define (on-each val on each)
     (let ([m (mod val each)])
       (= m on)))
-
-  (define (above a b)
-    (>= a b))
-
-  (define (below a b)
-    (<= a b))
 
   (define (nearly-equal a b error)
     (< (abs (- a b)) error))
@@ -160,9 +166,9 @@
   ;; them runs out. The heads of each column are offered
   ;; to a joiner func, along with an accumulated result.
   (define (column-process col-list joiner)
-    (let impl ([l col-list] [result '()])
+    (let loop ([l col-list] [result '()])
       (if (member '() l) result
-          (impl (map cdr l) (joiner result (map car l))))))
+          (loop (map cdr l) (joiner result (map car l))))))
 
   ;; ((1 2 3) (x y) (a b c)) -> (1 x a 2 y b)
   (define (merge-columns col-list)
@@ -237,14 +243,7 @@
   ;;--------------------------------------------------------------------
   ;; Logic
   
-  ;; R6RS provides for-all.
-  (define (for-any pred lst)
-    (exists pred lst))
-
-  (define (for-none pred lst)
-    (not (for-any pred lst)))
-
-  ;; let+if in a more compact way
+  ;; let+if
   (define-syntax lif
     (syntax-rules ()
       ((_ [name init] test t-branch f-branch)
@@ -255,7 +254,18 @@
   (define-syntax lest
     (syntax-rules ()
       ((_ [name init] t-branch f-branch)
-       (lif [name init] name t-branch f-branch))))
+       (lif [name init] name t-branch f-branch))
+
+      ((_ [name init] t-branch)
+       (let ([name init])
+         (when name t-branch)))))
+
+  ;; For symmetry with R6RS's for-all.
+  (define (for-any pred lst)
+    (exists pred lst))
+
+  (define (for-none pred lst)
+    (not (for-any pred lst)))
 
   ;;----------------------------------------------------------------------
   ;; Lists
@@ -282,15 +292,24 @@
   (define (push-front val list)
     ((if (unsafe-list? val) append cons) val list))
 
+  ;; Return index of first slot in a vector matching pred. Returns #f otherwise.
+  (define* (find-first-slot vec [/opt (pred identity)])
+    (let loop ([n 0] [len (vector-length vec)])
+      (cond
+        ((>= n len) #f)
+        ((pred (vector-ref vec n)) n)
+        (else (loop (inc n) len)))))
+
   ;; Get an alist value, or default if not
   (define (alist-get alist key default)
-    (let ([result (assq key alist)])
-      (if result (cdr result) default)))
+    (lest [result (assq key alist)]
+          (cdr result) default))
 
   ;; Set an alist value
   (define (alist-set alist key value)
     (if (and (not (null? alist))
-             (eq? key (caar alist)) (eq? value (cadr alist)))
+             (eq? key (caar alist))
+             (eq? value (cadr alist)))
         alist ;; optimise: don't set same value twice in a row
         (cons (cons key value) alist)))
 
@@ -331,21 +350,6 @@
   (define (make-alist . kv-pairs)
     (lest (alist (pairwise kv-pairs)) alist
           (error 'make-alist kv-pairs-err kv-pairs)))
-
-  ;;------------------------------------------------------------------------
-  ;; Useful for destructuring records
-  (define-syntax derecord
-    (syntax-rules ()
-      ((_ rec ([name record-accessor] ...) body-forms ...)
-       (let ([name (record-accessor rec)] ...)
-         body-forms ...))))
-
-  (define-syntax declare-keywords
-    (syntax-rules ()
-      ((_ name1 name2 ...) 
-       (begin
-         (define name1 'name1)
-         (define name2 'name2) ...))))
   
   ;;------------------------------------------------------------------------
   ;; Strings
@@ -357,21 +361,81 @@
     (fresh-line)
     (for-each (lambda (x) (display x) (fresh-line)) objs))
 
+  (define-syntax declare-keywords
+    (syntax-rules ()
+      ((_ name1 name2 ...) 
+       (begin
+         (define name1 'name1)
+         (define name2 'name2) ...))))
+
   ;;------------------------------------------------------------------------
-  ;; Throw an error if the wrong type is used
+  ;; Types
   (define-syntax check-type
     (syntax-rules ()
       ((_ pred val context-id)
        (unless (pred val) 
          (error context-id (format "~A should satisfy ~A" 'val 'pred) val)))))
 
-  ;; Helper for synthesising new identifiers in unhygenic macros.
-  (define (gen-id template-id . args)
+  ;; If the object matches pred, apply converter to it
+  (define (maybe-convert x pred converter)
+    (if (pred x) (converter x) x))
+
+  ;;------------------------------------------------------------------------
+  ;; These make writing unhygenic macros less verbose
+  (alias sym->str symbol->string)
+  (alias str->sym string->symbol)
+  (alias dat->syn datum->syntax)
+  (alias syn->dat syntax->datum)
+
+  ;; Synthesises a symbol from strings and syntax objects
+  (meta define (synth-symbol . args)
     (define (arg->string x)
-      (if (string? x) x (symbol->string (syntax->datum x))))
-    (let ([str (apply string-append (map arg->string args))])
-      (datum->syntax template-id (string->symbol str))))
-  
+      (if (string? x) x (sym->str (syn->dat x))))
+    (str->sym (apply string-append (map arg->string args))))
+
+  ;; Synthesises an identifier for use in an unhygenic macro
+  (meta define (gen-id template-id . args)
+    (dat->syn template-id (apply synth-symbol args)))
+
+  ;;------------------------------------------------------------------------
+  ;; Useful for destructuring records
+  (define-syntax derecord
+    (syntax-rules ()
+      ((_ rec ([name record-accessor] ...) body-forms ...)
+       (let ([name (record-accessor rec)] ...)
+         body-forms ...))))
+
+  ;; Defines a record with all fields being immutable. Also defines
+  ;; functions of the form `record-with-field`, e.g:
+  ;;
+  ;; (define-immutable-record point (x 0) (y 1))
+  ;; (make-point) => (point (x 0) (y 1))
+  ;; (make-point 3) => (point (x 3) (y 1))
+  ;; (point-with-x (make-point 3 4) 99) => (point (x 99) (y 4))
+  (define-syntax define-immutable-record
+    (lambda (x)
+
+      (define (gen-ids k rec-name conj-str fields)
+        (dat->syn k (map (lambda (f) (synth-symbol rec-name conj-str f)) (syn->dat fields))))
+
+      (syntax-case x ()
+        ((k record-name (field default) ...)
+         (with-syntax ((make-fn (gen-id #'k "make-" #'record-name))
+                       ((with-fn ...) (gen-ids #'k #'record-name "-with-" #'(field ...)))
+                       ((get-fn ...)  (gen-ids #'k #'record-name "-" #'(field ...))))
+           #'(begin
+               (define-record-type record-name
+                 (fields (immutable field) ...)
+                 (protocol
+                  (lambda (new)
+                    (lambda* ([/opt [field default] ...])
+                      (new field ...)))))
+
+               (define (with-fn record new-value)
+                 (let ([field (get-fn record)] ...)
+                   (let ([field new-value])
+                     (make-fn field ...)))) ...))))))
+
   ;;------------------------------------------------------------------------
   ;; A value bound with a mutex to make it threadsafe. You should always
   ;; use and access the value through safe-val-apply.

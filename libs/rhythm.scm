@@ -38,9 +38,9 @@
       (not (eqv? (quotient bucket num-steps)
                  (quotient (+ bucket num-hits) num-steps)))))
 
-  (define* (euc num-steps num-hits offset [/opt (value 1)])
-    (map (lambda (i) (if (euc-hit? i num-steps num-hits offset) value '~))
-            (iota num-steps)))
+  (define* (euc num-steps num-hits [/opt (offset 0) (on-val 1) (off-val '~)])
+    (map (lambda (i) (if (euc-hit? i num-steps num-hits offset) on-val off-val))
+         (iota num-steps)))
   
   
   ); end module 'rhythm'

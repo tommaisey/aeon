@@ -1,7 +1,7 @@
 #!chezscheme ;; Needed for the extra symbols like +->
 
 (library (nodes-chains)
-  (export o-> x-> +-> nowt thru off)
+  (export o-> x-> +-> thru copies off)
 
   (import (chezscheme) 
           (utilities) (context) (event)
@@ -11,16 +11,18 @@
   ;; Apply each node successively to the input context.
   ;; Replace the input.
   (define (x-> . nodes)
-    (lambda (context)
-      (context-resolve (context-push-chain context (reverse nodes)))))
+    (let ([nodes (reverse nodes)])
+      (lambda (context)
+        (context-resolve (context-push-chain context nodes)))))
 
   ;; Apply each node successively to a blank context.
   ;; Merge result with the input.
   (define (o-> . nodes)
-    (lambda (context)
-      (let ([inner (context-with-chain context (reverse nodes))])
-        (contexts-merge (context-resolve inner)
-                        (context-resolve context)))))
+    (let ([nodes (reverse nodes)])
+      (lambda (context)
+        (let ([inner (context-with-chain context nodes)])
+          (contexts-merge (context-resolve inner)
+                          (context-resolve context))))))
 
   ;; Apply each node to the input separately, summing the results
   ;; to a blank context. Replace the input.
@@ -35,8 +37,7 @@
   (define (off . nodes)
     (lambda (context) (context-resolve context)))
 
-  ;; Sometimes we want to pass a function that 'does nothing'
-  (define nowt (x->))
-  (define thru x->)
+  (alias thru x->)
+  (alias copies +->)
 
   )

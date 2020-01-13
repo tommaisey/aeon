@@ -1,6 +1,7 @@
 (library (samples)
 
   (export
+    :sample :sample-idx :sidx
     samples
     samples-dir
     valid-sample?
@@ -11,6 +12,9 @@
 
   (import (scheme) (utilities) (node-eval) 
           (file-tools) (context))
+
+  (declare-keywords :sample :sample-idx)
+  (alias :sidx :sample-idx)
 
   (define-syntax samples
     (syntax-rules ()

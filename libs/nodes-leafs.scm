@@ -18,7 +18,7 @@
 ;;----------------------------------------------------------------------
 (library (nodes-leafs)
   (export
-    this next nearest
+    this next
     c+ c- c* c/
     ? rnd wpick pick
     each every
@@ -39,10 +39,6 @@
   (define (next idx key default)
     (lambda (context)
       (get (context-move context idx) key default)))
-
-  (define (nearest time key default)
-    (lambda (context)
-      (get (context-to-closest-event context time) key default)))
 
   ;;-------------------------------------------------------------------
   ;; Maths
@@ -156,7 +152,7 @@
       ((_ [a b ...]) (pick [a b ...]))
 
       ((_ a b ...)
-       (error '? "invalid number of args;" 'a 'b ...))))
+       (error '? "invalid number of args" 'a 'b ...))))
 
   ;; Tag so pdef recognises as a macro
   (tag-pdef-callable pick)

@@ -1,13 +1,14 @@
 (library (nodes-ops-time)
   (export mv- mv+ mv/ mv* tt+ tt- tt* tt/
-          flip-time swing taps)
+          flip-time swing taps legato)
 
   (import (chezscheme)
-          (utilities) (context) (event)
+          (utilities) (context) (arc) (event)
           (node-eval)
           (nodes-subdivide)
           (nodes-chains)
-          (rhythm))
+          (rhythm)
+          (only (samples) :sidx))
 
   ;; A general 'mv', taking a math op and a def. The math op is
   ;; called with each segment's current time and the value returned by
@@ -45,7 +46,8 @@
             (else
               (let* ([new-arc (arc-math old-arc inv-math-fn val)]
                      ;; When we flip time, start/end exclusivity is messed up!
-                     [new-arc (if (and mul? (< val 0)) (arc-widen new-arc 1/128) new-arc)]
+                     [inverse (and mul? (< val 0))]
+                     [new-arc (if inverse (arc-widen new-arc 1/128) new-arc)]
                      [shifted (rearc context new-arc)]
                      [shifted (context-resolve shifted)]
                      [shifted (context-map (move-events val) shifted)]
@@ -84,7 +86,7 @@
   ;; The optional node arguments are applied to the taps differently.
   ;; `iterative-node` is applied once to the 1st tap, twice to the 2nd, etc.
   ;; `once-node` is applied once to all taps but not the original.
-  (define* (taps period num [/opt (iterative-node nowt) (once-node nowt)])
+  (define* (taps period num [/opt (iterative-node (thru)) (once-node (thru))])
 
     ;; Compute furthest lookahead/lookback that might be required.
     (define possible-range
@@ -177,5 +179,33 @@
              [c (context-resolve (rearc context (make-arc s e)))]
              [c (context-sort (context-map (move-event s e) c))])
         (context-trim (rearc c (context-arc context))))))
+
+  ;;-------------------------------------------------------------------
+  ;; Lengthens notes to stretch until the next note, up until a maximum
+  ;; length. Ignores next notes that are closer than threshold.
+  (define* (legato [/opt (max-length 2) (threshold 1/16) (end-nudge 0)])
+
+    (define (lengthen c)
+      (let* ([e (context-event c)]
+             [start (event-beat e)]
+             [threshold (+ threshold start)]
+             [next (context-to-event-after c threshold)])
+        (if (context-it-end? next)
+            (event-set e :sustain max-length)
+            (let* ([next-start (event-beat (context-event next))]
+                   [delta (min (+ (- next-start start) end-nudge) max-length)])
+              (event-set e :sustain delta)))))
+
+    (unless (and (number? max-length) (positive? max-length))
+      (error 'legato "max-length expected to be a positive number" max-length))
+
+    (lambda (context)
+      (lif [requested (context-resolve context)]
+           (context-empty? requested) requested
+           (let* ([arc (make-arc (context-start context)
+                                 (+ max-length (context-end context)))]
+                  [lookahead (context-resolve (rearc context arc))]
+                  [lengthened (context-map lengthen lookahead)])
+             (context-trim (rearc lengthened (context-arc context)))))))
 
   )

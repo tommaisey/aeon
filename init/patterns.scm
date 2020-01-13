@@ -2,31 +2,27 @@
 
 (define-syntax pattern
   (syntax-rules ()
+    ((_ name p)
+     (pattern name #t p))
 
     ((_ name play-now? p)
      (begin (define name p)
             (when play-now?
-              (add-pattern pattern-dict 'name p))))
-
-    ((_ name p)
-     (pattern name #t p))))
-
-(define (pattern-form? datum)
-  (and (unsafe-list? datum) (eq? 'pattern (car datum))))
+              (add-pattern pattern-dict 'name p))))))
 
 (define-syntax start
   (syntax-rules ()
-
     ((_) (start-playhead))
 
-    ((_ name) (add-pattern pattern-dict 'name name))))
+    ((_ name ...) 
+     (begin (add-pattern pattern-dict 'name name) ...))))
 
 (define-syntax stop
   (syntax-rules ()
-
     ((_) (stop-playhead))
 
-    ((_ name) (remove-pattern pattern-dict 'name))))
+    ((_ name ...)
+     (begin (remove-pattern pattern-dict 'name) ...))))
 
 (define (pause) (pause-playhead)) ;; for symmetry
 (define (clear-all) (clear-patterns pattern-dict))
@@ -41,6 +37,9 @@
   (context-serialised (context-map process ctxt)))
 
 ;;------------------------------------------------------------------
+(define (pattern-form? datum)
+  (and (unsafe-list? datum) (eq? 'pattern (car datum))))
+
 (define (stop-patterns-in-file file-path)
   (for-each (lambda (p) (remove-pattern pattern-dict p))
             (list-patterns-in-file file-path pattern-form?)))

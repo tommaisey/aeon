@@ -3,7 +3,8 @@
   (export valid-scheme-path?
           path-append
           child-file-paths
-          definitions-in-file)
+          definitions-in-file
+          os-symbol)
 
   (import (chezscheme)
           (only (srfi s13 strings) string-suffix?))
@@ -18,7 +19,7 @@
            [dir (if (string-suffix? sep dir) dir (string-append dir sep))])
       (string-append dir file)))
 
-  ;; Unlike directory list, returns full path of child files
+  ;; Unlike directory-list, returns full path of child files
   (define (child-file-paths dir)
     (map (lambda (f) (path-append dir f))
          (directory-list dir)))
@@ -32,4 +33,29 @@
            [out (list) (if (defining-form? s)
                            (cons (name-getter s) out) out)])
           ((eof-object? s) out)))
-    (with-input-from-file file-path do-read)))
+    (with-input-from-file file-path do-read))
+
+  ;; Expands the home-directory ~ shortcut on Mac.
+  (define (expand-path path)
+    (if (and (eqv? os-symbol 'macos)
+             (eqv? #\~ (string-ref path 0)))
+        (string-append )
+        path))
+
+  ;; Returns a human-readable symbol for the os from Chez's cryptic machine-type.
+  (define os-symbol
+    (let* ([m-type-list (string->list (symbol->string (machine-type)))]
+           [chez-name (list->string (cdr (memp char-numeric? m-type-list)))])
+      (cdar (memp (lambda (x) (string=? (car x) chez-name))
+                  '(("fb"  . freebsd)
+                    ("le"  . linux)
+                    ("nb"  . netbsd)
+                    ("nt"  . windows)
+                    ("ob"  . openbsd)
+                    ("osx" . macos)
+                    ("qnx" . qnx)
+                    ("s2"  . solaris))))))
+
+  )
+
+(current-directory)

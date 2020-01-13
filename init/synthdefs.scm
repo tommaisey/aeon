@@ -3,35 +3,13 @@
 ;; its entirety to update definitions live.
 
 ;; A useful test function
-(define (test-synth name freq length)
+(define* (test-synth name [/opt (freq 440) (length 1)])
   (play-now name
             (cons ":freq" freq)
             (cons ":sustain" length)))
 
-(define (sine-perc freq length)
+(define* (sine-perc [/opt (freq 440) (length 1)])
   (test-synth "sine-grain" freq length))
-
-;;------------------------------------------------------------------
-;; A table to keep sample->bufnum mappings
-
-(define (add-sample path bufnum)
-  (sc/async sc3 (sc/b-alloc-read bufnum path 0 0)))
-
-(define (check-sample bufnum)
-  (sc/async sc3 (sc/b-query1 bufnum)))
-
-(define bufnum-table
-  (make-hashtable string-hash string=? 128))
-
-(define bufnum-counter 0)
-
-(define (get-bufnum file)
-  (or (hashtable-ref bufnum-table file #f)
-      (begin
-        (set! bufnum-counter (+ bufnum-counter 1))
-        (hashtable-set! bufnum-table file bufnum-counter)
-        (add-sample file bufnum-counter)
-        bufnum-counter)))
 
 ;;------------------------------------------------------------------
 ;; Keyword for specifying which synthdef an event applies to.
@@ -51,6 +29,7 @@
 ;; If the user supplies a vector of samples, for the :sample key, this key can
 ;; be used to select between them.
 (declare-keywords :sample-idx)
+(alias :sidx :sample-idx)
 
 ;; Defines some globally reserved bus numbers. These are used for
 ;; standard effects busses in the synthdefs. The numbers start at
@@ -62,57 +41,51 @@
 
 ;;-------------------------------------------------------------------
 ;; Some helper tools for writing synthdefs more clearly.
-(alias +sc sc/add)
-(alias *sc sc/mul)
-(alias *+sc sc/mul-add)
-
-;; N-arity versions of rsc3 mul, sub & add. Can DRY these once I
-;; understand macro composition better...
-(define-syntax mul-n
+;; N-arity versions of rsc3 mul, sub & add.
+(define-syntax *u
   (syntax-rules ()
     ((_ x) x)
-    ((_ x y ...) (*sc x (mul-n y ...)))))
+    ((_ x y ...) (sc/mul x (*u y ...)))))
 
-(define-syntax sub-n
+(define-syntax +u
   (syntax-rules ()
     ((_ x) x)
-    ((_ x y ...) (sc/sub x (sub-n y ...)))))
+    ((_ x y ...) (sc/add x (+u y ...)))))
 
-(define-syntax add-n
+(define-syntax -u
   (syntax-rules ()
-    ((_ x) x)
-    ((_ x y ...) (+sc x (add-n y ...)))))
+    ((_ x) (*u x -1))
+    ((_ x y ...) (sc/sub x (+u y ...)))))
+
+(alias *+u sc/mul-add)
 
 (define (private-bus i)
-  (+sc i (+sc sc/num-output-buses sc/num-input-buses)))
+  (+u i sc/num-output-buses sc/num-input-buses))
 
 (define (make-env-gen magnitude env action)
   (sc/env-gen sc/kr 1 magnitude 0 1 action env))
 
-;; TODO: Really should get into optional arguments to DRY these.
-(define* (make-asr mag atk sus rel [/opt (curve -4) (action sc/remove-synth)])
+(define* (make-asr magnitude atk sus rel [/opt (curve -4) (action sc/remove-synth)])
   (let ([shape (sc/env-linen atk sus rel 1 (repeat 4 curve))])
-       (make-env-gen mag shape action)))
+    (make-env-gen magnitude shape action)))
 
 (define (make-rand-lfo mag time)
-  (*sc (sc/lfd-noise1 sc/ar time) mag))
+  (*u (sc/lfd-noise1 sc/ar time) mag))
 
 (define (make-pan sig pos)
-  (sc/pan2 sig (*+sc pos 2 -1) 1))
+  (sc/pan2 sig (*+u pos 2 -1) 1))
 
 (define (make-bus-out bus sig pan)
   (sc/out bus (make-pan sig pan)))
 
-(define (sc/limit val lo hi)
-  (sc/min hi (sc/max lo val)))
 
 ;; Makes N parallel outputs, where N is the number of pairs.
 ;; each pair should be: (bus-num . send-amt)
 (define (make-outputs sig pan . pairs)
   (if (null? pairs)
-      (raise "Must supply bus info pairs to make-standard-out")
+      (raise "Must supply bus info pairs to make-outputs")
       (let* ([panned (make-pan sig pan)]
-             [make-out (lambda (info) (sc/out (car info) (*sc panned (cdr info))))]
+             [make-out (lambda (info) (sc/out (car info) (*u panned (cdr info))))]
              [combine (lambda (ug info) (sc/mrg2 ug (make-out info)))])
         (fold-left combine (make-out (car pairs)) (cdr pairs)))))
 
@@ -146,7 +119,7 @@
     (let* ([osc (sc/sin-osc sc/ar (sc/lag :freq 0.05) 0)]
            [env (sc/env-perc :attack :sustain 1 (repeat 2 -4))]
            [env (make-env-gen 1 env sc/remove-synth)]
-           [sig (*sc env osc)])
+           [sig (*u env osc)])
       (make-outputs sig :pan
                     (pair 0 :amp)
                     (pair (private-bus :bus1) :bus1-amt)
@@ -160,13 +133,13 @@
          [:bus2 :delay1] [:bus2-amt 0])
 
     (let* ([frq (sc/lag :freq 0.05)]
-           [mod (sc/sin-osc sc/ar (*sc :ratio frq) 0.5)]
-           [fm-env (sc/env-perc 0.0 (*sc :sustain 1.5) :fm-amt (repeat 2 -6))]
+           [mod (sc/sin-osc sc/ar (*u :ratio frq) 0.5)]
+           [fm-env (sc/env-perc 0.0 (*u :sustain 1.5) :fm-amt (repeat 2 -6))]
            [fm-env (make-env-gen 1 fm-env sc/remove-synth)]
-           [osc (sc/sin-osc sc/ar frq (mul-n mod fm-env))]
+           [osc (sc/sin-osc sc/ar frq (*u mod fm-env))]
            [env (sc/env-perc :attack :sustain 1 (repeat 2 -4))]
            [env (make-env-gen 1 env sc/remove-synth)]
-           [sig (*sc env osc)])
+           [sig (*u env osc)])
       (make-outputs sig :pan
                     (pair 0 :amp)
                     (pair (private-bus :bus1) :bus1-amt)
@@ -181,13 +154,13 @@
          [:bus1 :verb1]  [:bus1-amt 0]
          [:bus2 :delay1] [:bus2-amt 0])
 
-    (let* ([rate (*sc :speed (sc/buf-rate-scale sc/kr :sample))]
+    (let* ([rate (*u :speed (sc/buf-rate-scale sc/kr :sample))]
            [frames (sc/buf-frames sc/kr :sample)]
-           [pos (*sc frames :sample-pos)]
+           [pos (*u frames :sample-pos)]
            [osc (sc/play-buf 1 sc/ar :sample rate 1 pos sc/no-loop sc/remove-synth)]
-           [osc (sc/moog-ff osc (+sc 75 (*sc :cutoff 17000)) :resonance 0)]
+           [osc (sc/moog-ff osc (*+u :cutoff 17000 75) :resonance 0)]
            [env (make-asr 1 :attack :sustain :release -4)]
-           [sig (*sc env osc)])
+           [sig (*u env osc)])
       (make-outputs sig :pan
                     (pair 0 :amp)
                     (pair (private-bus :bus1) :bus1-amt)
@@ -202,14 +175,14 @@
 
     (let* ([:freq (sc/lag :freq 0.1)]
            [:pan  (sc/lag :pan 0.15)]
-           [:amp (*sc :amp (sc/lin-exp :freq 20 10000 1.0 0.2))]
-           [osc1 (sc/lf-saw sc/ar (*sc :freq 0.9946) 0)]
-           [osc2 (sc/lf-saw sc/ar (*sc :freq 1.0024) 0.3)]
+           [:amp (*u :amp (sc/lin-exp :freq 20 10000 1.0 0.2))]
+           [osc1 (sc/lf-saw sc/ar (*u :freq 0.9946) 0)]
+           [osc2 (sc/lf-saw sc/ar (*u :freq 1.0024) 0.3)]
            [amp-env (make-asr 1 :attack :sustain :release -4)]
            [cut-env (make-asr :cutoff :attack :sustain :release 2 sc/do-nothing)]
-           [cutoff (clamp-cutoff (+sc :freq (*sc :freq cut-env)))]
-           [flt (sc/moog-ff (+sc osc1 osc2) cutoff :resonance 0.0)]
-           [sig (*sc amp-env flt)])
+           [cutoff (clamp-cutoff (+u :freq (*u :freq cut-env)))]
+           [flt (sc/moog-ff (+u osc1 osc2) cutoff :resonance 0.0)]
+           [sig (*u amp-env flt)])
       (make-outputs sig :pan
                     (pair 0 :amp)
                     (pair (private-bus :bus1) :bus1-amt)
@@ -223,15 +196,15 @@
          [:bus2 :delay1] [:bus2-amt 0])
 
     (define (make-osc mag freq-mul time)
-      (let ([freq (*sc :freq freq-mul)])
-        (sc/lf-tri sc/ar (+sc freq (make-rand-lfo (*sc freq mag) time)) 0)))
+      (let ([freq (*u :freq freq-mul)])
+        (sc/lf-tri sc/ar (+u freq (make-rand-lfo (*u freq mag) time)) 0)))
 
-    (let* ([osc1 (make-osc (*sc :slop 0.05) 0.5 1/2)]
-           [osc2 (make-osc (*sc :slop 0.04) 1.0 4/3)]
-           [osc3 (make-osc (*sc :slop 0.01) 1.5 3/2)]
+    (let* ([osc1 (make-osc (*u :slop 0.05) 0.5 1/2)]
+           [osc2 (make-osc (*u :slop 0.04) 1.0 4/3)]
+           [osc3 (make-osc (*u :slop 0.01) 1.5 3/2)]
            [env (make-asr 1 :attack :sustain :release -4)]
-           [sig (*sc env (add-n osc1 osc2 osc3))]
-           [cutoff (*+sc (+sc -1 :cutoff) 17000 200)]
+           [sig (*u env (+u osc1 osc2 osc3))]
+           [cutoff (*+u (+u -1 :cutoff) 17000 200)]
            [sig (sc/rlpf sig (clamp-cutoff cutoff) 1.0)])
       (make-outputs sig :pan
                     (pair 0 :amp)
@@ -247,22 +220,22 @@
 
     (define (make-osc freq flt-atk cutoff-prop)
       (let* ([pulse-lfo (sc/sin-osc sc/kr 0.5 0)]
-             [osc (sc/lf-pulse sc/ar freq 0 (+sc 0.50 (*sc 0.35 pulse-lfo)))]
-             [sub (sc/lf-pulse sc/ar (*sc 0.5 freq) 0.4 (+sc 0.50 (*sc 0.15 pulse-lfo)))]
+             [osc (sc/lf-pulse sc/ar freq 0 (+u 0.50 (*u 0.35 pulse-lfo)))]
+             [sub (sc/lf-pulse sc/ar (*u 0.5 freq) 0.4 (+u 0.50 (*u 0.15 pulse-lfo)))]
              [osc-flt-env (make-asr 1 flt-atk :sustain :release 1 sc/do-nothing)]
-             [osc-flt-env (+sc (*sc 4 freq) (mul-n 4 freq cutoff-prop osc-flt-env))]
+             [osc-flt-env (+u (*u 4 freq) (*u 4 freq cutoff-prop osc-flt-env))]
              [osc-flt-env (clamp-cutoff osc-flt-env)])
-        (sc/moog-ff (+sc osc (*sc sub 0.8)) osc-flt-env :resonance 0)))
+        (sc/moog-ff (+u osc (*u sub 0.8)) osc-flt-env :resonance 0)))
 
     (let* ([:freq (sc/lag :freq 0.175)]
            [:pan (sc/lag :pan 0.15)]
            [:cutoff1 (sc/lag :cutoff1 0.5)]
            [:cutoff2 (sc/lag :cutoff2 0.5)]
-           [:amp (*sc :amp (sc/lin-exp :freq 20 10000 1.0 0.2))]
-           [osc1 (make-osc (*sc :freq 0.5) (*sc :attack 2) :cutoff1)]
-           [osc2 (make-osc :freq (*sc :attack 1.5) :cutoff2)]
+           [:amp (*u :amp (sc/lin-exp :freq 20 10000 1.0 0.2))]
+           [osc1 (make-osc (*u :freq 0.5) (*u :attack 2) :cutoff1)]
+           [osc2 (make-osc :freq (*u :attack 1.5) :cutoff2)]
            [amp-env (make-asr 1 :attack :sustain :release -4)]
-           [sig (*sc (+sc osc1 osc2) amp-env)])
+           [sig (*u (+u osc1 osc2) amp-env)])
       (make-outputs sig :pan
                     (pair 0 :amp)
                     (pair (private-bus :bus1) :bus1-amt)
@@ -278,8 +251,8 @@
            [osc (sc/lf-pulse sc/ar (sc/lag :freq 0.05) 0 line)]
            [env (sc/env-perc :attack :sustain 1 (repeat 2 -4))]
            [env (make-env-gen 1 env sc/remove-synth)]
-           [sig (*sc env osc)]
-           [cutoff (+sc 75 (*sc :cutoff 17000))]
+           [sig (*u env osc)]
+           [cutoff (+u 75 (*u :cutoff 17000))]
            [sig (sc/moog-ff sig cutoff :resonance 0)])
       (make-outputs sig :pan
                     (pair 0 :amp)
@@ -294,13 +267,12 @@
 
 ;;-----------------------------------------------------------------------
 ;; Bus effects
-
 (sc/send-synth sc3 "bus-verb"
   (letc ([:size 0.4]
          [:dampen 0.8]
          [:inbus :verb1])
     (let* ([l (sc/in 1 sc/ar (private-bus :inbus))]
-           [r (sc/in 1 sc/ar (+sc 1 (private-bus :inbus)))]
+           [r (sc/in 1 sc/ar (+u 1 (private-bus :inbus)))]
            [sig (sc/free-verb2 l r 1 :size :dampen)])
       (sc/out 0 sig))))
 
@@ -312,11 +284,11 @@
          [:inbus :delay1])
     (let* ([t (sc/fdiv 0.25 :tempo)]
            [l (sc/in 1 sc/ar (private-bus :inbus))]
-           [r (sc/in 1 sc/ar (+sc 1 (private-bus :inbus)))]
-           [l (sc/comb-c l 4.0 (*sc :time-l t) :decay-l)]
-           [r (sc/comb-c r 4.0 (*sc :time-r t) :decay-r)])
-      (sc/out 0 (+sc (make-pan l (+sc 0.5 (*sc -0.5 :width)))
-                  (make-pan r (+sc 0.5 (*sc  0.5 :width))))))))
+           [r (sc/in 1 sc/ar (+u 1 (private-bus :inbus)))]
+           [l (sc/comb-c l 4.0 (*u :time-l t) :decay-l)]
+           [r (sc/comb-c r 4.0 (*u :time-r t) :decay-r)])
+      (sc/out 0 (+u (make-pan l (+u 0.5 (*u -0.5 :width)))
+                  (make-pan r (+u 0.5 (*u  0.5 :width))))))))
 
 (start-bus-effect "bus-verb"  (pair ":inbus" :verb1))
 (start-bus-effect "bus-delay" (pair ":inbus" :delay1))
