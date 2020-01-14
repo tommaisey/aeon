@@ -1,7 +1,8 @@
 #!chezscheme ;; Needed for symbols like 5th
 
 (library (harmony)
-  (export 5th triad sus2 sus4 6th 7th 9th 11th 13th    
+  (export harmony-docs
+          5th triad sus2 sus4 6th 7th 9th 11th 13th
 
           I II III IV V VI VII VIII IX X XI XII
 
@@ -20,8 +21,9 @@
 
           make-shape
           extend-shape)
-  
+
   (import (chezscheme)
+          (doc)
           (utilities)
           (midinotes)
           (event))
@@ -93,7 +95,7 @@
 
   (define (extend-shape shape . extensions)
     (list->vector (append (vector->list shape) extensions)))
-  
+
   ;; Chord shape definitions (in degrees of current scale)
   (define 5th   (make-shape I V))
   (define sus2  (make-shape I IV  V))
@@ -124,4 +126,24 @@
   (define japanese     (make-shape 0 4 6 7 11))
   (define ryukyu       (make-shape 0 4 5 7 11))
   (define spanish      (make-shape 0 1 3 4 5 6 8 10))
-  (define chromatic    (make-shape 0 1 2 3 4 5 6 7 8 9 10 11)))
+  (define chromatic    (make-shape 0 1 2 3 4 5 6 7 8 9 10 11))
+
+  ;;---------------------------------------------------------------
+  (define harmony-key-msg 
+    "A key whose value will be processed in tandem with several others to produce
+a frequency. The keys in this family are:
+
+:root, :scale, :scale-degree, :chord-degree, :octave, :tuning.")
+  
+  (make-doc harmony-docs
+    (:root harmony-key-msg () ())
+    (:scale harmony-key-msg () ())
+    (:scale-degree harmony-key-msg () ())
+    (:chord-degree harmony-key-msg () ())
+    (:octave harmony-key-msg () ())
+    (:tuning harmony-key-msg () ())
+
+    (:scd (str+ "An alias for :scale-degree.\n" harmony-key-msg) () ())
+    (:chd (str+ "An alias for :chord-degree.\n" harmony-key-msg) () ()))
+  
+  )

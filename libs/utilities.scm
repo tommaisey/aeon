@@ -46,6 +46,7 @@
           string-contains
           string-contains-ci
           string-last
+          str+
           gen-id
           lambda*
           define*
@@ -353,6 +354,8 @@
   
   ;;------------------------------------------------------------------------
   ;; Strings
+  (alias str+ string-append)
+  
   (define (string-last str n)
     (let ([len (string-length str)])
       (substring str (max 0 (- len n)) len)))
@@ -420,9 +423,9 @@
 
       (syntax-case x ()
         ((k record-name (field default) ...)
-         (with-syntax ((make-fn (gen-id #'k "make-" #'record-name))
-                       ((with-fn ...) (gen-ids #'k #'record-name "-with-" #'(field ...)))
-                       ((get-fn ...)  (gen-ids #'k #'record-name "-" #'(field ...))))
+         (with-syntax ([make-fn (gen-id #'k "make-" #'record-name)]
+                       [(with-fn ...) (gen-ids #'k #'record-name "-with-" #'(field ...))]
+                       [(get-fn ...)  (gen-ids #'k #'record-name "-" #'(field ...))])
            #'(begin
                (define-record-type record-name
                  (fields (immutable field) ...)

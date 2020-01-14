@@ -8,12 +8,14 @@
 ;; See node-eval for information on leafs.
 
 (library (nodes-subdivide)
-  (export over step
+  (export subdivide-docs
+          over step
           is-rest? is-sustain?
           wrap-subdivide-fn)
 
   (import (scheme)
           (utilities)
+          (doc)
           (event)
           (arc)
           (context)
@@ -23,21 +25,47 @@
   ;;-------------------------------------------------------------------
   (define-syntax over
     (syntax-rules ()
-      ((_ def) (over 1 def))
+      ((_ values) (over 1 values))
 
-      ((_ dur def)
-       (subdivide dur (pdef def)))))
+      ((_ dur values)
+       (subdivide dur (pdef values)))))
 
+  ;;-------------------------------------------------------------------
   (define-syntax step
     (syntax-rules ()
-      ((_ def) (step 1/4 def))
+      ((_ values) (step 1/4 values))
 
-      ((_ slice-dur def)
-       (let* ([data (pdef def)])
+      ((_ slice-dur values)
+       (let ([data (pdef values)])
          (subdivide (* slice-dur (length data)) data)))))
 
   (tag-pdef-callable over)
   (tag-pdef-callable step)
+
+  ;;-------------------------------------------------------------------
+  (make-doc subdivide-docs
+    (over 
+     "Creates a repeated sequence of values, spread evenly over the time period 'dur'.
+Sub-lists further subdivide the step they occupy, according to the rules of 'over'."
+     ((dur [/opt Number 1] 
+           "The length of time to spread the pattern over")
+      (values [/list [Number or Function]] 
+              "The values to be distributed over period 'dur'"))
+
+     (((over [1 2 3]) => "repeating sequence of [1 2 3] each 1 measure")
+      ((over 2 [1 2 3]) => "repeating sequence of [1 2 3] every 2 measures")))
+
+    (step 
+     "Creates a repeated sequence of values, with each value applying for 'slice-dur'.
+The total length of the sequence is therefore (* slice-dur (length def)).
+Sub-lists further subdivide the step they occupy, according to the rules of 'over'."
+     ((slice-dur [/opt Number 1/4] 
+                 "The length of time each value will apply for")
+      (values [/list [Number or Function]] 
+              "The values to be distributed, one per period 'slice-dur'"))
+
+     (((step [1 2 3]) => "repeating sequence of [1 2 3] each 3/4 measure")
+      ((step 1/3 [1 2 3]) => "repeating sequence of [1 2 3] each 1 measure"))))
 
   ;;-------------------------------------------------------------------
   ;; Wraps a leaf in a subdividing pattern, if it hasn't already declared
@@ -76,14 +104,14 @@
            (lif (arc (context-arc subctxt))
                 (arcs-overlap? (context-arc ctxt) arc)
                 (let* ([subctxt (context-to-event-after subctxt (arc-start arc))]
-                       [sans-tran (context-no-subdivide-fn subctxt)]
+                       [subctxt-no-subdiv (context-no-subdivide-fn subctxt)]
                        [time (context-now subctxt)]
-                       [dur (arc-length arc)]
-                       [early (eval-leaf-early item time sans-tran)])
+                       [subdur (arc-length arc)]
+                       [early (eval-leaf-early item time subctxt-no-subdiv)])
                   (cond
-                    ((is-rest? early)     (context-resolve sans-tran))
-                    ((unsafe-list? early) (eval-leaf (subdivide dur early) subctxt))
-                    (else (subdivide-fn sans-tran item))))
+                    ((is-rest? early)     (context-resolve subctxt-no-subdiv))
+                    ((unsafe-list? early) (eval-leaf (subdivide subdur early) subctxt))
+                    (else (subdivide-fn subctxt-no-subdiv item))))
                 subctxt))
 
          (let loop ([c (make-context (context-arc ctxt))]

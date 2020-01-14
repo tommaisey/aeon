@@ -161,7 +161,7 @@
   (define (flip-time chunk)
 
     (define (flip-chunked x)
-      (let* ([x-trunc (snap-prev x chunk)]
+      (let* ([x-trunc (round-down x chunk)]
              [x-mod (- x x-trunc)])
         (+ x-trunc (abs (- x-mod chunk)))))
 
@@ -175,7 +175,7 @@
 
     (lambda (context)
       (let* ([s (- (context-start context) chunk)]
-             [e (snap-next (context-end context) chunk)]
+             [e (round-up (context-end context) chunk)]
              [c (context-resolve (rearc context (make-arc s e)))]
              [c (context-sort (context-map (move-event s e) c))])
         (context-trim (rearc c (context-arc context))))))

@@ -3,25 +3,9 @@
 ;; Rhythm helper functions
 ;; ---------------------------------------------------------
 (library (rhythm)
-  (export
-   snap-next
-   snap-prev
-   euc)
+  (export rhythm-docs euc)
 
-  (import (chezscheme) (utilities))
-
-  ;; Snap a value to the next number divisible by divisor,
-  ;; if `beat` isn't already cleanly divisible by divisor.
-  (define (snap-next beat divisor)
-    (let ([overlap (mod beat divisor)])
-      (if (zero? overlap) beat (+ (- divisor overlap) beat))))
-
-  ;; Snap a value to the previous number divisible by divisor,
-  ;; if 'beat' isn't already cleanly divisible by divisor
-  (define (snap-prev beat divisor)
-    (let ([overlap (mod beat divisor)])
-      (- beat overlap)))
-
+  (import (chezscheme) (utilities) (doc))
 
   ;;-----------------------------------------------------------------
   ;; Euclidean patterns
@@ -37,10 +21,24 @@
            [bucket (+ bucket (* num-hits (mod step num-steps)))])
       (not (eqv? (quotient bucket num-steps)
                  (quotient (+ bucket num-hits) num-steps)))))
-
+  
   (define* (euc num-steps num-hits [/opt (offset 0) (on-val 1) (off-val '~)])
     (map (lambda (i) (if (euc-hit? i num-steps num-hits offset) on-val off-val))
          (iota num-steps)))
+
+  (make-doc rhythm-docs
+    (euc 
+     "Returns a list representing a euclidean pattern."
+     ((steps Number "The number of steps in the rhythm")
+      (hits  Number "The number of active steps in the rhythm")
+      (offset [/opt Number 0] "The number of steps to rotate the pattern")
+      (on-val  [/opt Any 1] "The value for steps that are hits in the returned list")
+      (off-val [/opt Any ~] "The value for steps that are not hits in the returned list"))
+
+     (((euc 3 1) => (1 ~ ~))
+      ((euc 8 3) => (1 ~ ~ 1 ~ ~ 1 ~))
+      ((euc 3 1 1) => (~ 1 ~))
+      ((euc 3 1 1 "hi" 0) => (0 "hi" 0)))))
   
   
   ); end module 'rhythm'
