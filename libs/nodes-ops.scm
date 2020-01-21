@@ -36,8 +36,7 @@
              [num (max 1 value)]
              [dur (/ (context-length context) num)]
              [start (context-start context)]
-             [make (lambda (i) (make-event (+ start (* i dur))
-                                           (:sustain dur)))])
+             [make (lambda (i) (make-event-fast (+ start (* i dur)) (:sustain dur)))])
         (fold-left (lambda (c i) (context-insert c (make i))) 
                    (context-resolve context) 
                    (reverse (iota num)))))
@@ -158,7 +157,8 @@ Numbers greater than 1 are translated into a sub-list of N elements of 1."
      ((seq [Number or Sequence] 
            "A Number or sequence of Numbers and rests (~).")
       (ops... Function
-              "Further operators to apply to the blank events, as if wrapped in 'o->'."))
+              "Further operators to apply to the blank events, 
+              as if wrapped in 'o->'."))
 
      (((testp (in! (over 1 [1 ~]))) => [(:beat 0 :sustain 1/2)])
       ((testp (in! (over 1 [1 [1 1]]))) => [(:beat 0 :sustain 1/2) 
@@ -169,13 +169,15 @@ Numbers greater than 1 are translated into a sub-list of N elements of 1."
 
     (in:
      "Adds events according to a repeated subdividing sequence.
-Each value encountered in the sequence results in an event with a property 'key' of that value."
+Each value encountered in the sequence results in an event with a 
+property 'key' of that value."
      ((key :Keyword
            "The key which will be set according to values found in 'seq'")
       (seq [Any or Sequence]
            "The sequence of values and rests (~) used to generate events.")
       (ops... Function 
-              "Further operators to apply to the blank events, as if wrapped in 'o->'."))
+              "Further operators to apply to the blank events, 
+              as if wrapped in 'o->'."))
 
      (((testp (in: :freq (over 1 [440 ~])))
           => [(:beat 0 :sustain 1/2 :freq 440)])

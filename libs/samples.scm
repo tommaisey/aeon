@@ -1,7 +1,8 @@
 (library (samples)
 
   (export
-    :sample :sample-idx :sidx
+    :sample :sample-idx 
+    :smpl :sidx
     samples
     samples-dir
     valid-sample?
@@ -14,6 +15,7 @@
           (file-tools) (context))
 
   (declare-keywords :sample :sample-idx)
+  (alias :smpl :sample-idx)
   (alias :sidx :sample-idx)
 
   (define-syntax samples

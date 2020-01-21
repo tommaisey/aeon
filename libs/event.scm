@@ -13,6 +13,7 @@
           time-key
           priority-keys
           make-event
+          make-event-fast
           event-get
           event-set
           event-update
@@ -40,13 +41,15 @@
   (define time-key :beat)
   (define priority-keys '(:sustain :freq :beat))
 
-  (define-syntax make-event
+  ;; Returns an event: (make-event 1/16 :freq 440 :amp 0.1)
+  (define (make-event start-beat . key-values)
+    (cons (cons :beat start-beat) (apply make-alist key-values)))
+
+  ;; For internal use: less convenient syntax, but faster
+  (define-syntax make-event-fast
     (syntax-rules ()
       ((_ start-beat (key value) ...)
-       (list (cons :beat start-beat) (cons key value) ...))
-
-      ((_ ...)
-       (syntax-error "make-event syntax: (make-event 1/16 [:freq 100] [:pan 0]"))))
+       (list (cons :beat start-beat) (cons key value) ...))))
 
   ;; Getters & setters
   (define (event-get event key default)

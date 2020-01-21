@@ -29,12 +29,10 @@
 ;; Note: need a separate `in` for each input channel. `disk-out` fails
 ;; if num input channels doesn't match the buffer's channels. `in` can
 ;; read multiple channels but can only output one.
-(sc/send-synth sc3 "recorder2"
+(send-synth sc3 "recorder2"
   (letc ([:inbus 0] [:outbuf -1])
-    (let* ([sig1 (sc/in 1 sc/ar :inbus)]
-           [sig2 (sc/in 1 sc/ar (+u :inbus 1))]
-           [sig-chans (sc/mce2 sig1 sig2)])
-      (sc/disk-out :outbuf sig-chans))))
+    (disk-out :outbuf (mce2 (in 1 ar :inbus) 
+                            (in 1 ar (+ :inbus 1))))))
 
 (define-immutable-record recording-state
   [arc (make-arc 0 1)]
@@ -62,7 +60,7 @@
 (define* (start-recording [/opt (t (sc/utc))])
   (when active-recording
     (let* ([bufnum (recording-state-bufnum active-recording)]
-           [event (make-event 0 (:inbus 0) (:outbuf bufnum))]
+           [event (make-event 0 :inbus 0 :outbuf bufnum)]
            [args (event-symbols->strings event)]
            [synth-id 55378008]) ; only one at a time for now
       (play-when "recorder2" t recording-group args synth-id)

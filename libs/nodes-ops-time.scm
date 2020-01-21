@@ -86,7 +86,7 @@
   ;; The optional node arguments are applied to the taps differently.
   ;; `iterative-node` is applied once to the 1st tap, twice to the 2nd, etc.
   ;; `once-node` is applied once to all taps but not the original.
-  (define* (taps period num [/opt (iterative-node (thru)) (once-node (thru))])
+  (define* (taps period num [/opt (once-node (thru)) (iterative-node #f)])
 
     ;; Compute furthest lookahead/lookback that might be required.
     (define possible-range
@@ -120,9 +120,11 @@
       (lambda (time-and-idx)
         (let* ([t (car time-and-idx)]
                [i (cdr time-and-idx)]
-               [c (make-context (make-arc t (+ t period))
-                                (list (event-set ev :beat t)))])
-          (context-event ((apply x-> (repeat i iterative-node)) c)))))
+               [e (event-set ev :beat t)])
+          (if (eq? iterative-node #f) e
+              (context-event ((apply x-> (repeat i iterative-node))
+                              (make-context (make-arc t (+ t period)) 
+                                            (list e))))))))
 
     ;; Builds a list of events (the taps) based on the context's current event.
     (define (build-taps start end)

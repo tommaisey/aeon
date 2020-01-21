@@ -1,8 +1,5 @@
-;; -*- geiser-scheme-implementation: chez-*-
-;;----------------------------------------------------------
-;; Fundamental utilities
-;; ---------------------------------------------------------
 (library (utilities)
+
   (export identity compose
           pseudo-rand
           trunc-int round-down round-up round-nearest 
@@ -31,6 +28,7 @@
           make-alist
           alist-get
           alist-set
+          alist-set-if-not
           alist-get-multi
           alist-let
           lif lest
@@ -48,6 +46,7 @@
           string-last
           str+
           gen-id
+          with-identifiers
           lambda*
           define*
           /opt)
@@ -221,7 +220,7 @@
   ;; as consed pairs.
   ;; If the input list isn't even numbered, returns #f.
   (define (pairwise lst)
-    (and (even? (length lst))
+    (and (or (even? (length lst)) (null? lst))
          (let loop ([lst lst] [pairs '()])
            (if (null? lst)
                (reverse pairs)
@@ -241,7 +240,7 @@
           ((negative? num) (take (+ len num) lst))
           (else (loop (dec num) (cons to-repeat end)))))))
 
-  ;;--------------------------------------------------------------------
+  ;;-------------------------------------------------------------------
   ;; Logic
   
   ;; let+if
@@ -313,6 +312,11 @@
              (eq? value (cadr alist)))
         alist ;; optimise: don't set same value twice in a row
         (cons (cons key value) alist)))
+
+  ;; Set a value in an alist if it's not already present.
+  (define (alist-set-if-not alist key value)
+    (if (alist-get alist key #f) alist
+        (alist-set alist key value)))
 
   ;;----------------------------------------------------------------------
   ;; Alists - i.e. association lists
@@ -399,6 +403,12 @@
   ;; Synthesises an identifier for use in an unhygenic macro
   (meta define (gen-id template-id . args)
     (dat->syn template-id (apply synth-symbol args)))
+
+  ;; Introduces keywords unhygenically into a macro's scope.
+  (define-syntax with-identifiers
+    (syntax-rules ()
+      ((_ template-id (id ...) body)
+       (with-syntax ([id (dat->syn template-id 'id)] ...) body))))
 
   ;;------------------------------------------------------------------------
   ;; Useful for destructuring records

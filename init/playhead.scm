@@ -87,8 +87,8 @@
 (define (set-bpm! n)
   (set! bpm n)
   (let ([e (make-event 0 
-                       (:tempo (bpm->mps n))
-                       (:control "tempo")
-                       (:group bus-effect-group))])
+                       :tempo (bpm->mps n)
+                       :control "tempo"
+                       :group bus-effect-group)])
     (put-playhead-sync-info)
     (play-event e 0)))
