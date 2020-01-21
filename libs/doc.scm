@@ -1,3 +1,7 @@
+;; Defines some tools for making a (somewhat) interactive documentation
+;; system. The system is intended for use by musicians, not those who
+;; are hacking on the system itself - so I'll still use comments for
+;; 'internal' code.
 (library (doc)
   (export make-docs-dict
           make-doc
@@ -7,13 +11,13 @@
           get-doc-examples)
   (import (chezscheme) (utilities))
 
+  ;; Make a dictionary of documentation data.
   (define (make-docs-dict)
     (make-eq-hashtable 32))
 
-  ;; Defines a function which, given a docs-dict, adds the specified
-  ;; documentation data to the dictionary. Documentation is specified
-  ;; in the format (fn-name "Doc string" (arg-name ArgType "Arg description")).
-  ;; For use inside a library to expose a function adding docs to a docs-dict.
+  ;; For use inside libraries so they can expose a hook to add their
+  ;; documentation to a common docs-dict. Defines a function which
+  ;; adds the specified documentation to a docs-dict.
   (define-syntax make-doc
     (syntax-rules (=>)
       ((_ docs-fn-name 
@@ -29,9 +33,12 @@
              (hashtable-set! docs-dict 'name (list string args examples))))
          ...))))
 
+  ;; Get documentation data for a symbol out of a docs-dict.
   (define (get-doc docs-dict fn-sym)
     (hashtable-ref docs-dict fn-sym #f))
 
+  ;; Call a function on some documentation data for a symbol, or
+  ;; print a 'no docs' message if it's not found in the docs-dict.
   (define (do-doc docs-dict fn-sym fn)
     (lest [d (get-doc docs-dict fn-sym)]
           (fn d)
@@ -40,7 +47,6 @@
   (define (print-doc docs-dict fn-sym)
     (define (print d)
       (let* ([port (current-output-port)]
-             [top-divider "=============================\n"]
              [divider "-----------------------------\n"]
              [args (cadr d)]
              [examples (caddr d)]
@@ -50,7 +56,7 @@
         (fresh-line port)
         (newline port)
         (newline port)
-        (println top-divider)
+        (println "=============================\n")
         (println (str+ "*** " name " ***"))
         (when (not (null? args))
           (let ([num-str (number->string (length args))])
