@@ -1,7 +1,9 @@
+;; Convenience functions and macros that streamline our use of
+;; the rsc3 library to communicate with SuperCollider.
 (library (synthesis)
 
   (export send-synth 
-          letc src-synth
+          letc src-synth fx-synth
           get-bus-num
           private-bus
           make-env-gen
@@ -13,14 +15,21 @@
           make-pan
           make-bus-out
           make-outputs
+          stereo-in
           scale-cutoff
           clamp-cutoff
+          :group :fx :control 
           :verb1 :verb2 :delay1)
 
   (import (scheme)
           (utilities)
-          (prefix (rsc3) sc/)
-          (prefix (sosc) so/))
+          (prefix (rsc3) sc/))
+
+  ;; Events with :group will be added to the given node group.
+  ;; Events with :fx will be added to the end of the given node group
+  ;; Events with :control will send control messages to all nodes in
+  ;; the :group they are assigned to.
+  (declare-keywords :group :control :fx)
 
   ;; Defines some globally reserved bus numbers. These are used for
   ;; standard effects busses in the synthdefs. The numbers start at
@@ -65,12 +74,12 @@
 
   (define (convert-curve c num-segments)
     (cond
-      ((or (number? c) (symbol? c)) 
-       (repeat num-segments c))
-      ((unsafe-list? c)
-       (if (eq? (length c) num-segments) c 
-           (extend-repeating-last c num-segments)))
-      (else (error 'curve "curve argument should be a number, symbol or list" c))))
+      [(or (number? c) (symbol? c))
+       (repeat num-segments c)]
+      [(unsafe-list? c)
+       (if (eq? (length c) num-segments) c
+           (extend-repeating-last c num-segments))]
+      [else (error 'curve "curve argument should be a number, symbol or list" c)]))
 
   ;;-------------------------------------------------------------------
   (define (make-rand-lfo mag time)
@@ -85,31 +94,39 @@
   ;; Makes N parallel outputs, where N is the number of pairs.
   ;; each pair should be: (bus-num . send-amt)
   (define (make-outputs sig pan . pairs)
-    (if (null? pairs)
-        (raise "Must supply bus info pairs to make-outputs")
-        (let* ([panned (make-pan sig pan)]
-               [make-out (lambda (info) (sc/out (car info) (u* panned (cdr info))))]
-               [combine (lambda (ug info) (sc/mrg2 ug (make-out info)))])
-          (fold-left combine (make-out (car pairs)) (cdr pairs)))))
+    (when (null? pairs)
+      (error 'make-outputs "Supplied no bus info pairs"))
+    (let* ([panned (make-pan sig pan)]
+           [make-out (lambda (info) (sc/out (car info) (u* panned (cdr info))))]
+           [combine (lambda (ug info) (sc/mrg2 ug (make-out info)))])
+      (fold-left combine (make-out (car pairs)) (cdr pairs))))
+
+  ;; 'in' can read multiple channels but can only output one, so
+  ;; here we multichannel expand two of them.
+  (define (stereo-in inbus)
+    (sc/mce2 (sc/in 1 sc/ar inbus) (sc/in 1 sc/ar (u+ inbus 1))))
 
   ;; Synthdefs containing filters should be careful to keep
   ;; cutoff frequencies in a safe range.
-  (define* (clamp-cutoff x [/opt (min 30) (max 19000)])
-    (sc/clip x min max))
+  (define* (clamp-cutoff f [/opt (min 30) (max 19000)])
+    (sc/clip f min max))
 
   (define* (scale-cutoff f [/opt (min 30) (max 17000)])
-    (clamp-cutoff (sc/mul-add f max min) min max))
+    (clamp-cutoff (sc/mul-add f (- max min) min) min max))
 
   ;;-------------------------------------------------------------------
   ;; Variadic versions of the common binary ops.
-  (define (fold-binary-op op args)
-    (fold-left (lambda (x y) (op x y)) (car args) (cdr args)))
+  (define (fold-binary-op arith-op sc-op args)
+    (if (for-all number? args)
+        (apply arith-op args)
+        (fold-left sc-op (car args) (cdr args))))
+  
   (define (u* . args)
-    (fold-binary-op sc/mul args))
+    (fold-binary-op * sc/mul args))
   (define (u+ . args)
-    (fold-binary-op sc/add args))
+    (fold-binary-op + sc/add args))
   (define (u- . args)
-    (fold-binary-op sc/sub args))
+    (fold-binary-op - sc/sub args))
 
   ;; Inside send-synth, variadic versions of rsc3's mul, sub & add
   ;; ugens are aliased over the normal arithmetic operators.
@@ -127,30 +144,50 @@
   ;; Makes and binds synthedef inputs (i.e. Control objects) and also defines
   ;; the names of said inputs as 'keywords', i.e. self-evaluating symbols.
   (define-syntax letc
-    (syntax-rules  ()
-      ((_ ([name default] ...) extra-defs ... signal)
+    (syntax-rules ()
+      ((_ ([name default rest ...] ...) extra-defs ... signal)
        (let ([name (begin (define-top-level-value 'name 'name)
-                          (sc/make-control* (symbol->string 'name) default sc/kr 0))]
+                          (make-control 'name default rest ...))]
              ...)
          extra-defs ...
          signal))))
+
+  (define* (make-control name default [/opt (rate sc/kr) (lag 0)])
+    (sc/make-control* (symbol->string name) default rate lag))
 
   ;; Define a standard in/out structure for a sound source like a synth
   ;; or sampler voice. Predefines :out, :amp, :pan and some sends.
   (define-syntax src-synth
     (lambda (x)
       (syntax-case x ()
-        ((k ([name default] ...) extra-defs ... signal)
-         (with-identifiers #'k [:out :amp :pan :send1 :send2 :dest1 :dest2]
-           #'(letc ([:out 0] ; TODO: ir rate 
-                    [:amp 0.5] [:pan 0.5]
+        ((k ([name default rest ...] ...) extra-defs ... signal)
+         (with-identifiers #'k [:out :amp :pan
+                                :send1 :send2
+                                :dest1 :dest2]
+           #'(letc ([:out 0 sc/ir]
+                    [:amp 0.5 sc/kr 0.05] 
+                    [:pan 0.5 sc/kr 0.05]
                     [:send1 0] [:send2 0]
                     [:dest1 :verb1] [:dest2 :delay1]
-                    [name default] ...)
+                    [name default rest ...] ...)
                extra-defs ...
                (make-outputs signal :pan
                  (pair :out :amp)
                  (pair (private-bus :dest1) :send1)
                  (pair (private-bus :dest2) :send2))))))))
-  
+
+  ;; Define an effect synth. Takes input from a a scratch
+  ;; bus and replaces its contents with the effected version.
+  ;; Predefines :in as an In.ar ugen pointed to the right bus.
+  (define-syntax fx-synth
+    (lambda (x)
+      (syntax-case x ()
+        ((k ([name default rest ...] ...) extra-defs ... signal)
+         (with-identifiers #'k [:in]
+           #'(letc ([:in 1023 sc/ir] [name default rest ...] ...)
+               (let* ([:inbus :in]
+                      [:in (sc/in 2 sc/ar :inbus)])
+                 extra-defs ...
+                 (sc/replace-out :inbus signal))))))))
+
   )

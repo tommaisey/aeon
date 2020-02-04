@@ -179,7 +179,7 @@
 
   ;; Normally chooses the first value, but every n measures chooses
   ;; the second value instead. If there are more than 2 values, the
-  ;; 2nd through nth values are cycled.
+  ;; 2nd through nth values are cycled each n measures.
   (define-syntax every
     (syntax-rules ()
       ((_ n measures qlist)

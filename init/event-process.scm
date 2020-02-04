@@ -5,19 +5,22 @@
 ;; the same time.
 (define* (play-event event beat-now [/opt (time-now (sc/utc))])
   (let ([event (preprocess-event event)])
-    (alist-let event ([beat    :beat 0]
-                      [inst    :inst "sine-grain"]
-                      [group   :group standard-group]
-                      [control :control #f]
-                      [sustain :sustain #f])
-      (let ([time (time-at-beat beat beat-now time-now)]
-            [args (event-symbols->strings event)])
-        (create-group group sc/add-to-head default-group)
-        (if control
-            (if (or (not (number? group)) (<= group 1))
-                (println "Error: control event didn't specify a valid group.")
-                (control-when time group args))
-            (play-when inst time group args))))))
+    (alist-let event ([beat   :beat 0]
+                      [inst   :inst "sine-grain"]
+                      [group  :group standard-group]
+                      [ctrl   :control #f]
+                      [fx     :fx #f])
+      (if (and (number? group) (> group 1))
+          (let* ([time (time-at-beat beat beat-now time-now)]
+                 [args (event-symbols->strings event)]
+                 [bus (voice-group-bus group)]
+                 [with-bus (lambda (key) (cons (cons key bus) args))])
+            (create-voice-group group)
+            (cond
+              [ctrl (control-when time group args)]
+              [fx   (fx-when inst time group (with-bus ":in"))]
+              [else (play-when inst time group (with-bus ":out"))]))
+          (println "Error: event didn't specify a valid group.")))))
 
 (define (time-at-beat beat beat-now time-now)
   (let ([delay (secs-until beat beat-now bpm)])
@@ -47,7 +50,7 @@
   (event-set-multi event (:sample bufnum) (:inst inst)))
 
 ;; Converts any key found in the 'tempo-dependent-keys' alist
-;; from measures to seconds, for prior to sending to SC.
+;; from measures to seconds, prior to sending to SC.
 (define (process-times event)
   (define (convert event entry)
     (if (cdr entry)

@@ -16,11 +16,6 @@
 ;; client to be relative to the tempo.
 (declare-keywords :tempo)
 
-;; Events with :group will be added to the node group with the value
-;; as its ID. Events with :control must also have :group - control properties
-;; will be set on all synths in that node group instead of creating new synths.
-(declare-keywords :group :control)
-
 ;; Pre-declare these so that we can use them below:
 (declare-keywords :attack :sustain :release)
 
@@ -35,19 +30,18 @@
   (make-alist :sustain #f :attack #f :release #f))
 
 ;;-------------------------------------------------------------------
-;; The synthdef nursery - quite bare at the moment!
+;; The synthdef nursery...
 (send-synth sc3 "sine-grain"
-  (src-synth ([:freq 440] [:attack 0.01] [:sustain 1])
-    (* (sin-osc ar (lag :freq 0.05) 0) 
+  (src-synth ([:freq 440 kr 0.05] [:attack 0.01] [:sustain 1])
+    (* (sin-osc ar :freq 0)
        (make-ar :attack :sustain))))
 
 (send-synth sc3 "fm-grain"
-  (src-synth ([:freq 440] [:attack 0.01] [:sustain 1]
+  (src-synth ([:freq 440 kr 0.05] [:attack 0.01] [:sustain 1]
               [:ratio 2] [:fm-amt 0.1])
-    (let* ([frq (lag :freq 0.05)]
-           [mod (sin-osc ar (* :ratio frq) 0.5)]
+    (let* ([mod (sin-osc ar (* :ratio :freq) 0.5)]
            [fm-env (make-ar :attack (* :sustain 1.5) :fm-amt -6)])
-      (* (sin-osc ar frq (* mod fm-env))
+      (* (sin-osc ar :freq (* mod fm-env))
          (make-ar :attack :sustain)))))
 
 (send-synth sc3 "sampler"
@@ -65,11 +59,9 @@
 
 (send-synth sc3 "swirly-keys"
   (src-synth ([:attack 0.4] [:sustain 1] [:release 1]
-              [:freq 440] [:cutoff 3] [:resonance 0.1])
+              [:freq 440 kr 0.1] [:cutoff 3] [:resonance 0.1])
 
-     (let* ([:freq (lag :freq 0.1)]
-            [:pan  (lag :pan 0.15)]
-            [:amp (* :amp (lin-exp :freq 20 10000 1.0 0.2))]
+     (let* ([:amp (* :amp (lin-exp :freq 20 10000 1.0 0.2))]
             [osc1 (lf-saw ar (* :freq 0.4978) 0)]
             [osc2 (lf-saw ar (* :freq 1.0024) 0.3)]
             [cut-env (make-asr :attack :sustain :release :cutoff 0.5 do-nothing)]
@@ -94,9 +86,9 @@
          (make-asr :attack :sustain :release)))))
 
 (send-synth sc3 "dual-lopass"
-  (src-synth ([:freq 440]
+  (src-synth ([:freq 440 kr 0.175]
               [:attack 2.0] [:sustain 1] [:release 1]
-              [:cutoff1 1.0] [:cutoff2 2.0] [:resonance 0.1])
+              [:cutoff1 1.0 kr 0.5] [:cutoff2 2.0 kr 0.5] [:resonance 0.1])
 
     (define (make-osc freq flt-atk cutoff-prop)
       (let* ([pulse-lfo (sin-osc kr 0.5 0)]
@@ -107,26 +99,29 @@
              [osc-flt-env (clamp-cutoff osc-flt-env)])
         (moog-ff (+ osc (* sub 0.8)) osc-flt-env :resonance 0)))
 
-    (let* ([:freq (lag :freq 0.175)]
-           [:pan (lag :pan 0.15)]
-           [:cutoff1 (lag :cutoff1 0.5)]
-           [:cutoff2 (lag :cutoff2 0.5)]
-           [:amp (* :amp (lin-exp :freq 20 10000 1.0 0.2))]
+    (let* ([:amp (* :amp (lin-exp :freq 20 10000 1.0 0.2))]
            [osc1 (make-osc (* :freq 0.5) (* :attack 2) :cutoff1)]
            [osc2 (make-osc :freq (* :attack 1.5) :cutoff2)])
       (* (+ osc1 osc2)
          (make-asr :attack :sustain :release 1 (list 4 -4))))))
 
 (send-synth sc3 "pulse-pluck"
-  (src-synth ([:freq 440] 
+  (src-synth ([:freq 440 kr 0.05]
               [:attack 0.01] [:sustain 1]
               [:cutoff 0.5] [:resonance 0])
 
-    (let* ([line (make-line (rand 0.1 0.8) (rand 0.1 0.8) :sustain)]
-           [osc (lf-pulse ar (lag :freq 0.05) 0 line)]
-           [cutoff (*+ :cutoff 17000 75)])
+    (let* ([line (make-line (rand 0.1 0.9) (rand 0.1 0.9) :sustain)]
+           [osc (lf-pulse ar :freq 0 line)]
+           [cutoff (scale-cutoff :cutoff)])
       (* (moog-ff osc cutoff :resonance 0)
          (make-ar :attack :sustain)))))
+
+;;-------------------------------------------------------------------
+;; The fx synthdef nursery...
+(send-synth sc3 "hpf"
+  (fx-synth ([:cutoff 0.5] [:resonance 0] [:sustain 1])
+    (* (rhpf :in (scale-cutoff :cutoff) :resonance)
+       (make-ar 0.005 :sustain))))
 
 ;;-----------------------------------------------------------------------
 ;; Bus effects
@@ -152,5 +147,5 @@
       (out 0 (+ (make-pan l (*+ :width -0.5 0.5))
                 (make-pan r (*+ :width  0.5 0.5)))))))
 
-(start-bus-effect "bus-verb"  (pair ":inbus" :verb1))
-(start-bus-effect "bus-delay" (pair ":inbus" :delay1))
+(start-send-effect "bus-verb"  (pair ":inbus" :verb1))
+(start-send-effect "bus-delay" (pair ":inbus" :delay1))

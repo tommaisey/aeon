@@ -26,13 +26,11 @@
                                  ". Retry after playhead has begun.\n"))))))
 
 ;;----------------------------------------------------------------
-;; Note: need a separate `in` for each input channel. `disk-out` fails
-;; if num input channels doesn't match the buffer's channels. `in` can
-;; read multiple channels but can only output one.
+;; Note: `disk-out` fails if num input channels doesn't match the
+;; buffer's channels. Currently we always assume stereo.
 (send-synth sc3 "recorder2"
   (letc ([:inbus 0] [:outbuf -1])
-    (disk-out :outbuf (mce2 (in 1 ar :inbus) 
-                            (in 1 ar (+ :inbus 1))))))
+    (disk-out :outbuf (stereo-in :inbus))))
 
 (define-immutable-record recording-state
   [arc (make-arc 0 1)]

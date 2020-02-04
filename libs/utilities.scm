@@ -3,31 +3,18 @@
   (export identity compose
           pseudo-rand
           trunc-int round-down round-up round-nearest 
-          inc dec clamp
-          nearly-divisible divisible on-each
-          between between-inclusive between-each
-          equal nearly-equal
+          inc dec clamp 
+          between between-inclusive
           range-sine
           pair first rest cons-r
-          merge-columns
-          columns-to-rows
-          concatenate
-          merge-sorted
-          pairwise
+          sorted? merge-sorted
+          pairwise repeat flatten take
           extend-repeating-last
-          take
-          repeat
-          sorted?
-          for-any
-          for-none
-          list-index
-          list-last
-          unsafe-list?
-          push-front
+          for-any for-none
+          list-index list-last unsafe-list? push-front
           find-first-slot
           make-alist
-          alist-get
-          alist-set
+          alist-get alist-set
           alist-set-if-not
           alist-get-multi
           alist-let
@@ -101,6 +88,7 @@
   (define trunc-int (compose exact truncate))
   (define floor-int (compose exact floor))
   (define ceil-int  (compose exact ceiling))
+  (define round-int (compose exact round))
 
   ;; Find the nearest whole multiple of divisor that's <= x.
   (define (round-down x divisor)
@@ -110,30 +98,8 @@
     (* divisor (ceil-int (/ x divisor))))
 
   (define (round-nearest x divisor)
-    (let ([down (round-down x divisor)]
-          [up (round-up x divisor)])
-      (if (< (- up x) (- x down)) up down)))
-
-  (define (nearly-divisible val div error)
-    (let* ([remain (/ val div)]
-           [truncated (truncate remain)])
-      (< (- remain truncated) error)))
-
-  (define (divisible val div)
-    (nearly-divisible val div 0.0001))
-
-  (define (on-each val on each)
-    (let ([m (mod val each)])
-      (= m on)))
-
-  (define (nearly-equal a b error)
-    (< (abs (- a b)) error))
-
-  (define (equal a b)
-    (= a b))
-
-  (define (not-equal a b)
-    (not (equal a b)))
+    (let ([r (if (exact? divisor) round-int round)])
+      (* (r (/ x divisor)) divisor)))
 
   (define (between x lower upper)
     (and (>= x lower) (< x upper)))
@@ -141,15 +107,11 @@
   (define (between-inclusive x lower upper)
     (and (>= x lower) (<= x upper)))
 
-  (define (between-each x lower upper each)
-    (let ([m (mod x each)])
-      (between m lower upper)))
-
   (define (clamp value lo hi)
     (cond
-      ((< value lo) lo)
-      ((> value hi) hi)
-      (else value)))
+      [(< value lo) lo]
+      [(> value hi) hi]
+      [else value]))
 
   (define pi 3.141592653589793)
 
@@ -162,47 +124,48 @@
   (define (cons-r a b) (cons b a))
 
   ;;-------------------------------------------------------------------
-  ;; Takes the head off each inner list until one of
-  ;; them runs out. The heads of each column are offered
-  ;; to a joiner func, along with an accumulated result.
-  (define (column-process col-list joiner)
-    (let loop ([l col-list] [result '()])
-      (if (member '() l) result
-          (loop (map cdr l) (joiner result (map car l))))))
-
-  ;; ((1 2 3) (x y) (a b c)) -> (1 x a 2 y b)
-  (define (merge-columns col-list)
-    (column-process col-list (lambda (a b) (append a b))))
-
-  ;; ((1 2 3) (x y) (a b c)) -> ((1 x a) (2 y b))
-  (define (columns-to-rows col-list)
-    (reverse (column-process col-list (lambda (a b) (cons b a)))))
-
-  ;;  ((1 2 3) (x y) (a b c)) -> (1 2 3 x y a b c)
-  (define (concatenate col-list)
-    (fold-right push-front '() col-list))
+  ;; (1 (2 3) 4 (5 6 (7 8))) -> (1 2 3 4 5 6 7 8)
+  ;; n.b. converts improper lists to proper lists.
+  (define (flatten lst)
+    (let loop ([lst lst] [acc '()])
+      (cond [(null? lst) acc]
+            [(pair? lst) (loop (car lst) (loop (cdr lst) acc))]
+            [else (cons lst acc)])))
 
   (define (repeat n val)
     (let loop ([x '()] [n n])
-      (if (<= n 0) x (loop (cons val x) (- n 1)))))
+      (if (<= n 0) x (loop (cons val x) (dec n)))))
+
+  ;; Makes the input list have a length of desired-len, either
+  ;; by dropping elements at the end or repeating the last list element.
+  (define (extend-repeating-last lst desired-len)
+    (when (null? lst)
+      (error 'extend-by-repeating-last "can't accept null list" lst))
+    (let ([to-repeat (list-last lst)]
+          [len (length lst)])
+      (let loop ([num (- desired-len len)] [end '()])
+        (cond
+          [(zero? num) (append lst end)]
+          [(negative? num) (take lst (max 0 (+ len num)))]
+          [else (loop (dec num) (cons to-repeat end))]))))
 
   ;; Check if a list is sorted or not.
   (define (sorted? less? l)
     (let loop ([l (cdr l)] [prev (car l)])
       (cond
-        ((null? l) #t)
-        ((or (less? prev (car l))
+        [(null? l) #t]
+        [(or (less? prev (car l))
              (not (less? (car l) prev)))
-         (loop (cdr l) (car l)))
-        (else #f))))
+         (loop (cdr l) (car l))]
+        [else #f])))
 
   ;; Stable merges to lists according to less?. Lifted from
   ;; SRFI95 ref implementation, with tweaks.
   (define (merge-sorted a b less? . opt-key)
     (define key (if (null? opt-key) values (car opt-key)))
-    (cond ((null? a) b)
-          ((null? b) a)
-          (else
+    (cond [(null? a) b]
+          [(null? b) a]
+          [else
             (let loop ((x (car a)) (kx (key (car a))) (a (cdr a))
                                    (y (car b)) (ky (key (car b))) (b (cdr b)))
               ;; The loop handles the merging of non-empty lists.  It has
@@ -214,7 +177,7 @@
                   ;; x <= y
                   (if (null? a)
                       (cons x (cons y b))
-                      (cons x (loop (car a) (key (car a)) (cdr a) y ky b))))))))
+                      (cons x (loop (car a) (key (car a)) (cdr a) y ky b)))))]))
 
   ;; Takes successive pairs in a flat list and builds a new list with them
   ;; as consed pairs.
@@ -226,19 +189,6 @@
                (reverse pairs)
                (loop (cddr lst)
                      (cons (cons (car lst) (cadr lst)) pairs))))))
-
-  ;; Makes the input list have a length of desired-len, either
-  ;; by dropping elements at the end or repeating the last list element.
-  (define (extend-repeating-last lst desired-len)
-    (when (null? lst)
-      (error 'extend-by-repeating-last "can't accept null list" lst))
-    (let ([to-repeat (list-last lst)]
-          [len (length lst)])
-      (let loop ([num (- desired-len len)] [end '()])
-        (cond
-          ((zero? num) (append lst end))
-          ((negative? num) (take (+ len num) lst))
-          (else (loop (dec num) (cons to-repeat end)))))))
 
   ;;-------------------------------------------------------------------
   ;; Logic
@@ -278,8 +228,9 @@
         (and (pair? x)
              (or (null? (cdr x))
                  (pair? (cdr x))))))
-  
-  (define (list-last l) ; Linear time.
+
+  ;; Linear time.
+  (define (list-last l)
     (if (null? (cdr l))
         (car l)
         (list-last (cdr l))))
@@ -296,9 +247,9 @@
   (define* (find-first-slot vec [/opt (pred identity)])
     (let loop ([n 0] [len (vector-length vec)])
       (cond
-        ((>= n len) #f)
-        ((pred (vector-ref vec n)) n)
-        (else (loop (inc n) len)))))
+        [(>= n len) #f]
+        [(pred (vector-ref vec n)) n]
+        [else (loop (inc n) len)])))
 
   ;; Get an alist value, or default if not
   (define (alist-get alist key default)

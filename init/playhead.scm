@@ -89,6 +89,6 @@
   (let ([e (make-event 0 
                        :tempo (bpm->mps n)
                        :control "tempo"
-                       :group bus-effect-group)])
+                       :group send-effect-group)])
     (put-playhead-sync-info)
     (play-event e 0)))

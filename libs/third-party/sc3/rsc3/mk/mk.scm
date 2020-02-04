@@ -31,8 +31,7 @@
     make-time
     time-nanosecond 
     time-second
-    current-time
-    define-top-level-value))
+    current-time))
 
 (mk-r6rs '(rsc3)
 	 (cons "../src/ext/sys.chez.scm" rsc3-src)
