@@ -15,6 +15,7 @@
 (import (scheme)
         (prefix (rsc3) sc/)
         (prefix (sosc) so/)
+        (rename (matchable) (? ??))
         (utilities)
         (doc)
         (file-tools)

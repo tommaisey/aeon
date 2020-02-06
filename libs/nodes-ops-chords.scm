@@ -5,6 +5,7 @@
 
   (import
     (scheme)
+    (matchable)
     (harmony)
     (event)
     (context)
@@ -20,13 +21,12 @@
       (lambda (ctxt)
         (map (lambda (d) (event-set (context-event ctxt) :chd d)) degrees)))
     (define (impl context val)
-      (let ([vec (eval-leaf val context)])
-        (cond
-         ((is-rest? vec) (context-resolve context))
-         ((not (vector? vec)) (error 'chord "expected vector" vec))
-         (else (context-map (cmap (vector->list vec))
-                            (context-resolve context)
-                             append)))))
+      (match (eval-leaf val context)
+          [(? is-rest?) (context-resolve context)]
+          [(? vector? v) (context-map (cmap (vector->list v))
+                                    (context-resolve context)
+                                    append)]
+          [v (error 'chord "expected vector" v)]))
     (wrap-subdivide-fn impl shape-pattern))
 
   )

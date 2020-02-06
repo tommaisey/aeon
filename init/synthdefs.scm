@@ -32,19 +32,32 @@
 ;;-------------------------------------------------------------------
 ;; The synthdef nursery...
 (send-synth sc3 "sine-grain"
-  (src-synth ([:freq 440 kr 0.05] [:amp 0.5 sc/ir]
+  (src-synth ([:freq 440 kr 0.05] [:amp 0.5 ir]
               [:attack 0.01] [:sustain 1])
     (* (sin-osc ar :freq 0)
        (make-ar :attack :sustain)
        (freq->amp :freq :amp))))
 
 (send-synth sc3 "fm-grain"
-  (src-synth ([:freq 440 kr 0.05] [:amp 0.5 sc/ir]
+  (src-synth ([:freq 440 kr 0.05] [:amp 0.5 ir]
               [:attack 0.01] [:sustain 1]
               [:ratio 2] [:fm-amt 0.1])
     (let* ([mod (sin-osc ar (* :ratio :freq) 0.5)]
            [fm-env (make-ar :attack (* :sustain 1.5) :fm-amt -6)])
       (* (sin-osc ar :freq (* mod fm-env))
+         (make-ar :attack :sustain)
+         (freq->amp :freq :amp)))))
+
+(send-synth sc3 "saw-grain"
+  (src-synth ([:freq 440 kr 0.05] [:amp 0.5 ir]
+              [:cutoff 0.7 kr 0.05] [:resonance 0.1 ir]
+              [:attack 0.01] [:sustain 1])
+    (let* ([cut-env (make-ar (* 0.5 :attack) (* 4 :sustain))]
+           [cut-env (+ (* 0.2 :cutoff)
+                       (* 0.8 :cutoff cut-env))]
+           [cutoff (scale-cutoff cut-env)]
+           [q (convert-q :resonance)])
+      (* (rlpf (saw ar :freq) cutoff q)
          (make-ar :attack :sustain)
          (freq->amp :freq :amp)))))
 

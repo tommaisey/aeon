@@ -12,7 +12,7 @@
     context-resolve
     make-caching-context)
 
-  (import (scheme) (utilities) (arc) (event) (context))
+  (import (scheme) (utilities) (matchable) (arc) (event) (context))
 
   ;;--------------------------------------------------------------
   ;; Call on the root of a tree to fill a context with events.
@@ -35,9 +35,9 @@
   ;; naked contextual function or a special 'decorated' leaf object.
   (define (eval-leaf v context)
     (cond
-      ((procedure? v) (eval-leaf (v context) context))
-      ((leaf-meta? v) (eval-leaf (leaf-meta-fn v) context))
-      (else v)))
+      [(procedure? v) (eval-leaf (v context) context)]
+      [(leaf-meta? v) (eval-leaf (leaf-meta-fn v) context)]
+      [else v]))
 
   ;; If we eval a leaf in order to add a new event, the context will look
   ;; wrong - the event doesn't yet exist, so e.g. rand seeding would be broken.
@@ -63,16 +63,14 @@
       (let ([cached-list '()])
         (lambda (ctxt)
           (let loop ([cl cached-list])
-            (cond
-              ((null? cl)
-               (begin
-                 (set! cached-list (cons (context-resolve ctxt) cached-list))
-                 (car cached-list)))
-              ((test-arc arc-eq? (car cl) ctxt)
-               (car cl))
-              ((test-arc arc-contains? (car cl) ctxt)
-               (context-trim (rearc (car cl) (context-arc ctxt))))
-              (else (loop (cdr cl))))))))
+            (match cl
+              [() (begin
+                    (set! cached-list (cons (context-resolve ctxt) cached-list))
+                    (car cached-list))]
+              [(c . rst) (cond [(test-arc arc-eq? c ctxt) c]
+                               [(test-arc arc-contains? c ctxt)
+                                (context-trim (rearc c (context-arc ctxt)))]
+                               [else (loop rst)])])))))
 
     (lif (chain (context-chain context)) (null? chain) context
          (context-push-chain (context-pop-chain context)
@@ -99,11 +97,11 @@
               [range-min (leaf-foldl leaf-meta-rng-min min +inf.0 lst)]
               [range-max (leaf-foldl leaf-meta-rng-max max -inf.0 lst)])
          (cond
-           ((and range-min range-max)
-            (make-leaf-meta range-min range-max fn subdivider?))
-           (subdivider?
-            (make-leaf-meta #f #f fn subdivider?))
-           (else fn))))))
+           [(and range-min range-max)
+            (make-leaf-meta range-min range-max fn subdivider?)]
+           [subdivider?
+            (make-leaf-meta #f #f fn subdivider?)]
+           [else fn])))))
 
   (define (leaf-subdivider? leaf)
     (and (leaf-meta? leaf)

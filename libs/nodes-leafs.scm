@@ -26,7 +26,9 @@
 
   (import
     (chezscheme)
-    (utilities)  (context) (event)
+    (utilities)
+    (rename (matchable) (? ??))
+    (context) (event)
     (node-eval)
     (for (pdef) expand))
 
@@ -106,15 +108,14 @@
 
        (let ([lst (pdef qlist)])
          (define (to-cumulative lst)
-           (let loop ([cnt 0] [o '()] [lst lst])
-             (if (null? lst)
-                 (reverse o)
-                 (let ([nxt-cnt (+ cnt (car lst))])
-                   (loop nxt-cnt (cons nxt-cnt o) (cdr lst))))))
+           (let loop ([count 0] [o '()] [lst lst])
+             (match lst
+               [() (reverse o)]
+               [(a . b) (loop (+ count a) (cons (+ count a) o) b)])))
 
          (define (pick-index v cumulative-weights)
-           (lif (i (list-index (lambda (x) (>= x v)) cumulative-weights))
-                i i (- (length cumulative-weights) 1)))
+           (lest [i (list-index (lambda (x) (>= x v)) cumulative-weights)]
+                 i (- (length cumulative-weights) 1)))
 
          (when (or (null? lst) (null? weights))
            (error 'wpick "requires 2 lists" lst weights))
@@ -222,13 +223,11 @@
       (find (lambda (k) (eq? k (car pair))) key/keys))
     (let ([time (context-now context)]
           [event (context-event context)])
-      (cond
-        ((null? key/keys)
-         (fn init time))
-        ((symbol? key/keys)
-         (fn init (event-get event key/keys 1)))
-        ((unsafe-list? key/keys)
-         (fold-left fn init (event-clean (filter matches-key? event)))))))
+      (match key/keys
+        [() (fn init time)]
+        [(?? symbol?) (fn init (event-get event key/keys 1))]
+        [(?? unsafe-list?)
+         (fold-left fn init (event-clean (filter matches-key? event)))])))
 
   ;; Helper for `this`, `next` and `nearest`.
   (define (get c key default)

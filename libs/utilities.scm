@@ -39,6 +39,7 @@
           /opt)
 
   (import (chezscheme)
+          (matchable)
           (only (srfi s1 lists)
                 take
                 first
@@ -128,9 +129,10 @@
   ;; n.b. converts improper lists to proper lists.
   (define (flatten lst)
     (let loop ([lst lst] [acc '()])
-      (cond [(null? lst) acc]
-            [(pair? lst) (loop (car lst) (loop (cdr lst) acc))]
-            [else (cons lst acc)])))
+      (match lst
+        [() acc]
+        [(a . b) (loop a (loop b acc))]
+        [x (cons x acc)])))
 
   (define (repeat n val)
     (let loop ([x '()] [n n])
@@ -150,24 +152,22 @@
           [else (loop (dec num) (cons to-repeat end))]))))
 
   ;; Check if a list is sorted or not.
-  (define (sorted? less? l)
-    (let loop ([l (cdr l)] [prev (car l)])
-      (cond
-        [(null? l) #t]
-        [(or (less? prev (car l))
-             (not (less? (car l) prev)))
-         (loop (cdr l) (car l))]
-        [else #f])))
+  (define (sorted? less? lst)
+    (let ([less-eq? (lambda (a b) (or (less? a b) (not (less? b a))))])
+      (match lst
+        [() #t]
+        [(x) #t]
+        [(a b . rst) (and (less-eq? a b) (sorted? less? rst))])))
 
-  ;; Stable merges to lists according to less?. Lifted from
+  ;; Stable merges two lists according to less?. Lifted from
   ;; SRFI95 ref implementation, with tweaks.
   (define (merge-sorted a b less? . opt-key)
     (define key (if (null? opt-key) values (car opt-key)))
     (cond [(null? a) b]
           [(null? b) a]
           [else
-            (let loop ((x (car a)) (kx (key (car a))) (a (cdr a))
-                                   (y (car b)) (ky (key (car b))) (b (cdr b)))
+            (let loop ([x (car a)] [kx (key (car a))] [a (cdr a)]
+                       [y (car b)] [ky (key (car b))] [b (cdr b)])
               ;; The loop handles the merging of non-empty lists.  It has
               ;; been written this way to save testing and car/cdring.
               (if (less? ky kx)
@@ -183,12 +183,11 @@
   ;; as consed pairs.
   ;; If the input list isn't even numbered, returns #f.
   (define (pairwise lst)
-    (and (or (even? (length lst)) (null? lst))
-         (let loop ([lst lst] [pairs '()])
-           (if (null? lst)
-               (reverse pairs)
-               (loop (cddr lst)
-                     (cons (cons (car lst) (cadr lst)) pairs))))))
+    (let loop ([lst lst] [pairs '()])
+      (match lst
+        [() (reverse pairs)]
+        [(x) #f]
+        [(a b . lst) (loop lst (cons (cons a b) pairs))])))
 
   ;;-------------------------------------------------------------------
   ;; Logic
@@ -224,16 +223,16 @@
   ;; Faster than 'list?' but improper lists (which return true)
   ;; are dangerous and shouldn't be used with e.g. append.
   (define (unsafe-list? x)
-    (or (null? x)
-        (and (pair? x)
-             (or (null? (cdr x))
-                 (pair? (cdr x))))))
+    (match x
+      [(a . b) (or (null? b) (pair? b))]
+      [a (null? a)]))
 
   ;; Linear time.
   (define (list-last l)
-    (if (null? (cdr l))
-        (car l)
-        (list-last (cdr l))))
+    (match l
+      [(x . ()) x]
+      [(a . x) (list-last x)]
+      [l l])) ;; improper list
 
   ;; Remove matching items in b from a
   (define (remove-list a b)
@@ -258,12 +257,12 @@
 
   ;; Set an alist value
   (define (alist-set alist key value)
-    (if (and (not (null? alist))
-             (eq? key (caar alist))
-             (eq? value (cadr alist)))
-        alist ;; optimise: don't set same value twice in a row
-        (cons (cons key value) alist)))
-
+    (match alist
+      [((k . v) . x)
+       (if (and (eq? k key) (eq? v value))
+           alist (cons (cons key value) alist))]
+      [else (error 'alist-set "doesn't appear to be an alist" alist)]))
+  
   ;; Set a value in an alist if it's not already present.
   (define (alist-set-if-not alist key value)
     (if (alist-get alist key #f) alist
@@ -274,18 +273,18 @@
   
   ;; Get multiple alist values in one go.
   ;; Can be more efficient than searching seperately for each value.
-  ;; key-default-pairs should be a list of: (key default-val).
+  ;; key-default-pairs should be an alist of: (key default-val).
   ;; Returns a new alist containing only the key/value pairs requested.
   (define (alist-get-multi alist key-default-pairs)
-    (let* ([targets key-default-pairs]
-           [found '()]
-           [setter (lambda (entry)
-                     (let ([t (assq (car entry) targets)])
-                       (when t
-                         (set! found (cons entry found))
-                         (set! targets (remq t targets)))))])
-      (for-each setter alist)
-      (append found targets))) ;; Add defaults for those not found.
+    (let loop ([found '()]
+               [alist alist]
+               [targets key-default-pairs])
+      (if (or (null? targets) (null? alist))
+          (append found targets) ;; Add defaults for those not found.
+          (lest [t (assq (caar alist) targets)]
+                (loop (cons (car alist) found) (cdr alist)
+                      (remq t targets))
+                (loop found (cdr alist) targets)))))
 
   ;; A helpful macro to bind to multiple values in an alist.
   ;; TODO: could this be faster using a vector internally?
@@ -304,7 +303,7 @@
 
   ;; Turns a flat list into an alist, or emits an error if they aren't pairs
   (define (make-alist . kv-pairs)
-    (lest (alist (pairwise kv-pairs)) alist
+    (lest [alist (pairwise kv-pairs)] alist
           (error 'make-alist kv-pairs-err kv-pairs)))
   
   ;;------------------------------------------------------------------------
