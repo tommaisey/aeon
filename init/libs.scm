@@ -27,6 +27,7 @@
         (nodes-subdivide)
         (nodes-chains)
         (nodes-ops)
+        (nodes-sugar)
         (nodes-ops-time)
         (nodes-ops-chords)
         (midinotes)

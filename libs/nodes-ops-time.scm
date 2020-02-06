@@ -86,7 +86,7 @@
   ;; The optional node arguments are applied to the taps differently.
   ;; `iterative-node` is applied once to the 1st tap, twice to the 2nd, etc.
   ;; `once-node` is applied once to all taps but not the original.
-  (define* (taps period num [/opt (once-node (thru)) (iterative-node #f)])
+  (define* (taps period num [/opt (once-node (with)) (iterative-node #f)])
 
     ;; Compute furthest lookahead/lookback that might be required.
     (define possible-range

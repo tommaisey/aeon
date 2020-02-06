@@ -34,27 +34,27 @@
 ;; If it looks like a sampler event, sets the right inst if it's
 ;; missing. If it looks like a freq event, computes freq.
 (define (process-inst event)
-  (lest [sample (event-get event :sample #f)]
+  (lest [sample (event-get event :smpl #f)]
         (process-sample event sample)
         (process-event-freq event)))
 
 ;; Interprets the :sample and :sample-idx keys to select a sample bufnum
 (define (process-sample event sample)
   (define bufnum
-    (cond ((vector? sample)
-           (open-read-buffer (get-sample-safe sample (event-get event :sample-idx 0))))
-          ((valid-sample? sample)
-           (open-read-buffer sample))
-          (else (error 'process-sample "Couldn't get sample" sample))))
+    (cond [(vector? sample)
+           (open-read-buffer (get-sample-safe sample (event-get event :sidx 0)))]
+          [(valid-sample? sample)
+           (open-read-buffer sample)]
+          [else (error 'process-sample "Couldn't get sample" sample)]))
   (define inst (event-get event :inst "sampler"))
-  (event-set-multi event (:sample bufnum) (:inst inst)))
+  (event-set-multi event (:smpl bufnum) (:inst inst)))
 
 ;; Converts any key found in the 'tempo-dependent-keys' alist
 ;; from measures to seconds, prior to sending to SC.
 (define (process-times event)
   (define (convert event entry)
-    (if (cdr entry)
-        (event-set event (car entry) (measures->secs (cdr entry) bpm))
-        event))
-  (let ([vals (event-get-multi event tempo-dependent-keys)])
-    (fold-left convert event vals)))
+    (lest [val (cdr entry)]
+          (event-set event (car entry) (measures->secs val bpm))
+          event))
+  (let ([entries (event-get-multi event tempo-dependent-keys)])
+    (fold-left convert event entries)))

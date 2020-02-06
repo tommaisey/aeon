@@ -1,3 +1,5 @@
 rhs.sls
 rsc3.sls
 sosc.sls
+*.dylib
+*.so

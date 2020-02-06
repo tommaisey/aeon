@@ -147,9 +147,10 @@
                (wpick ad bd key/keys))
              (rnd ad bd key/keys))))
 
-      ((_ a b) (? a b '()))
-
+      ((_ [a b ...] key/keys) (pick [a b ...] key/keys))
       ((_ [a b ...]) (pick [a b ...]))
+      
+      ((_ a b) (? a b '()))
 
       ((_ a b ...)
        (error '? "invalid number of args" 'a 'b ...))))

@@ -13,11 +13,11 @@
           make-line
           make-rand-lfo
           make-pan
-          make-bus-out
-          make-outputs
           stereo-in
           scale-cutoff
           clamp-cutoff
+          convert-q
+          freq->amp
           :group :fx :control 
           :verb1 :verb2 :delay1)
 
@@ -85,21 +85,8 @@
   (define (make-rand-lfo mag time)
     (sc/mul (sc/lfd-noise1 sc/ar time) mag))
 
-  (define (make-pan sig pos)
+  (define (make-pan pos sig)
     (sc/pan2 sig (sc/mul-add pos 2 -1) 1))
-
-  (define (make-bus-out bus sig pan)
-    (sc/out bus (make-pan sig pan)))
-
-  ;; Makes N parallel outputs, where N is the number of pairs.
-  ;; each pair should be: (bus-num . send-amt)
-  (define (make-outputs sig pan . pairs)
-    (when (null? pairs)
-      (error 'make-outputs "Supplied no bus info pairs"))
-    (let* ([panned (make-pan sig pan)]
-           [make-out (lambda (info) (sc/out (car info) (u* panned (cdr info))))]
-           [combine (lambda (ug info) (sc/mrg2 ug (make-out info)))])
-      (fold-left combine (make-out (car pairs)) (cdr pairs))))
 
   ;; 'in' can read multiple channels but can only output one, so
   ;; here we multichannel expand two of them.
@@ -108,11 +95,22 @@
 
   ;; Synthdefs containing filters should be careful to keep
   ;; cutoff frequencies in a safe range.
-  (define* (clamp-cutoff f [/opt (min 30) (max 19000)])
-    (sc/clip f min max))
+  (define* (clamp-cutoff f [/opt (min 30) (max 18000)])
+    (sc/clip f min (sc/u:min max (u* sc/sample-rate 0.45))))
 
-  (define* (scale-cutoff f [/opt (min 30) (max 17000)])
-    (clamp-cutoff (sc/mul-add f (- max min) min) min max))
+  (define* (scale-cutoff f [/opt (min 30) (max 18000)])
+    (clamp-cutoff (sc/lin-exp f 0 1 min max) min max))
+
+  (define (convert-q resonance)
+    (sc/clip (sc/lin-lin resonance 0 1 1 0.01) 0 1))
+
+  ;; Makes higher-pitched sounds quieter. Adds a little extra
+  ;; gain, because most notes will be attenuated by amp-comp.
+  ;; These values were determined entirely unscientifically.
+  (define* (freq->amp freq amp [/opt (base-hz 50) (exp 0.11)])
+    (let ([f (sc/u:max freq base-hz)]
+          [r (sc/rate-of freq)])
+      (u* 1.25 amp (sc/amp-comp r f base-hz exp))))
 
   ;;-------------------------------------------------------------------
   ;; Variadic versions of the common binary ops.
@@ -123,10 +121,12 @@
   
   (define (u* . args)
     (fold-binary-op * sc/mul args))
-  (define (u+ . args)
-    (fold-binary-op + sc/add args))
   (define (u- . args)
     (fold-binary-op - sc/sub args))
+  (define (u/ . args)
+    (fold-binary-op / sc/fdiv args))
+  (define (u+ . args) ;; TODO: optimise to sum3 or sum4
+    (fold-binary-op + sc/add args))
 
   ;; Inside send-synth, variadic versions of rsc3's mul, sub & add
   ;; ugens are aliased over the normal arithmetic operators.
@@ -135,9 +135,9 @@
     (lambda (x)
       (syntax-case x ()
         ((k sc3 name-str body ...)
-         (with-identifiers #'k (* + - *+ rsc3 letc)
+         (with-identifiers #'k (* + - / *+ rsc3 letc)
            #'(sc/send-synth sc3 name-str
-               (let ([* u*] [+ u+] [- u-] [*+ sc/mul-add])
+               (let ([* u*] [+ u+] [- u-] [/ u/] [*+ sc/mul-add])
                  (import (except (rsc3) letc))
                  body ...)))))))
 
@@ -146,8 +146,8 @@
   (define-syntax letc
     (syntax-rules ()
       ((_ ([name default rest ...] ...) extra-defs ... signal)
-       (let ([name (begin (define-top-level-value 'name 'name)
-                          (make-control 'name default rest ...))]
+       (let* ([name (begin (define-top-level-value 'name 'name)
+                           (make-control 'name default rest ...))]
              ...)
          extra-defs ...
          signal))))
@@ -161,33 +161,32 @@
     (lambda (x)
       (syntax-case x ()
         ((k ([name default rest ...] ...) extra-defs ... signal)
-         (with-identifiers #'k [:out :amp :pan
-                                :send1 :send2
-                                :dest1 :dest2]
+         (with-identifiers #'k [:out :amp :pan]
            #'(letc ([:out 0 sc/ir]
-                    [:amp 0.5 sc/kr 0.05] 
+                    [:amp 0.5 sc/kr 0.05]
                     [:pan 0.5 sc/kr 0.05]
-                    [:send1 0] [:send2 0]
-                    [:dest1 :verb1] [:dest2 :delay1]
                     [name default rest ...] ...)
                extra-defs ...
-               (make-outputs signal :pan
-                 (pair :out :amp)
-                 (pair (private-bus :dest1) :send1)
-                 (pair (private-bus :dest2) :send2))))))))
+               (sc/out :out (make-pan :pan signal))))))))
 
-  ;; Define an effect synth. Takes input from a a scratch
-  ;; bus and replaces its contents with the effected version.
-  ;; Predefines :in as an In.ar ugen pointed to the right bus.
+  ;; Define an effect synth. Takes input from a bus and
+  ;; replaces its contents with the effected version.
+  ;; Predefines :in as an In.ar ugen pointed at the right bus.
   (define-syntax fx-synth
     (lambda (x)
       (syntax-case x ()
         ((k ([name default rest ...] ...) extra-defs ... signal)
-         (with-identifiers #'k [:in]
-           #'(letc ([:in 1023 sc/ir] [name default rest ...] ...)
+         (with-identifiers #'k [:in :sustain :fade]
+           #'(letc ([:in 1023 sc/ir]
+                    [:sustain 1 sc/ir]
+                    [:fade 0.01 sc/ir]
+                    [name default rest ...] ...)
                (let* ([:inbus :in]
-                      [:in (sc/in 2 sc/ar :inbus)])
+                      [:in (sc/in 2 sc/ar :inbus)]
+                      [env (make-asr :fade :sustain :fade)]
+                      [env (sc/mul-add env 2 -1)]
+                      [xfade sc/x-fade2])
                  extra-defs ...
-                 (sc/replace-out :inbus signal))))))))
+                 (sc/replace-out :inbus (xfade :in signal env 1)))))))))
 
   )

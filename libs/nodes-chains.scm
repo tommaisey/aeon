@@ -2,11 +2,14 @@
 
 (library (nodes-chains)
 
-  (export chain-docs o-> x-> +-> thru copies off)
+  (export chain-docs o-> x-> +-> part with copy off)
 
   (import (chezscheme) 
-          (utilities) (context) (event)
-          (node-eval) (doc))
+          (utilities) 
+          (context) 
+          (event)
+          (node-eval) 
+          (doc))
 
   (define (x-> . nodes)
     (let ([nodes (reverse nodes)])
@@ -31,8 +34,9 @@
   (define (off . args)
     (lambda (context) (context-resolve context)))
 
-  (alias thru x->)
-  (alias copies +->)
+  (alias part o->)
+  (alias with x->)
+  (alias copy +->)
 
   ;;--------------------------------------------------------------
   (make-doc chain-docs

@@ -5,7 +5,7 @@
           trunc-int round-down round-up round-nearest 
           inc dec clamp 
           between between-inclusive
-          range-sine
+          pi range-sine
           pair first rest cons-r
           sorted? merge-sorted
           pairwise repeat flatten take

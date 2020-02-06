@@ -15,7 +15,7 @@
           (file-tools) (context))
 
   (declare-keywords :sample :sample-idx)
-  (alias :smpl :sample-idx)
+  (alias :smpl :sample)
   (alias :sidx :sample-idx)
 
   (define-syntax samples
@@ -70,11 +70,11 @@
   (define (get-sample-safe sample-vec idx)
     (let ([len (vector-length sample-vec)])
       (cond
-        ((not (number? idx))
-         (error 'get-sample-safe "Can't index sample" idx))
-        ((zero? len)
-         (error 'get-sample-safe "No samples in vector"))
-        (else (vector-ref sample-vec (mod (trunc-int idx) len))))))
+        [(not (number? idx))
+         (error 'get-sample-safe "Can't index sample" idx)]
+        [(zero? len)
+         (error 'get-sample-safe "No samples in vector")]
+        [else (vector-ref sample-vec (mod (trunc-int idx) len))])))
 
   ;; Returns a predicate for matching strings. May take a string or a
   ;; list of strings. Supply a bool for the first arg to invert the results.
