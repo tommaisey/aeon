@@ -137,24 +137,27 @@
   (define-syntax ?
     (syntax-rules ()
       ((_ a b key/keys)
-       (let ([ad (pdef a)]
-             [bd (pdef b)])
-         (when (not (or (symbol? key/keys) (unsafe-list? key/keys)))
-           (error '? "3rd arg must be a key or key list;" ad bd key/keys))
+       (let ([ad (pdef a)] [bd (pdef b)])
+         (unless (or (symbol? key/keys) (unsafe-list? key/keys))
+           (error '? "3rd arg must be a key or key list" ad bd key/keys))
          (if (unsafe-list? ad)
-             (begin
-               (when (not (unsafe-list? bd))
-                 (error '? "2nd arg must be a list if 1st is;"  ad bd))
-               (wpick ad bd key/keys))
+             (if (unsafe-list? bd)
+                 (wpick ad bd key/keys)
+                 (error '? "2nd arg must be a list if 1st is" ad bd))
              (rnd ad bd key/keys))))
 
-      ((_ [a b ...] key/keys) (pick [a b ...] key/keys))
+      ((_ [a b ...] key/keys)
+       (lif [ks (pdef key/keys)]
+            (for-all symbol? ks)
+            (pick [a b ...] key/keys)
+            (? [a b ...] key/keys '())))
+
       ((_ [a b ...]) (pick [a b ...]))
-      
+
       ((_ a b) (? a b '()))
 
-      ((_ a b ...)
-       (error '? "invalid number of args" 'a 'b ...))))
+      ((_ a ...)
+       (error '? "invalid number of args" 'a ...))))
 
   ;; Tag so pdef recognises as a macro
   (tag-pdef-callable pick)
