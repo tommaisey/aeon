@@ -33,7 +33,7 @@
           print-events
           make-events-with-times)
 
-  (import (chezscheme) (utilities) (srfi s26 cut)
+  (import (chezscheme) (utilities)
           (only (srfi s1 lists) delete-duplicates lset-difference))
 
   (define :beat ':beat)
@@ -105,7 +105,7 @@
 
   ;; Prioritise and clean the event (see above).
   (define (event-optimise event)
-    (let ([n (fold-left (cut event-prioritise <> <>) event priority-keys)])
+    (let ([n (fold-left event-prioritise event priority-keys)])
       (event-clean n)))
 
   ;; Turn all the symbol keys into string keys
