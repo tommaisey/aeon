@@ -12,6 +12,7 @@
           extend-repeating-last
           for-any for-none
           list-index list-last unsafe-list? push-front
+          delete-duplicates lset-difference
           find-first-slot
           make-alist
           alist-get alist-set
@@ -30,6 +31,7 @@
           safe-val-apply
           string-contains
           string-contains-ci
+          string-suffix?
           string-last
           str+
           gen-id
@@ -40,14 +42,17 @@
 
   (import (chezscheme)
           (matchable)
+	  (srfi s27 random-bits)
           (only (srfi s1 lists)
                 take
                 first
-                list-index)
-          (srfi s27 random-bits)
+                list-index
+                delete-duplicates
+                lset-difference)
           (only (srfi s13 strings) 
                 string-contains
-                string-contains-ci)
+                string-contains-ci
+		string-suffix?)
           (only (thunder-utils)
 		lambda/optional
 		define/optional

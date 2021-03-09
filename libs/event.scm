@@ -33,8 +33,7 @@
           print-events
           make-events-with-times)
 
-  (import (chezscheme) (utilities)
-          (only (srfi s1 lists) delete-duplicates lset-difference))
+  (import (chezscheme) (utilities))
 
   (define :beat ':beat)
   (define :sustain ':sustain)

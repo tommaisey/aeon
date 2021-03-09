@@ -6,8 +6,7 @@
           definitions-in-file
           os-symbol)
 
-  (import (chezscheme)
-          (only (srfi s13 strings) string-suffix?))
+  (import (chezscheme) (utilities))
 
   ;; Doesn't check it exists, just for an apparently valid path.
   (define (valid-scheme-path? path)
