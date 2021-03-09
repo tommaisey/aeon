@@ -48,7 +48,10 @@
           (only (srfi s13 strings) 
                 string-contains
                 string-contains-ci)
-          (thunder-utils))
+          (only (thunder-utils)
+		lambda/optional
+		define/optional
+		/optional))
 
   ;;-------------------------------------------------------------------
   ;; Optional arguments
@@ -305,7 +308,7 @@
   (define (make-alist . kv-pairs)
     (lest [alist (pairwise kv-pairs)] alist
           (error 'make-alist kv-pairs-err kv-pairs)))
-  
+
   ;;------------------------------------------------------------------------
   ;; Strings
   (alias str+ string-append)
