@@ -65,7 +65,7 @@
 
       ((_ qlist weights key/keys)
 
-       (let ([lst (pdef qlist)])
+       (let ([lst (pdef qlist)] [wts (pdef weights)])
          (define (to-cumulative lst)
            (let loop ([count 0] [o '()] [lst lst])
              (match lst
@@ -76,12 +76,13 @@
            (lest [i (list-index (lambda (x) (>= x v)) cumulative-weights)]
                  i (- (length cumulative-weights) 1)))
 
-         (when (or (null? lst) (null? weights))
-           (error 'wpick "requires 2 lists" lst weights))
+         (when (or (not (unsafe-list? lst)) (not (unsafe-list? wts)) 
+                   (null? lst) (null? wts))
+           (error 'wpick "requires 2 lists" lst wts))
 
          (let* ([len (length lst)]
-                [weights (extend-repeating-last (pdef weights) len)]
-                [cumulative-weights (to-cumulative weights)]
+                [wts (extend-repeating-last wts len)]
+                [cumulative-weights (to-cumulative wts)]
                 [top (list-last cumulative-weights)])
            (leaf-meta-ranged
             lst
@@ -158,7 +159,7 @@
                    [i (if (zero? t) 0 (trunc-int (/ t measures)))]
                    [n-cycles (trunc-int (/ i n))]
                    [choice (lambda () (+ 1 (mod n-cycles (- len 1))))])
-              (lif (n-wrapped (mod i n))
+              (lif [n-wrapped (mod i n)]
                    (eq? n-wrapped (- n 1))
                    (eval-leaf (list-ref lst (choice)) context)
                    (eval-leaf (car lst) context)))))))))

@@ -164,11 +164,11 @@
   (fx-synth ([:coarse 100])
     (latch :in (impulse ar (/ sample-rate :coarse) 0))))
 
-;; translated from SuperDirt, sounds like shit. made a mistake?
+;; 
 (send-synth sc3 "shape"
   (fx-synth ([:shape 0])
     (let* ([amp 1]
-           [shape (u:min :shape (- 1 4e10))] ; prevent div by zero
+           [shape (u:min :shape (- 1 4e-10))] ; prevent div by zero
            ; [amp (* (- 1 (/ (* 0.15 :shape) (+ :shape 2))) amp)] ; gain comp?
            [shape (/ (* 2 shape) (- 1 shape))])
       (/ (* :in (+ 1 shape)) (+ 1 (* shape (u:abs :in)))))))
