@@ -18,11 +18,8 @@
 ;;----------------------------------------------------------------------
 (library (nodes-leafs)
   (export
-    this next
-    c+ c- c* c/
     ? rnd wpick pick
-    each every
-    snap sine)
+    each every sine)
 
   (import
     (chezscheme)
@@ -31,44 +28,6 @@
     (context) (event)
     (node-eval)
     (for (pdef) expand))
-
-  ;;-------------------------------------------------------------------
-  ;; Get values from the current or neighbouring events in the context.
-  (define (this key default)
-    (lambda (context)
-      (get context key default)))
-
-  (define (next idx key default)
-    (lambda (context)
-      (get (context-move context idx) key default)))
-
-  ;;-------------------------------------------------------------------
-  ;; Maths
-  (define (leaf-apply fn leaves)
-    (lambda (context)
-      (apply fn (map (lambda (v) (eval-leaf v context)) leaves))))
-
-  (define (c+ . leaves)
-    (leaf-apply + leaves))
-
-  (define (c- . leaves)
-    (leaf-apply - leaves))
-
-  (define (c* . leaves)
-    (leaf-apply * leaves))
-
-  (define (c/ . leaves)
-    (leaf-apply / leaves))
-
-  ;; Snap the input value to the next number divisible by divisor.
-  (define (snap divisor val)
-    (lambda (context)
-      (let* ([val (eval-leaf val context)]
-             [divisor (eval-leaf divisor context)]
-             [overlap (mod val divisor)]
-             [prev (- val overlap)])
-        (if (>= overlap (* 0.5 divisor))
-            (+ prev divisor) prev))))
 
   ;;-------------------------------------------------------------------
   ;; Pseudo-random values and choices.
