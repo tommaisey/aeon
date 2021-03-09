@@ -11,6 +11,11 @@
 (define jitter-overlap 1/32)  ;; extra time to render each block
 (define rendered-point #f)    ;; musical time that has been sent to SC
 
+;; Find out how many beats have elapsed since the last process-chunk.
+(define (beats-since-last-process utc-time)
+  (if (not last-process-time) 0
+      (secs->measures (- utc-time last-process-time) bpm)))
+
 ;; Called regularly by the playback thread. It renders events in
 ;; chunks whose length are determined by playback-chunk, plus a
 ;; little extra ('jitter-overlap') to allow for the callback to
@@ -35,6 +40,7 @@
         (set! last-process-beat now)
         (set! rendered-point end)))))
 
+;; TODO: clear only the offending pattern on error
 (define (handle-error condition)
   (let ([p (console-output-port)])
     (display-condition condition p)
@@ -49,46 +55,31 @@
           (start-suspendable-thread
            process-chunk (* playback-chunk (bpm->spm bpm)) semaphore))))
 
-(define (start-playhead)
+(define (play)
   (start-thread playback-thread-semaphore)
   (stop-waiting playback-thread-semaphore)
-  (put-playhead-sync-info))
+  (pipe-out (playhead-sync-info)))
 
-(define (pause-playhead)
+(define (pause)
   (start-waiting playback-thread-semaphore)
   (so/send sc3 sc/clear-sched)
   (cancel-recording)
   (set! rendered-point #f)
   (set! last-process-time #f)
-  (put-playhead-sync-info))
+  (pipe-out (playhead-sync-info)))
 
-(define (stop-playhead)
-  (pause-playhead)
+(define* (rewind [/opt (keep-playing #t)])
+  (pause)
   (set! last-process-beat 0)
-  (put-playhead-sync-info))
+  (when keep-playing (play)))
 
 (define (playing?)
   (not (waiting? playback-thread-semaphore)))
 
-(define (beats-since-last-process utc-time)
-  (if (not last-process-time) 0
-      (secs->measures (- utc-time last-process-time) bpm)))
-
-(define (playhead-sync-info)
-  (let ([now (+ last-process-beat (beats-since-last-process (sc/utc)))])
-    (list 'playhead-sync (if (playing?) 'playing 'stopped)
-          (list 'position now)
-          (list 'mps (bpm->mps bpm)))))
-
-(define (put-playhead-sync-info)
-  (put-datum (current-output-port) (playhead-sync-info))
-  (fresh-line))
-
 (define (set-bpm! n)
   (set! bpm n)
-  (let ([e (make-event 0 
-                       :tempo (bpm->mps n)
-                       :control "tempo"
-                       :group send-effect-group)])
-    (put-playhead-sync-info)
-    (play-event e 0)))
+  (pipe-out (playhead-sync-info))
+  (play-event (make-event 0 
+                          :tempo (bpm->mps n)
+                          :control "tempo"
+                          :group send-effect-group) 0))

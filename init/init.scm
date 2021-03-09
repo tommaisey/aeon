@@ -17,6 +17,7 @@
 (load "patterns.scm")
 (load "recording.scm")
 (load "playhead.scm")
+(load "comms.scm")
 
 (tag-pdef-callable map)
 (tag-pdef-callable filter)

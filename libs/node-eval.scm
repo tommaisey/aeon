@@ -1,6 +1,5 @@
 (library (node-eval)
   (export
-    testp
     render-arc
     eval-leaf
     eval-leaf-early
@@ -23,12 +22,6 @@
 
       ((pattern-fn start end) 
        (render-arc pattern-fn (make-arc start end)))))
-
-  ;; Call to serialise a test render of a pattern
-  (define* (testp pattern-fn [/opt (start 0) (end 1)])
-    (put-datum (current-output-port)
-               (lif [c (render-arc pattern-fn start end)]
-                    (context? c) (context-serialised c) c)))
 
   ;;--------------------------------------------------------------
   ;; Get a value from a leaf. The source leaf v might be a plain value, a

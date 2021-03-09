@@ -12,7 +12,6 @@
     context-start
     context-end
     context-now
-    context-serialised
     context-insert
     context-with-events
     context-replace-event
@@ -86,11 +85,6 @@
          (null? e)
          (context-start c)
          (event-beat e)))
-
-  (define (context-serialised c)
-    (list 'context
-          (list 'arc (context-start c) (context-end c))
-          (cons 'events (event-clean (context-events-next c)))))
 
   ;; Replaces the pointed-to event, or simply adds if there is none.
   (define (context-replace-event c new-event)
