@@ -8,7 +8,7 @@
 (source-directories (list "." "./init"))
 
 (load "libs.scm")
-(println "Welcome to [unnamed music system]!")
+(println "Welcome to [aeon]!")
 
 (load "sc3.scm")
 (load "synthdefs.scm")

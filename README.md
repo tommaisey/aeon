@@ -1,4 +1,4 @@
-# convex
+# aeon
 
 This is a functional music live-coding suite. It's heavily under development, and currently undocumented. 
 In essence, this is a placeholder! 

@@ -1,6 +1,6 @@
-README: Convex Dependencies
+README: Aeon Dependencies
 -----------------------
-This repo contains third party scheme code used in Convex's pattern engine. Because
+This repo contains third party scheme code used in Aeon's pattern engine. Because
 these libraries can be found in repositories spanning many different version control
 systems, and because many have had to be massaged/ported to Chez, I'm going to maintain
 my own monorepo of these libraries. Some will stay very close to their original versions,
