@@ -1,8 +1,11 @@
 ;; Prevent a chez global lock blocking on the playback thread.
-(let* ([stdin (transcoded-port (standard-input-port) 
-                               (make-transcoder (utf-8-codec)))])
-  (current-input-port stdin)
-  (console-input-port stdin))
+;; This is necessary in an emacs-geiser context, but disables
+;; the nice expression editor in the ordinary repl.
+(when #f
+  (let* ([stdin (transcoded-port (standard-input-port) 
+				 (make-transcoder (utf-8-codec)))])
+    (current-input-port stdin)
+    (console-input-port stdin)))
 
 ;; Load libraries, top level functions and state.
 (source-directories (list "." "./init"))
