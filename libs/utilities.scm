@@ -258,6 +258,9 @@
         [(pred (vector-ref vec n)) n]
         [else (loop (inc n) len)])))
 
+  ;;----------------------------------------------------------------------
+  ;; Alists - i.e. association lists
+
   ;; Get an alist value, or default if not
   (define (alist-get alist key default)
     (lest [result (assq key alist)]
@@ -275,9 +278,6 @@
   (define (alist-set-if-not alist key value)
     (if (alist-get alist key #f) alist
         (alist-set alist key value)))
-
-  ;;----------------------------------------------------------------------
-  ;; Alists - i.e. association lists
   
   ;; Get multiple alist values in one go.
   ;; Can be more efficient than searching seperately for each value.
