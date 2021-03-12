@@ -26,7 +26,7 @@
 (tag-pdef-callable filter)
 
 (set-bpm! bpm)
-(start)
+(play)
 
 ;; Load user's init files, but not clip files.
 (for-each (lambda (p) (when (valid-scheme-path? p) (load p)))
