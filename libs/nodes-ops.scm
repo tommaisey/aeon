@@ -47,9 +47,9 @@
     (define (impl context value)
       (let ([value (eval-leaf-early value (context-start context) context)])
         (context-insert (context-resolve context)
-                        (make-event (context-start context)
-                                    (:sustain (context-length context))
-                                    (key value)))))
+                        (make-event-fast (context-start context)
+                                         (:sustain (context-length context))
+                                         (key value)))))
     (unless (symbol? key) (error 'in: "expected :key" key))
     (apply o-> (wrap-subdivide-fn impl seq) ops))
 
@@ -64,7 +64,7 @@
 
   ;; A general 'to', taking a math op, a key and a def. The math op is
   ;; called with the current value for key and the value returned by def.
-  (define (to math-op . kv-pairs)
+  (define (to math-op kv-pairs)
     (define (impl key)
       (lambda (context value)
         (context-map
@@ -75,10 +75,10 @@
          (context-resolve context))))
     (build-kv kv-pairs 'to-math impl))
 
-  (define (to+ . kv-pairs) (apply to + kv-pairs))
-  (define (to- . kv-pairs) (apply to - kv-pairs))
-  (define (to* . kv-pairs) (apply to * kv-pairs))
-  (define (to/ . kv-pairs) (apply to / kv-pairs))
+  (define (to+ . kv-pairs) (to + kv-pairs))
+  (define (to- . kv-pairs) (to - kv-pairs))
+  (define (to* . kv-pairs) (to * kv-pairs))
+  (define (to/ . kv-pairs) (to / kv-pairs))
 
   ;; A node that replaces the input with the result of applying
   ;; it to a node or pattern of nodes.

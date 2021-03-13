@@ -7,6 +7,7 @@
           (testing)
           (event)
           (context)
+          (nodes-ops)
           (nodes-chains)
           (nodes-subdivide))
 
@@ -72,15 +73,18 @@
   ;;----------------------------------------------------------
   (testp "[in:] basic" (make-arc 0 1)
     (in: :scd I)
-    ((:beat 0 :scd I)))
+    ((:beat 0 :sustain 1 :scd I)))
 
   (testp "[in: over] basic" (make-arc 0 1)
     (in: :scd (over 1 [I V]))
-    ((:beat 0 :scd I) (:beat 1/2 :scd V)))
+    ((:beat 0 :sustain 1/2 :scd I)
+     (:beat 1/2 :sustain 1/2 :scd V)))
 
   (testp "[in: over] basic subdivision" (make-arc 0 1)
     (in: :scd (over 1 [[I II] V]))
-    ((:beat 0 :scd I) (:beat 1/4 :scd II) (:beat 1/2 :scd V)))
+    ((:beat 0 :sustain 1/4 :scd I)
+     (:beat 1/4 :sustain 1/4 :scd II)
+     (:beat 1/2 :sustain 1/2 :scd V)))
 
   ;;----------------------------------------------------------
   (testp "[to:] basic" (make-arc 0 1)

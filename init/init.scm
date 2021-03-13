@@ -9,10 +9,24 @@
 
 ;; Load libraries, top level functions and state.
 (source-directories (list "." "./init"))
-
 (load "libs.scm")
-(println "Welcome to [aeon]!")
 
+;;------------------------------------------------------------------
+(println "------------------------------------------")
+(println "[aeon] musical patterns")
+(println "------------------------------------------")
+
+;;------------------------------------------------------------------
+(define (run-tests)
+  (load "libs/tests/context-tests.scm")
+  (load "libs/tests/harmony-tests.scm")
+  (load "libs/tests/basic-ops-tests.scm")
+  (load "libs/tests/time-ops-tests.scm"))
+
+;; Uncomment to run tests on engine init.
+(run-tests)
+
+;;------------------------------------------------------------------
 (load "sc3.scm")
 (load "synthdefs.scm")
 (load "buffers.scm")

@@ -9,7 +9,7 @@
 ;; returns a new list, the old one remains untouched.
 ;; ------------------------------------------------------------
 (library (event)
-  (export :beat :sustain
+  (export :beat :sustain :freq
           time-key
           priority-keys
           make-event
@@ -35,10 +35,9 @@
 
   (import (chezscheme) (utilities))
 
-  (define :beat ':beat)
-  (define :sustain ':sustain)
-  (define time-key :beat)
+  (declare-keywords :beat :sustain :freq)
   (define priority-keys '(:sustain :freq :beat))
+  (define time-key :beat)
 
   ;; Returns an event: (make-event 1/16 :freq 440 :amp 0.1)
   (define (make-event start-beat . key-values)
