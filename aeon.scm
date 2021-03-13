@@ -8,7 +8,7 @@
     (console-input-port stdin)))
 
 ;; Load libraries
-(source-directories (list "." "./init"))
+(source-directories (list "." "./runtime"))
 (load "libs.scm")
 
 ;;------------------------------------------------------------------

@@ -1,4 +1,4 @@
-(load "init/libs.scm")
+(load "runtime/libs.scm")
 
 ;;------------------------------------------------------------------
 (define (run-tests)

@@ -16,7 +16,7 @@
          [pid (caddr process-info)]
          [old-exit-handler (exit-handler)])
     ;; kill scsynth when scheme exits
-    ;; TODO: doesn't work when we invoke `scheme init/init.scm`
+    ;; TODO: doesn't work when we invoke `scheme aeon.scm`
     (exit-handler (lambda args
                     (system (format "kill -9 ~d" pid))
                     (apply old-exit-handler args)))
