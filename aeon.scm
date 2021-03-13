@@ -7,7 +7,7 @@
     (current-input-port stdin)
     (console-input-port stdin)))
 
-;; Load libraries, top level functions and state.
+;; Load libraries
 (source-directories (list "." "./init"))
 (load "libs.scm")
 
@@ -17,16 +17,7 @@
 (println "------------------------------------------")
 
 ;;------------------------------------------------------------------
-(define (run-tests)
-  (load "libs/tests/context-tests.scm")
-  (load "libs/tests/harmony-tests.scm")
-  (load "libs/tests/basic-ops-tests.scm")
-  (load "libs/tests/time-ops-tests.scm"))
-
-;; Uncomment to run tests on engine init.
-(run-tests)
-
-;;------------------------------------------------------------------
+;; Load top-level state and functions
 (load "sc3.scm")
 (load "synthdefs.scm")
 (load "buffers.scm")

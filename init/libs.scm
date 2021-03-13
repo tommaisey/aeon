@@ -7,10 +7,10 @@
 (library-directories
  (list "."
        "./libs"
-       "./libs/tests"
        "./libs/third-party"
        "./libs/third-party/thunderchez"
-       "./libs/third-party/sc3"))
+       "./libs/third-party/sc3"
+       "./tests"))
 
 (import (scheme)
         (prefix (rsc3) sc/)
