@@ -36,7 +36,8 @@
         (rhythm)
         (playback)
         (samples)
-        (synthesis))
+        (synthesis)
+        (system))
 ; (import (controls)) ;; I'll come back to this
 
 ;;------------------------------------------------------------------

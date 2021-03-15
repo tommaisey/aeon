@@ -1,36 +1,16 @@
 ;;-----------------------------------------------------------------
 (define sc-port 57110)
 (define sc-possible-paths
-  (list "/Applications/SuperCollider/SuperCollider.app/Contents/Resources/scsynth" ; regular mac
-        "/Applications/SuperCollider.app/Contents/Resources/scsynth")) ; homebrew mac
+  (list
+   "/Applications/SuperCollider/SuperCollider.app/Contents/Resources/scsynth" ; regular mac
+   "/Applications/SuperCollider.app/Contents/Resources/scsynth")) ; homebrew mac
 
 (define (sc-responds? path)
   (and (file-exists? path)
        (eq? 0 (system (format "~s -v > /dev/null 2>&1" path)))))
 
-(define (sc-reader path port)
-  (let* ([verbosity -2] ; use 0 for full scsynth output
-         [process-info (process (format "~a -u ~a -V ~a" path port verbosity))]
-         [stdout (car process-info)]
-         [stdin (cadr process-info)]
-         [pid (caddr process-info)]
-         [old-exit-handler (exit-handler)])
-    ;; kill scsynth when scheme exits
-    ;; TODO: doesn't work when we invoke `scheme aeon.scm`
-    (exit-handler (lambda args
-                    (system (format "kill -9 ~d" pid))
-                    (apply old-exit-handler args)))
-    (println path)
-    (println (format "pid: ~d" pid))
-    (lambda () (let ([result (get-line stdout)])
-            (if (eof-object? result)
-                (begin (println "scsynth quit.")
-                       (exit-handler old-exit-handler)
-                       #f)
-                (begin (println result) #t))))))
-
 (lest [sc-path (find sc-responds? sc-possible-paths)]
-      (let ([rd (sc-reader sc-path sc-port)])
+      (let ([rd (make-sc-process sc-path sc-port)])
         (fork-thread (lambda () (let loop () (when (rd) (loop))))))
       (println "Couldn't find scsynth."))
 
