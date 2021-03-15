@@ -1,11 +1,10 @@
 (load "runtime/libs.scm")
+(import (testing))
 
 ;;------------------------------------------------------------------
-(define (run-tests)
-  (load "tests/context-tests.scm")
-  (load "tests/harmony-tests.scm")
-  (load "tests/basic-ops-tests.scm")
-  (load "tests/time-ops-tests.scm"))
-
-(run-tests)
-
+(reset-test-results)
+(load "tests/context-tests.scm")
+(load "tests/harmony-tests.scm")
+(load "tests/basic-ops-tests.scm")
+(load "tests/time-ops-tests.scm")
+(print-test-results)

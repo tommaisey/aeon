@@ -13,9 +13,10 @@
     (console-input-port stdin)))
 
 ;;------------------------------------------------------------------
-(println "------------------------------------------")
-(println "[aeon] musical patterns")
-(println "------------------------------------------")
+(let ([divider (fold-left str+ "" (repeat 60 "-"))])
+  (println divider)
+  (println "[aeon] musical patterns")
+  (println divider))
 
 ;;------------------------------------------------------------------
 ;; Load top-level state and functions

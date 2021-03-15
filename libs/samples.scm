@@ -31,7 +31,7 @@
                 [p (lambda (s) (and (p s) (valid-sample? s)))])
            (map (lambda (x) (path-append dir-path x))
                 (filter p (list-sort string<? (directory-list dir-path)))))
-         (string-append " from ..." (string-last dir-path 42))))
+         (str+ " from ..." (string-last dir-path 42))))
 
       ((_ name dir-path)
        (samples-dir name dir-path (lambda (x) #t)))))
@@ -57,10 +57,10 @@
                  (lambda (context)
                    (get-sample-safe id (eval-leaf val context))))
 
-               (println (string-append (symbol->string 'id) ": "
-                                       (number->string id-num)
-                                       " samples added"
-                                       source-string))))))))
+               (println (str+ (symbol->string 'id) ": "
+                              (number->string id-num)
+                              " samples added"
+                              source-string))))))))
 
   (define (valid-sample? f)
     (and (string? f)

@@ -318,9 +318,10 @@
   ;; Strings
   (alias str+ string-append)
   
-  (define (string-last str n)
+  (define* (string-last str n [/opt (prefix "")])
     (let ([len (string-length str)])
-      (substring str (max 0 (- len n)) len)))
+      (if (>= n len) str
+          (str+ prefix (substring str (max 0 (- len n)) len)))))
 
   (define (println . objs)
     (fresh-line)

@@ -1,5 +1,8 @@
 (library (testing)
-  (export test-assert
+  (export reset-test-results
+          print-test-results
+          print-test-pass
+          test-assert
           test-eqv
           test-list
           test-impl
@@ -7,36 +10,66 @@
 
   (import (chezscheme)
           (only (srfi s1 lists) list=)
-          (only (utilities) make-alist)
+          (only (utilities) make-alist str+ println repeat inc)
           (only (event) event-check event-optimise)
           (only (context) context-move context-events-next)
           (only (node-eval) render-arc))
 
+  ;;----------------------------------------------------------
+  ;; Set to #t to get printouts for test passes (fails always printed).
+  (define print-test-pass (make-parameter #f))
+
+  ;; Prints the accumulated test results. Call 'reset-test-results'
+  ;; between runs of the same test suite, or they'll be added together.
+  (define (print-test-results)
+    (let* ([divider (fold-left str+ "" (repeat 60 "-"))]
+           [template "[aeon] tests: [~A pass] [~A fail]"]
+           [results (format template tests-passed tests-failed)])
+      (println divider results divider)))
+  
+  (define (reset-test-results)
+    (set! tests-passed 0)
+    (set! tests-failed 0))
+
+  ;; Internal state for tracking the above.
+  (define tests-passed 0)
+  (define tests-failed 0)
+  (define (register-pass) (set! tests-passed (inc tests-passed)))
+  (define (register-fail) (set! tests-failed (inc tests-failed)))
+
+  ;;----------------------------------------------------------
+  ;; Base macro for implementing test assertions
   (define-syntax test-impl
     (syntax-rules ()
       ((_ name result-id form check-form message-string)
        (let ([result-id form])
          (if check-form
-             (display (string-append "Pass: " name "\n"))
-             (raise-continuable
-              (condition
-               (make-warning)
-               (make-message-condition message-string)
-               (make-source-condition 'form))))))))
+             (begin
+               (register-pass)
+               (when (print-test-pass)
+                 (println (string-append "Pass: " name))))
+             (begin
+               (register-fail)
+               (raise-continuable
+                (condition
+                 (make-warning)
+                 (make-message-condition (str+ "Fail: " message-string))
+                 (make-source-condition 'form)))))))))
 
+  ;; Test assertions
   (define-syntax test-assert
     (syntax-rules ()
       ((_ name form)
        (test-impl name result form
                   result
-                  (format "Fail: ~A" name)))))
+                  (format "~A" name)))))
 
   (define-syntax test-eqv
     (syntax-rules ()
       ((_ name val form)
        (test-impl name result form
                   (eqv? val result)
-                  (format "Fail: '~A'. Expected ~A, got ~A:" 
+                  (format "'~A'. Expected ~A, got ~A:" 
                           name val result)))))
 
   (define-syntax test-list
@@ -44,7 +77,7 @@
       ((_ name eq-fn val form)
        (test-impl name result form
                   (list= eq-fn val result)
-                  (format "Fail: '~A'. Expected ~A, got ~A:" 
+                  (format "'~A'. Expected ~A, got ~A:" 
                           name val result)))))
 
   ;;----------------------------------------------------------
@@ -69,19 +102,17 @@
     (syntax-rules ()
       ((_ name arc  pattern-expr ((events-props ...) ...))
        (let ([expected (list (make-alist events-props ...) ...)])
-         (test-impl name result 
+         (test-impl
+          name result
           (render-arc pattern-expr arc)
           (test-events result expected)
           (let* ([rendered (context-events-next result)]
                  [cleaned (map (lambda (e) (event-optimise e)) rendered)]
                  [len-expected (length expected)]
-                 [len-actual (length cleaned)]
-                 [extra-msg (cond
-                              ((not (eqv? len-expected len-actual))
-                               (format "Expected ~A events, but got ~A."
-                                       len-expected len-actual))
-                                        (else ""))])
-            (string-append "Failed: " name ". " extra-msg "\n"
-                           (format "Expected: ~A\nGot:      ~A\nCode:"
-                                   expected cleaned))))))))
+                 [len-actual (length cleaned)])
+            (if (eqv? len-expected len-actual)
+                (format "~A.\nExpected: ~A\nGot: ~A"
+                        name expected cleaned)
+                (format "~A. Expected ~A events, but got ~A."
+                        name len-expected len-actual))))))))
   )
