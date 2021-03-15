@@ -47,9 +47,9 @@
     (over 
      "Creates a repeated sequence of values, spread evenly over the time period 'dur'.
 Sub-lists further subdivide the step they occupy, according to the rules of 'over'."
-     ((dur [/opt Number 1] 
+     ((dur [/opt Number 1]
            "The length of time to spread the pattern over")
-      (values [/list [Number or Function]] 
+      (values [/list [Number or Function]]
               "The values to be distributed over period 'dur'"))
 
      (((over [1 2 3]) => "repeating sequence of [1 2 3] each 1 measure")

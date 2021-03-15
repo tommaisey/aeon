@@ -23,12 +23,12 @@
          ((:beat 13/4 :freq 500)
           (:beat 15/4 :freq 500)))
 
-  (test-eqv "[context-to-event-after]" 2/3
+  (test-eq "[context-to-event-after]" 2/3
     (event-beat
      (context-event (context-to-event-after 
                      (render-arc (in! 3) 0 1) 1/2))))
 
-  (test-eqv "[context-to-event-after]" 4
+  (test-eq "[context-to-event-after]" 4
     (event-beat
      (context-event (context-to-event-after 
                      (render-arc (in! 2) 3 5) 3.51))))

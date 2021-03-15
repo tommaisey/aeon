@@ -3,14 +3,14 @@
           print-test-results
           print-test-pass
           test-assert
-          test-eqv
-          test-list
+          test-eq
+          test-eq~
           test-impl
           testp)
 
   (import (chezscheme)
           (only (srfi s1 lists) list=)
-          (only (utilities) make-alist str+ println repeat inc)
+          (only (utilities) str+ println repeat inc make-alist)
           (only (event) event-check event-optimise)
           (only (context) context-move context-events-next)
           (only (node-eval) render-arc))
@@ -47,14 +47,12 @@
              (begin
                (register-pass)
                (when (print-test-pass)
-                 (println (string-append "Pass: " name))))
+                 (println (str+ "Pass: " name)))
+               #t)
              (begin
                (register-fail)
-               (raise-continuable
-                (condition
-                 (make-warning)
-                 (make-message-condition (str+ "Fail: " message-string))
-                 (make-source-condition 'form)))))))))
+               (println (str+ "Fail: " message-string))
+               #f))))))
 
   ;; Test assertions
   (define-syntax test-assert
@@ -63,22 +61,27 @@
        (test-impl name result form
                   result
                   (format "~A" name)))))
-
-  (define-syntax test-eqv
+  
+  (define-syntax test-eq
     (syntax-rules ()
       ((_ name val form)
        (test-impl name result form
-                  (eqv? val result)
-                  (format "'~A'. Expected ~A, got ~A:" 
-                          name val result)))))
+                  (equal? val result)
+                  (print-result name val result)))))
 
-  (define-syntax test-list
+  (define-syntax test-eq~
     (syntax-rules ()
-      ((_ name eq-fn val form)
+      ((_ name val form tolerance)
        (test-impl name result form
-                  (list= eq-fn val result)
-                  (format "'~A'. Expected ~A, got ~A:" 
-                          name val result)))))
+                  (<= (abs (- result val)) tolerance)
+                  (print-result name val result)))
+      ((_ name val form)
+       (test-eq~ name val form 0.01))))
+
+  (define-syntax print-result
+    (syntax-rules ()
+      ((_ name val result)
+       (format "'~A'. Expected ~A, got ~A:" name val result))))
 
   ;;----------------------------------------------------------
   ;; Pattern tests

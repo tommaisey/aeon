@@ -4,7 +4,7 @@
           pseudo-rand
           trunc-int round-down round-up round-nearest 
           inc dec clamp 
-          between between-inclusive
+          between? between-inclusive?
           pi range-sine
           pair first rest cons-r
           sorted? merge-sorted
@@ -44,7 +44,6 @@
           (matchable)
 	  (srfi s27 random-bits)
           (only (srfi s1 lists)
-                take
                 first
                 list-index
                 delete-duplicates
@@ -110,10 +109,10 @@
     (let ([r (if (exact? divisor) round-int round)])
       (* (r (/ x divisor)) divisor)))
 
-  (define (between x lower upper)
+  (define (between? x lower upper)
     (and (>= x lower) (< x upper)))
 
-  (define (between-inclusive x lower upper)
+  (define (between-inclusive? x lower upper)
     (and (>= x lower) (<= x upper)))
 
   (define (clamp value lo hi)
@@ -128,8 +127,8 @@
     (+ lo (* (- hi lo) 0.5 (+ 1 (sin (/ (* 2 pi val) freq))))))
 
   ;; More readable for users to write pair/first/rest
-  (define pair cons)
-  (define rest cdr)
+  (alias pair cons)
+  (alias rest cdr)
   (define (cons-r a b) (cons b a))
 
   ;;-------------------------------------------------------------------
@@ -161,15 +160,14 @@
 
   ;; Check if a list is sorted or not.
   (define (sorted? less? lst)
-    (let ([less-eq? (lambda (a b) (or (less? a b) (not (less? b a))))])
-      (match lst
-        [() #t]
-        [(x) #t]
-        [(a b . rst) (and (less-eq? a b) (sorted? less? rst))])))
+    (or (null? lst) (null? (cdr lst))
+        (let ([a (car lst)] [b (cadr lst)])
+          (and (or (less? a b) (not (less? b a)))
+               (sorted? less? (cdr lst))))))
 
   ;; Stable merges two lists according to less?. Lifted from
   ;; SRFI95 ref implementation, with tweaks.
-  (define (merge-sorted a b less? . opt-key)
+  (define (merge-sorted less? a b . opt-key)
     (define key (if (null? opt-key) values (car opt-key)))
     (cond [(null? a) b]
           [(null? b) a]
@@ -218,14 +216,13 @@
          (when name t-branch)))))
 
   ;; For symmetry with R6RS's for-all.
-  (define (for-any pred lst)
-    (exists pred lst))
+  (alias for-any exists)
 
   (define (for-none pred lst)
-    (not (for-any pred lst)))
+    (not (exists pred lst)))
 
   ;;----------------------------------------------------------------------
-  ;; Lists
+  ;; Lists & vectors
 
   ;; #t for any kind of list: null, proper, improper, or cyclic.
   ;; Faster than 'list?' but improper lists (which return true)
@@ -236,19 +233,24 @@
       [a (null? a)]))
 
   ;; Linear time.
-  (define (list-last l)
-    (match l
+  (define (list-last lst)
+    (match lst
       [(x . ()) x]
       [(a . x) (list-last x)]
-      [l l])) ;; improper list
+      [lst lst])) ;; improper list
 
   ;; Remove matching items in b from a
   (define (remove-list a b)
     (filter (lambda (x) (not (member x b))) a))
 
   ;; Adds the element to the list. If the element is a list, it is appended.
-  (define (push-front val list)
-    ((if (unsafe-list? val) append cons) val list))
+  (define (push-front val lst)
+    ((if (unsafe-list? val) append cons) val lst))
+
+  ;; Return the first n items of the list
+  (define (take lst n)
+    (if (or (null? lst) (<= n 0)) '()
+        (cons (car lst) (take (cdr lst) (dec n)))))
 
   ;; Return index of first slot in a vector matching pred. Returns #f otherwise.
   (define* (find-first-slot vec [/opt (pred identity)])

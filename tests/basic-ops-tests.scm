@@ -45,11 +45,11 @@
   ;;----------------------------------------------------------
   (testp "[in! over] basic" (make-arc 0 1)
     (in! (over 1 1))
-    ((:beat 0)))
+    ((:beat 0 :sustain 1)))
 
   (testp "[in! over] basic" (make-arc 0 1)
     (in! (over 1 [1 1]))
-    ((:beat 0) (:beat 1/2)))
+    ((:beat 0 :sustain 1/2) (:beat 1/2 :sustain 1/2)))
 
   (testp "[in! over] subdivide" (make-arc 0 1)
     (in! (over 1 [1 [1 1]]))

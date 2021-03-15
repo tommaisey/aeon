@@ -72,7 +72,7 @@
             (event-set-multi ev (:beat t) (':sustain (- sus (- t b))))
             (event-set-multi ev (:beat t)))))
 
-    (unless (between amount 0.0 1.001)
+    (unless (between? amount 0.0 1.001)
       (error 'swing "amount should be in the range 0 <-> 1" amount))
 
     (lambda (context)
@@ -108,7 +108,7 @@
     (define (list-taps src period num start end)
       (if (zero? num) (list)
           (let* ([sign (if (> num 0) 1 -1)]
-                 [time-flt (lambda (ti) (between (car ti) start end))]
+                 [time-flt (lambda (ti) (between? (car ti) start end))]
                  [time-idx (lambda (i) (cons (+ src (* (inc i) sign period))
                                              (inc i)))])
             (filter time-flt (map time-idx (iota (abs num)))))))
@@ -171,7 +171,7 @@
       (lambda (context)
         (let* ([e (context-event context)]
                [t (flip-chunked (event-beat e))])
-          (if (between t start end)
+          (if (between? t start end)
               (event-set e time-key t)
               (list))))) ;; empty events are ignored by context-map
 

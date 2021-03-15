@@ -161,9 +161,9 @@
   ;; Removes events from the context that don't fall within arc.
   (define (context-trim context)
     (define (pred c)
-      (between (event-beat (context-event c))
-               (context-start c)
-               (context-end c)))
+      (between? (event-beat (context-event c))
+                (context-start c)
+                (context-end c)))
     (context-filter pred context))
 
   ;; Sorts the events in a context by time. In general events should
@@ -179,9 +179,9 @@
           [c2 (context-rewind c2)])
       (make-context (make-arc (min (context-start c1) (context-start c2))
                               (max (context-end c1) (context-end c2)))
-                    (merge-sorted (context-events-next c1)
-                                  (context-events-next c2)
-                                  event-before?)
+                    (merge-sorted event-before?
+                                  (context-events-next c1)
+                                  (context-events-next c2))
                     (list)
                     (context-chain c2)
                     (context-subdivide-fn c2))))

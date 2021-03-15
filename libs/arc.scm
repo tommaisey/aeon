@@ -41,7 +41,7 @@
          (eqv? (arc-end a) (arc-end b))))
   
   (define (within-arc? a t)
-    (between-inclusive t (arc-start a) (arc-end a)))
+    (between-inclusive? t (arc-start a) (arc-end a)))
   
   (define (arc-contains? a b) ;; two arcs
     (and (within-arc? a (arc-start b))
