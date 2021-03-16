@@ -70,4 +70,3 @@
 ;          rhs-private
 ;          rnrs-equalities)
 
-(exit)

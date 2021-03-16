@@ -29,6 +29,7 @@
           make-safe-val
           safe-val?
           safe-val-apply
+          string-concat
           string-contains
           string-contains-ci
           string-suffix?
@@ -319,7 +320,13 @@
   ;;------------------------------------------------------------------------
   ;; Strings
   (alias str+ string-append)
-  
+
+  (define (string-concat spacer lst)
+    (if (null? lst) ""
+        (let loop ([s (car lst)] [lst (cdr lst)])
+          (if (null? lst) s
+              (loop (str+ s spacer (car lst)) (cdr lst))))))
+
   (define* (string-last str n [/opt (prefix "")])
     (let ([len (string-length str)])
       (if (>= n len) str

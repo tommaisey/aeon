@@ -17,7 +17,7 @@
         (file-tools)
         (system))
 
-(build-aeon-libraries)
+(build-aeon-libraries (current-directory))
 
 (import (prefix (rsc3) sc/)
         (prefix (sosc) so/)

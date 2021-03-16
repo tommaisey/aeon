@@ -81,7 +81,7 @@
   (define-syntax print-result
     (syntax-rules ()
       ((_ name val result)
-       (format "'~A'. Expected ~A, got ~A:" name val result))))
+       (format "'~A'.\nExpected: ~A\nGot: ~A" name val result))))
 
   ;;----------------------------------------------------------
   ;; Pattern tests

@@ -146,5 +146,8 @@
       '((z . 3) (x . 1) (q . 7))
       (alist-get-multi '((x . 1) (y .2) (z . 3))
                        (make-alist 'x #f 'z #f 'q 7))))
+
+  (test-eq "[utilities string-concat]"
+    "hi>my>name" (string-concat ">" (list "hi" "my" "name")))
   
   )

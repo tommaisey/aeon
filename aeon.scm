@@ -1,3 +1,5 @@
+#!chezscheme
+
 ;;------------------------------------------------------------------
 ;; Load libraries
 (source-directories (list "." "./runtime"))
@@ -5,8 +7,8 @@
 
 ;;------------------------------------------------------------------
 ;; Prevent a chez global lock blocking on the playback thread in emacs geiser.
-(when geiser:eval
-  (display "geiser detected: disabling expression editor")
+(when (top-level-bound? 'geiser:eval)
+  (display "Geiser detected: disabling expression editor")
   (let* ([stdin (transcoded-port (standard-input-port)
 				 (make-transcoder (utf-8-codec)))])
     (current-input-port stdin)
