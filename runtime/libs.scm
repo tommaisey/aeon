@@ -13,12 +13,16 @@
        "./tests"))
 
 (import (scheme)
-        (prefix (rsc3) sc/)
+        (utilities)
+        (file-tools)
+        (system))
+
+(build-aeon-libraries)
+
+(import (prefix (rsc3) sc/)
         (prefix (sosc) so/)
         (rename (matchable) (? ??))
-        (utilities)
         (doc)
-        (file-tools)
         (event)
         (arc)
         (context)
@@ -36,8 +40,7 @@
         (rhythm)
         (playback)
         (samples)
-        (synthesis)
-        (system))
+        (synthesis))
 ; (import (controls)) ;; I'll come back to this
 
 ;;------------------------------------------------------------------
