@@ -3,16 +3,9 @@
 (define sc-possible-paths
   (list
    "/Applications/SuperCollider/SuperCollider.app/Contents/Resources/scsynth" ; regular mac
-   "/Applications/SuperCollider.app/Contents/Resources/scsynth")) ; homebrew mac
+   "/Applications/SuperCollider.app/Contents/Resources/scsynth")) ; homebrew ma
 
-(define (sc-responds? path)
-  (and (file-exists? path)
-       (eq? 0 (system (format "~s -v > /dev/null 2>&1" path)))))
-
-(lest [sc-path (find sc-responds? sc-possible-paths)]
-      (let ([rd (make-sc-process sc-path sc-port)])
-        (fork-thread (lambda () (let loop () (when (rd) (loop))))))
-      (println "Couldn't find scsynth."))
+(launch-supercollider sc-port sc-possible-paths)
 
 ;;-----------------------------------------------------------------
 ;; Open the UDP connection to SuperCollider
