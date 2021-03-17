@@ -20,10 +20,9 @@
              (close-write-buffer (recording-state-bufnum active-recording)))
 
            (set! active-recording (make-recording-state arc bufnum))
-           (println (format "recording starts in ~~~A measures"
+           (println (format "Recording starts in ~~~A measures"
                             (exact (round (- (arc-start arc) rendered-point))))))
-         (println (string-append "Won't record to: " filepath
-                                 ". Retry after playhead has begun.\n"))))))
+         (println (format "Won't record to: ~a. Retry after playhead has begun." filepath))))))
 
 ;;----------------------------------------------------------------
 ;; Note: `disk-out` fails if num input channels doesn't match the
@@ -63,7 +62,7 @@
            [synth-id 55378008]) ; only one at a time for now
       (play-when "recorder2" t recording-group args synth-id)
       (set! active-recording (recording-state-with-synth active-recording synth-id))
-      (println "recording started!"))))
+      (println "Recording started!"))))
 
 (define* (cancel-recording [/opt (t (sc/utc))])
   (when active-recording
@@ -72,4 +71,4 @@
       (stop-synth synth-id t)
       (close-write-buffer bufnum (+ t 0.01))
       (set! active-recording #f)
-      (println "recording ended!"))))
+      (println "Recording ended!"))))
