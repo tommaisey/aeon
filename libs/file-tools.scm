@@ -1,7 +1,8 @@
 (library (file-tools)
 
-  (export valid-scheme-path?
-          path-append
+  (export has-extension?
+          valid-scheme-path?
+          path-append path+
           child-file-paths
           definitions-in-file
           file-lines
@@ -9,15 +10,24 @@
 
   (import (chezscheme) (utilities))
 
-  ;; Doesn't check it exists, just for an apparently valid path.
-  (define (valid-scheme-path? path)
-    (string=? "scm" (path-extension path)))
+  ;; Returns a lambda that checks for any of the given extensions
+  (define (has-extension? . exts)
+    (lambda (path)
+      (let ([ext (string-downcase (path-extension path))]
+            [exts (map string-downcase exts)])
+        (for-any (lambda (e) (string=? e ext)) exts))))
+  
+  ;; Checks a path's extension for an extension associated with scheme.
+  (define valid-scheme-path? (has-extension? "scm"))
 
   ;; A safer way to add a file name to a directory
   (define (path-append dir file)
     (let* ([sep (string (directory-separator))]
            [dir (if (string-suffix? sep dir) dir (str+ dir sep))])
       (str+ dir file)))
+
+  ;; Mirrors our string-append -> str+ alias.
+  (alias path+ path-append)
 
   ;; Unlike directory-list, returns full path of child files
   (define (child-file-paths dir)
@@ -71,8 +81,6 @@
   ;; Read an entire file into a list of lines.
   ;; Don't do this with huge files!
   (define (file-lines file)
-    (lines-from-port (open-file-as-textual-port file)))
-
-  )
+    (lines-from-port (open-file-as-textual-port file))))
 
 (current-directory)

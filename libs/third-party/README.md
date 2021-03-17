@@ -1,16 +1,13 @@
 README: Aeon Dependencies
 -----------------------
-This repo contains third party scheme code used in Aeon's pattern engine. Because
-these libraries can be found in repositories spanning many different version control
-systems, and because many have had to be massaged/ported to Chez, I'm going to maintain
-my own monorepo of these libraries. Some will stay very close to their original versions,
-others will have to be heavily refactored (e.g. rsc3).
+This directory contains third party scheme code used in `aeon`'s pattern engine. 
+The code is copied into this repo (rather than in submodules) for a few reasons:
 
-RSC3 was retreived on 21st January 2019, and refactored into R6RS libraries, partly through
-a quick 'n' dirty automated tool I wrote. Its file structure has been changed as a result,
-but as yet its functionality has not been. If I need to start making changes to the library
-itself I'll have to come up with a strategy to get those changes upstream. Or just fork it
-as it doesn't appear to be maintained.
+- Reduces the `git`-foo required to install `aeon`, which is targeted at non-developers.
+- Some of the libraries (e.g. `rsc3`) use different version-control systems from `git`.
+- To reduce the aeon's code size by copying only some parts (e.g. `thunderchez`).
 
-Other libraries, such as 'thunderchez' and 'socket' are mostly unchanged from their original,
-so could be updated quite painlessly.
+Notes:
+
+- `rsc3` was retreived on 21st January 2019. Its build system & scripts were modified to work inside chez scheme and aeon's startup procedure.
+- `thunder` contains a few libraries copied from `thunderchez`

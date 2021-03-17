@@ -8,7 +8,7 @@
  (list "."
        "./libs"
        "./libs/third-party"
-       "./libs/third-party/thunderchez"
+       "./libs/third-party/thunder"
        "./libs/third-party/sc3"
        "./tests"))
 

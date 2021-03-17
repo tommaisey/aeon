@@ -36,7 +36,3 @@
 
 (set-bpm! bpm)
 (play)
-
-;; Load user's init files, but not clip files.
-(for-each (lambda (p) (when (valid-scheme-path? p) (load p)))
-          (child-file-paths "music/"))

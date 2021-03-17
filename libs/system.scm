@@ -94,33 +94,32 @@
   ;;----------------------------------------------------------------------------------
   ;; Building the libraries required by aeon.
   (define (third-dir-from root)
-    (path-append root "libs/third-party/"))
+    (path+ root "libs/third-party/"))
   (define (sc3-dir-from root)
-    (path-append root "libs/third-party/sc3"))
+    (path+ root "libs/third-party/sc3"))
 
   (define (aeon-libraries-missing? aeon-root-dir)
-    (let ([sc3 (sc3-dir-from aeon-root-dir)]
-          [sls? (lambda (s) (string-suffix? ".sls" s))])
-      (null? (filter sls? (directory-list sc3)))))
+    (let ([sc3 (sc3-dir-from aeon-root-dir)])
+      (null? (filter (has-extension? "sls") (directory-list sc3)))))
 
   (define (rohan-drake-mk dir dest-dir)
     (parameterize ([source-directories (cons dir (source-directories))]
                    [current-directory dir]
                    [command-line (list "mk.scm" dest-dir)])
-      (load (path-append dir "mk.scm"))))
+      (load (path+ dir "mk.scm"))))
 
   (define (c-mk libname c-files)
     (let ([f (fold-left (lambda (a b) (str+ a " " b)) "" c-files)])
       (case os-symbol
         ['macos (system (format "cc -dynamiclib -o ~a.dylib ~a" libname f))]
-        [('linux 'freebsd) (system (format "cc -fPIC -shared -o ~a.so ~a" libname f))]
+        [['linux 'freebsd] (system (format "cc -fPIC -shared -o ~a.so ~a" libname f))]
         [else (error 'build-aeon-libraries "Can only build libraries on linux and macOS.")])))
 
   ;; Builds the rsc3 libraries for e.g. OSC communication.
   (define (build-aeon-libraries aeon-root-dir)
     (let* ([third-dir (third-dir-from aeon-root-dir)]
            [sc3-dir (sc3-dir-from aeon-root-dir)]
-           [sc3-sub (lambda (sub) (path-append sc3-dir sub))]
+           [sc3-sub (lambda (sub) (path+ sc3-dir sub))]
            [sc3-make (sc3-sub "mk-r6rs")]
            [lib-dirs (cons sc3-make (library-directories))])
       (when (aeon-libraries-missing? aeon-root-dir)
@@ -128,18 +127,18 @@
           (rohan-drake-mk (sc3-sub "rhs/mk")  sc3-dir)
           (rohan-drake-mk (sc3-sub "sosc/mk") sc3-dir)
           (rohan-drake-mk (sc3-sub "rsc3/mk") sc3-dir))
-        (parameterize ([current-directory (path-append third-dir "timeout")])
+        (parameterize ([current-directory (path+ third-dir "timeout")])
           (c-mk "libtimeout" (list "timeout.c"))))))
-
+  
+  ;; Clean the build scheme and c libraries out.
   (define (clean-aeon-libraries aeon-root-dir)
-    (let* ([third-dir (third-dir-from aeon-root-dir)]
+    (let* ([del? (has-extension? "sls" "so" "dylib")]
            [sc3-dir (sc3-dir-from aeon-root-dir)]
-           [sls? (lambda (s) (string-suffix? ".sls" s))])
-      (for-each delete-file (filter sls? (directory-list sc3-dir)))
-      (parameterize ([current-directory (path-append third-dir "timeout")])
-        (delete-file "timeout.so")
-        (delete-file "libtimeout.dylib")
-        (delete-file "libtimeout.so"))
-      #t))
+           [sc3-files (filter del? (child-file-paths sc3-dir))]
+           [timeout-dir (path+ (third-dir-from aeon-root-dir) "timeout")]
+           [timeout-files (filter del? (child-file-paths timeout-dir))])
+      (and
+       (for-all identity (map delete-file timeout-files))
+       (for-all identity (map delete-file sc3-files)))))
   
   )
