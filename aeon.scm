@@ -15,12 +15,6 @@
     (console-input-port stdin)))
 
 ;;------------------------------------------------------------------
-(let ([divider (fold-left str+ "" (repeat 60 "-"))])
-  (println divider)
-  (println "[aeon] musical patterns")
-  (println divider))
-
-;;------------------------------------------------------------------
 ;; Load top-level state and functions
 (load "sc3.scm")
 (load "synthdefs.scm")
@@ -36,3 +30,9 @@
 
 (set-bpm! bpm)
 (play)
+
+;;------------------------------------------------------------------
+(let ([divider (fold-left str+ "" (repeat 60 "-"))])
+  (println divider)
+  (println "[aeon] musical patterns")
+  (println divider))
