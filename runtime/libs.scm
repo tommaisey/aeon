@@ -15,7 +15,8 @@
 (import (scheme)
         (utilities)
         (file-tools)
-        (system))
+        (system)
+        (version-control))
 
 (build-aeon-libraries (current-directory))
 

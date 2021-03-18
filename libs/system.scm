@@ -2,26 +2,40 @@
 ;; for example running shell commands, running SuperCollider
 ;; in particular, and compiling some libraries that we use.
 (library (system)
-  (export run-process
+  (export run-command
+          run-commands
           launch-process
           launch-supercollider
           build-aeon-libraries
-          clean-aeon-libraries)
+          clean-aeon-libraries
+          syscall-file-prefix)
   
   (import (chezscheme) (utilities) (file-tools))
 
-  ;; Runs a process in a blocking way, returning the exit
-  ;; code and output (as a string).
-  (define (run-process command)
-    (let* ([file-name (str+ "." (number->string (random 9999)))]
+  ;; Runs a process, blocking until it completes.
+  ;; => (values exit-code output-lines)
+  (define (run-command command)
+    (let* ([file-name (syscall-file-name)]
            [file (path-append (current-directory) file-name)]
-           [exit-code (system (format "~a > ~s" command file))]
+           [exit-code (system (format "~a > ~s 2>&1" command file))]
            [lines (file-lines file)])
       (delete-file file)
       (values exit-code lines)))
 
-  ;; Launches a process and returns stdin, stdout and a
-  ;; function that can be used to kill the process.
+  ;; Runs a list of processes, one after the other, bailing
+  ;; out if any of them fail, and returning its error message.
+  ;; => (values success? error-string)
+  (define (run-commands . cmds)
+    (let loop ([cmds cmds])
+      (if (null? cmds)
+          (values #t "done")
+          (let-values ([(exit-code txt) (run-command (car cmds))])
+            (if (zero? exit-code)
+                (loop (cdr cmds))
+                (values #f txt))))))
+
+  ;; Launches a process and returns ports to read/write to it.
+  ;; => (values stdin stdout kill-process-fn pid)
   (define (launch-process command)
     (let* ([sc (process command)]
            [stdout (car sc)]
@@ -29,6 +43,14 @@
            [pid (caddr sc)]
            [kill (lambda () (system (format "kill -9 ~d" pid)))])
       (values stdout stdin kill pid)))
+
+  ;;-------------------------------------------------------------------
+  ;; A prefix for files where system call output will be directed.
+  ;; These files should get cleaned up automatically.
+  (define (syscall-file-name)
+    (str+ syscall-file-prefix (number->string (random 9999))))
+  
+  (define syscall-file-prefix ".aeon-syscall")
 
   ;;-------------------------------------------------------------------
   ;; Launches a SuperCollider sub-process.
@@ -64,8 +86,9 @@
   
   ;; Runs a SuperCollider process using the executable at the given
   ;; path and using the given port. Returns a procedure for reading
-  ;; SC output that keeps returning #t as long as SC is alive, and
-  ;; #f if it crashes or fails to boot correctly.
+  ;; SC output that keeps returning => (values :event text)
+  ;; => (values (reader-fn) => (values :event text)
+  ;;            (kill-fn) => #void)
   (define (make-sc-process path port)
     (let*-values ([(cmd) (format "~a -u ~a" path port)]
                   [(stdout stdin kill pid) (launch-process cmd)]
@@ -91,7 +114,7 @@
     (and (file-exists? path)
          (zero? (system (format "~s -v > /dev/null 2>&1" path)))))
 
-  ;;----------------------------------------------------------------------------------
+  ;;-------------------------------------------------------------------------
   ;; Building the libraries required by aeon.
   (define (third-dir-from root)
     (path+ root "libs/third-party/"))
@@ -109,11 +132,13 @@
       (load (path+ dir "mk.scm"))))
 
   (define (c-mk libname c-files)
-    (let ([f (fold-left (lambda (a b) (str+ a " " b)) "" c-files)])
+    (let* ([fs (fold-left (lambda (a b) (str+ a " " b)) "" c-files)]
+           [run (lambda (fmt-str) (system (format fmt-str libname fs)))])
       (case os-symbol
-        ['macos (system (format "cc -dynamiclib -o ~a.dylib ~a" libname f))]
-        [['linux 'freebsd] (system (format "cc -fPIC -shared -o ~a.so ~a" libname f))]
-        [else (error 'build-aeon-libraries "Can only build libraries on linux and macOS.")])))
+        ['macos (run "cc -dynamiclib -o ~a.dylib ~a")]
+        [['linux 'freebsd] (run "cc -fPIC -shared -o ~a.so ~a")]
+        [else (error 'build-aeon-libraries
+                "Can only build libraries on linux and macOS.")])))
 
   ;; Builds the rsc3 libraries for e.g. OSC communication.
   (define (build-aeon-libraries aeon-root-dir)

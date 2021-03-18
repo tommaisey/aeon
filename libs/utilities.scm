@@ -30,6 +30,7 @@
           safe-val?
           safe-val-apply
           string-concat
+          string-replace
           string-contains
           string-contains-ci
           string-suffix?
@@ -331,6 +332,10 @@
     (let ([len (string-length str)])
       (if (>= n len) str
           (str+ prefix (substring str (max 0 (- len n)) len)))))
+
+  (define (string-replace s start end new-text)
+    (let ([last (string-length s)])
+      (str+ (substring s 0 start) new-text (substring s end last))))
 
   (define (println . objs)
     (fresh-line)
