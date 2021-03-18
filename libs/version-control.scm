@@ -3,7 +3,12 @@
 ;; It needs to work with `git` version 2.20.1, because that's installed
 ;; on a lot of still-not-that-old Macs.
 (library (version-control)
-  (export save jump init list-saves print-saves)
+  (export save
+          jump
+          list-saves
+          print-saves
+          init-repo)
+  
   (import (chezscheme) (utilities) (file-tools) (system))
 
   ;; Save the current state of the project, optionally in a new branch.
@@ -17,25 +22,41 @@
 
   ;; Jump by a number of commits back (negative) forward (positive)
   ;; or to a specific branch/hash (string).
+  ;; If jumping forwards you may specify a branch to jump towards.
+  ;; If you don't, it will jump towards the newest branch.
   ;; => (files-that-changed ...)
-  ;;
-  ;; TODO: currently always jumps forward to 'main'. Doesn't know
-  ;;   what branch you recently came from. Should I make this
-  ;;   function stateful? What if we switch project?
-  (define (jump dest)
+  (define* (jump dest [/opt target-branch-forwards])
     (cond
      [(string? dest)  (jump-branch dest)]
-     [(integer? dest) (jump-by dest "main")]
+     [(integer? dest) (jump-by dest target-branch-forwards)]
      [else (error 'jump "requires an integer or string, got" dest)]))
+
+  ;; Returns a list of the repo's branches, with the current
+  ;; branch (if applicable) at the front.
+  (define (list-saves)
+    (define (first? a b) (or (string-contains a "* ") (string-ci<? a b)))
+    (filter-branches (list-sort first? (lines-output "git branch"))))
+
+  ;; Prints the branches in a tree view.
+  (define (print-saves)
+    (define (trans s)
+      (let ([pos (string-contains-ci s "HEAD")])
+        (or (and pos (string-replace s pos (+ pos 4) "*")) s)))
+    (apply println (map trans (lines-output print-tree-cmd))))
+
+  (define print-tree-cmd
+    (str+ "git log --graph --decorate --all "
+          "--date=relative "
+          "--pretty='format:[%ad] %D'"))
 
   ;; Initialize a git repo in (current-directory).
   ;; If one already exists, then nothing is done.
   ;; => (values success? (output ...))
-  (define (init)
+  (define (init-repo)
     (let-values ([(exit-code output) (run-command "git init")])
       (if (zero? exit-code)
           (if (git-reinitialized? output)
-              (values #t "done")
+              (values #t 'done)
               (first-commit))
           (values #f output))))
 
@@ -58,24 +79,9 @@
   (define (changed-files ref)
     (lines-output (format "git diff --name-only HEAD ~a" ref)))
 
-  ;; Returns a list of the repo's branches, with the current
-  ;; branch (if applicable) at the front.
-  (define (list-saves)
-    (define (named? branch) (not (string-contains branch "HEAD detached")))
-    (define (first? a b) (or (string-contains a "* ") (string-ci<? a b)))
-    (define (trim branch) (substring branch 2 (string-length branch)))
-    (map trim (list-sort first? (filter named? (lines-output "git branch")))))
-
-  ;; Prints the branches in a tree view.
-  (define (print-saves)
-    (define (trans s)
-      (let ([pos (string-contains-ci s "HEAD")])
-        (or (and pos (string-replace s pos (+ pos 4) "*")) s)))
-    (apply println (map trans (lines-output tree-cmd))))
-
-  (define tree-cmd
-    (str+ "git log --graph --decorate --reflog "
-          "--date=relative --pretty='format:[%ad] %D'"))
+  (define (newest-branches)
+    (define fn (compose lines-output filter-branches reverse))
+    (fn "git branch --sort=authordate"))
 
   ;;-------------------------------------------------------------------
   ;; Make the first commit to a freshly initalized repo.
@@ -102,11 +108,12 @@
       (changed-files prev-commit)))
 
   ;; Jump n commits back (negative) or forward (positive).
-  ;; Since it's possible that there are branches in the
-  ;; forward direction, you must specify a branch/ref to
-  ;; jump towards.
+  ;; Since there may be many branches in the forward direction,
+  ;; we need to specify a branch to jump 'towards'.
+  ;; If #f is supplied, we jump to the newest.
   (define (jump-by n end-ref)
     (let* ([txt (if (> n 0) "forward" "back")]
+           [end-ref (or end-ref (car (newest-branches)))]
            [commits (if (> n 0)
                         (commits-forward end-ref)
                         (commits-back))]
@@ -144,5 +151,12 @@
 
   (define (single-output cmd)
     (output-or cmd "" car))
+
+  ;; Filters a list products by `git branch`. Removes any HEAD entry,
+  ;; plus trims away the spacing and asterisk marking the current branch.
+  (define (filter-branches branches)
+    (define (named? branch) (not (string-contains branch "HEAD detached")))
+    (define (trim branch) (substring branch 2 (string-length branch)))
+    (map trim (filter named? branches)))
 
   )
