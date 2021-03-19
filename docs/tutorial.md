@@ -12,6 +12,7 @@ sense and where they need more work.
     1. [blank events](#blank-events)
     2. [chains and to:](#chains-and-to)
     3. [subdividers](#subdividers)
+    4. [rests, ties and repeats](#rests-ties-and-repeats)
     4. [grouping with chains](#grouping-with-chains)
 3. [further with patterns](#further-with-patterns)
     1. [dynamic patterns](#dynamic-patterns)
@@ -249,6 +250,9 @@ We can of course give different subdividers to multiple properties in a `to:` ex
     (to: :scale-degree (over 2 [I VI III VIII])
          :octave (over 1/2 [-1 0]))))
 ```
+
+#### rests, ties and repeats
+*TODO*
 
 #### grouping with chains
 We're nearly done with the basics of `aeon`, so that we can start exploring a richer
