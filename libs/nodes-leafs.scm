@@ -51,11 +51,12 @@
 
       ((_ qlist key/keys)
        (let* ([lst (pdef qlist)]
-              [len (length lst)])
+              [len (length lst)]
+              [rgen (rnd 0 len key/keys)])
          (leaf-meta-ranged
           lst
           (lambda (context)
-            (let ([choice (eval-leaf (rnd 0 len key/keys) context)])
+            (let ([choice (eval-leaf rgen context)])
               (eval-leaf (list-ref lst choice) context))))))))
 
   ;; Choose from a list randomly, with weightings
@@ -72,9 +73,11 @@
                [() (reverse o)]
                [(a . b) (loop (+ count a) (cons (+ count a) o) b)])))
 
-         (define (pick-index v cumulative-weights)
-           (lest [i (list-index (lambda (x) (>= x v)) cumulative-weights)]
-                 i (- (length cumulative-weights) 1)))
+         (define (index-picker cumulative-weights)
+           (let ([len (length cumulative-weights)])
+             (lambda (v)
+               (or (list-index (lambda (x) (>= x v)) cumulative-weights)
+                   (- len 1)))))
 
          (when (or (not (unsafe-list? lst)) (not (unsafe-list? wts)) 
                    (null? lst) (null? wts))
@@ -83,13 +86,14 @@
          (let* ([len (length lst)]
                 [wts (extend-repeating-last wts len)]
                 [cumulative-weights (to-cumulative wts)]
-                [top (list-last cumulative-weights)])
+                [top (list-last cumulative-weights)]
+                [rgen (rnd 0 top key/keys)]
+                [picker (index-picker cumulative-weights)])
            (leaf-meta-ranged
             lst
             (lambda (context)
-              (let* ([v (eval-leaf (rnd 0 top key/keys) context)]
-                     [choice (pick-index v cumulative-weights)])
-                (eval-leaf (list-ref lst choice) context)))))))))
+              (let* ([v (eval-leaf rgen context)])
+                (eval-leaf (list-ref lst (picker v)) context)))))))))
 
   ;; This short operator picks either rnd, pick or wpick depending
   ;; on the arguments. Two lists gets wpick, one list gets pick, and
