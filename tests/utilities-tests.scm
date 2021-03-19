@@ -11,6 +11,8 @@
   (test-eq "[utilities compose]" #t ((compose inc zero?) -1))
   (test-eq "[utilities compose]" #f ((compose dec (lambda (x) (> x 5))) 5))
 
+  (test-eq "[utilities nth-value]" 'hi (nth-value 2 (values 42 'yo 'hi 8)))
+
   (test-eq "[utilities trunc-int]" 2 (trunc-int 2.8))
   (test-eq "[utilities trunc-int]" -2 (trunc-int -2.8))
   (test-eq "[utilities trunc-int]" 1 (trunc-int 9/7))

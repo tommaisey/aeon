@@ -22,8 +22,7 @@
   ;; Prints the accumulated test results. Call 'reset-test-results'
   ;; between runs of the same test suite, or they'll be added together.
   (define (print-test-results)
-    (let* ([divider (fold-left str+ "" (repeat 60 "-"))]
-           [template "[aeon] tests: [~A pass] [~A fail]"]
+    (let* ([template "[aeon] tests: [~A pass] [~A fail]"]
            [results (format template tests-passed tests-failed)])
       (println divider results divider)))
   
@@ -51,6 +50,7 @@
                #t)
              (begin
                (register-fail)
+               (println divider)
                (println (str+ "Fail: " message-string))
                #f))))))
 
@@ -81,7 +81,7 @@
   (define-syntax print-result
     (syntax-rules ()
       ((_ name val result)
-       (format "'~A'.\nExpected: ~A\nGot: ~A" name val result))))
+       (format "\"~A\".\nExpected: ~A\nGot: ~A" name val result))))
 
   ;;----------------------------------------------------------
   ;; Pattern tests
@@ -118,4 +118,7 @@
                         name expected cleaned)
                 (format "~A. Expected ~A events, but got ~A."
                         name len-expected len-actual))))))))
+
+  ;; Divider string for use in printing
+  (define divider (fold-left str+ "" (repeat 60 "-")))
   )

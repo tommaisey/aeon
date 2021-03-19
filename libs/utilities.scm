@@ -1,6 +1,6 @@
 (library (utilities)
 
-  (export identity compose
+  (export identity compose nth-value
           pseudo-rand
           trunc-int round-down round-up round-nearest 
           inc dec clamp 
@@ -72,6 +72,14 @@
   ;; Compose multiple functions that take and return the same arg.
   (define (compose . fns)
     (fold-left (lambda (a b) (lambda (x) (b (a x)))) identity fns))
+
+  ;; Get the nth of multiple return values
+  (define-syntax nth-value
+    (syntax-rules ()
+      [(_ n expr)
+       (call-with-values
+         (lambda () expr)
+         (lambda vals (list-ref vals n)))]))
 
   ;;-------------------------------------------------------------------
   ;; A pseudo-random number generator that takes a seed.
@@ -224,7 +232,7 @@
     (not (exists pred lst)))
 
   ;;----------------------------------------------------------------------
-  ;; Lists & vectors
+  ;; Lists, vectors & multiple values
 
   ;; #t for any kind of list: null, proper, improper, or cyclic.
   ;; Faster than 'list?' but improper lists (which return true)

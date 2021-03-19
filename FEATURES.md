@@ -60,18 +60,19 @@ a given number of musical measures. The recording has WAV format, and should hav
 precisely the right length, meaning it can be dragged directly into your DAW and 
 used instantly.
 
-## Rollbacks
+## Version control
 
-`[not yet implemented]`
+`[not yet complete]`
 
 When you're working on a set of patterns, you can take a snapshot of your entire project
 state, and later roll back to this snaphot at any time. You can take as many snapshots
-as you want, and roll backwards or forwards without losing musical time. 
+as you want, and roll backwards or forwards during a performance without losing musical 
+time. You can do this without leaving the `aeon` environment.
 
 You can even create alternative branches of snapshot history, and jump between them. 
 This should allow you to evolve your music in different directions over the course 
 of a performance, and also to ensure that you never lose any serendipitous musical magic.
 
-Rollbacks will be implemented by providing a highly simplified set of commands that
+Rollbacks are implemented by providing a highly simplified set of commands that
 call out to `git`. You can therefore share the project's history by posting it to
 github or similar.

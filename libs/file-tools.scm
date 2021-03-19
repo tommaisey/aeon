@@ -4,6 +4,7 @@
           valid-scheme-path?
           path-append path+
           child-file-paths
+          rmdir
           definitions-in-file
           file-lines
           os-symbol)
@@ -33,6 +34,13 @@
   (define (child-file-paths dir)
     (map (lambda (f) (path-append dir f))
          (directory-list dir)))
+
+  ;; Deletes a dir recursively.
+  (define (rmdir dir)
+    (or (not (file-exists? dir))
+        (and (file-regular? dir) (delete-file dir))
+        (and (for-all identity (map rmdir (child-file-paths dir)))
+             (delete-directory dir))))
 
   ;; Expands the home-directory ~ shortcut on Mac.
   (define (expand-path path)

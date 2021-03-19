@@ -7,7 +7,8 @@
           jump
           list-saves
           print-saves
-          init-repo)
+          init-repo
+          current-branch)
   
   (import (chezscheme) (utilities) (file-tools) (system))
 
@@ -18,7 +19,7 @@
       (when (string-contains branch-name " ")
         (error 'save "branch cannot contain contain spaces" branch-name))
       (run-command (format "git checkout -b ~a" branch-name)))
-    (commit "...")) ;; TODO: message?
+    (commit "-")) ;; TODO: message?
 
   ;; Jump by a number of commits back (negative) forward (positive)
   ;; or to a specific branch/hash (string).
@@ -39,15 +40,14 @@
 
   ;; Prints the branches in a tree view.
   (define (print-saves)
+    (define cmd
+      (str+ "git log --graph --decorate --all "
+            "--date=relative "
+            "--pretty='format:[%ad] %D'"))
     (define (trans s)
       (let ([pos (string-contains-ci s "HEAD")])
-        (or (and pos (string-replace s pos (+ pos 4) "*")) s)))
-    (apply println (map trans (lines-output print-tree-cmd))))
-
-  (define print-tree-cmd
-    (str+ "git log --graph --decorate --all "
-          "--date=relative "
-          "--pretty='format:[%ad] %D'"))
+        (or (and pos (string-replace s pos (+ pos 4) "x")) s)))
+    (apply println (map trans (lines-output cmd))))
 
   ;; Initialize a git repo in (current-directory).
   ;; If one already exists, then nothing is done.
@@ -96,9 +96,10 @@
 
   ;; Make subsequent commits to the repo
   (define (commit msg-string)
-    (run-commands
-     "git add --all"
-     (format "git commit -m ~s" msg-string)))
+    (let ([prev-commit (current-commit)])
+      (run-commands
+       "git add --all"
+       (format "git commit -m ~s" msg-string))))
 
   ;; Jump directly to a branch
   (define (jump-branch name)
@@ -124,7 +125,7 @@
             (run-command (format "git checkout ~a" hash))
             (println (format "Jumped ~a ~a" txt num))
             (changed-files prev-commit))
-          (println "Can't jump any further."))))
+          (begin (println "Can't jump any further.") '()))))
 
   ;;-------------------------------------------------------------------
   ;; A standard .gitignore file's contents.
@@ -152,11 +153,11 @@
   (define (single-output cmd)
     (output-or cmd "" car))
 
-  ;; Filters a list products by `git branch`. Removes any HEAD entry,
-  ;; plus trims away the spacing and asterisk marking the current branch.
+  ;; Filters a list produced by `git branch`. Removes a HEAD entry, and
+  ;; trims away the spacing and asterisk marking the current branch.
   (define (filter-branches branches)
-    (define (named? branch) (not (string-contains branch "HEAD detached")))
-    (define (trim branch) (substring branch 2 (string-length branch)))
-    (map trim (filter named? branches)))
+    (define (ref? b) (not (string-contains b "HEAD detached")))
+    (define (trim b) (substring b 2 (string-length b)))
+    (map trim (filter ref? branches)))
 
   )
