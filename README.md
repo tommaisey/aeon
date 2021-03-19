@@ -10,7 +10,9 @@ sequences of musical events that can be modified on the fly.
 
 This is far from a new idea, as the [list of alternatives](#alternatives) suggests. 
 But `aeon` tries to bring some new ideas to the table, or at least to remix existing
-ones in novel ways. Some of these are listed in the ['features' document](FEATURES.md).
+ones in novel ways. Some of these are listed in the 
+['features' document](docs/features-overview.md). If you want more comprehensive
+documentation, try the ['tutorial' document](docs/tutorial.md).
 
 The most important thing: you don't need to know programming to use `aeon`. At least,
 that is my goal. Instead you'll be using a very simplified 'domain-specific language'
@@ -56,6 +58,9 @@ Now you can check that your sound is working by typing this and pressing enter:
 
 To stop the sound, type: `(stop hello)`. To exit `aeon` entirely you can hit 
 `Ctrl-D` or type `(exit)`.
+
+If you want to learn how to get started constructing patterns, sounds and
+projects, head to the ['tutorial' document](docs/tutorial.md).
 
 ### Using a text editor
 
