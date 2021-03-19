@@ -52,6 +52,4 @@ the first argument."
                                             (:beat 1/2 :sustain 1/4) 
                                             (:beat 3/4 :sustain 1/4)])
       ((testp (in! (over 1 [~ 2]))) => [(:beat 1/2 :sustain 1/4) 
-                                        (:beat 3/4 :sustain 1/4)]))))
-  
-  )
+                                        (:beat 3/4 :sustain 1/4)])))))

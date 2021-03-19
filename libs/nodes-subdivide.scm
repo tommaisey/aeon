@@ -36,8 +36,9 @@
       ((_ values) (step 1/4 values))
 
       ((_ slice-dur values)
-       (let ([data (pdef values)])
-         (subdivide (* slice-dur (length data)) data)))))
+       (let ([data (pdef values)]
+             [len (if (list? data) (length data) 1)])
+         (subdivide (* slice-dur len) data)))))
 
   (tag-pdef-callable over)
   (tag-pdef-callable step)
