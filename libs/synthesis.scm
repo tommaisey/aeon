@@ -79,7 +79,10 @@
       [(unsafe-list? c)
        (if (eq? (length c) num-segments) c
            (extend-repeating-last c num-segments))]
-      [else (error 'curve "curve argument should be a number, symbol or list" c)]))
+      [else (error 'curve curve-err c)]))
+
+  (define curve-err
+    "curve argument should be a number, symbol or list")
 
   ;;-------------------------------------------------------------------
   (define (make-rand-lfo mag time)
@@ -141,7 +144,7 @@
                  (import (except (rsc3) letc))
                  body ...)))))))
 
-  ;; Makes and binds synthedef inputs (i.e. Control objects) and also defines
+  ;; Makes and binds synthdef inputs (i.e. Control objects) and also defines
   ;; the names of said inputs as 'keywords', i.e. self-evaluating symbols.
   (define-syntax letc
     (syntax-rules ()
@@ -156,7 +159,7 @@
     (sc/make-control* (symbol->string name) default rate lag))
 
   ;; Define a standard in/out structure for a sound source like a synth
-  ;; or sampler voice. Predefines :out, :amp, :pan and some sends.
+  ;; or sampler voice. Predefines :out, :amp, and :pan.
   (define-syntax src-synth
     (lambda (x)
       (syntax-case x ()
