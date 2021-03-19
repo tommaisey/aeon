@@ -393,7 +393,13 @@ chain operator later, in the [time-travel](#time-travel-patterns)
 section.
 
 ## further with patterns
-*TODO*
+
+OK, now the basic structure of patterns that create events and set
+properties has been explained. But our patterns are still pretty
+static things that loop in the same way forever. It's time to learn
+how to add additional variation with random choices, the manipulation
+of time, and the addition of effects to spice up our rather 'dry'
+patterns.
 
 ### dynamic patterns
 ### time-travel patterns
