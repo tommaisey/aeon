@@ -52,15 +52,16 @@ sequencer. The techniques for specifying patterns are unified
 (i.e. the same for all events and their properties), flexible and
 powerful.
 
-`aeon` has an interesting relationship with time. When you specify
-your patterns you are actually describing an infinite timeline of
-music. We can ask the system about any part of that timeline, past or
-future, whenever we want. When you edit your pattern, you have in some
-sense 'swapped' the old timeline for a new one.
+The following tutorial takes you through using `aeon`'s pattern
+system and other features. It's presented in rather a 'slow' way,
+so feel free to experiment at any point, for example by taking
+the examples and modifying them to see what happens. I feel it's
+important to have a slow step-by-step guide, however, that you
+can refer to if you need to understand the concepts more deeply.
 
 ## basic patterns
 ### blank events
-Let's write a simple pattern, giving it the name 'blip':
+Let's write a simple pattern, giving it the name blip:
 
 ```scheme
 (pattern blip
@@ -292,8 +293,11 @@ a `to:` expression:
 We're nearly done with the basics of `aeon`, so that we can start
 exploring a richer variety of ways to make patterns with random
 values, time-travel, control data, sample triggering, effects and
-more. But first we need to solve one more problem. Let's take a
-pattern similar to the one we just built:
+more. But first we need to solve one more problem. 
+
+Let's take a pattern similar to the one we just built. From now on,
+instead of `scale-degree` I'm going to write `:scd`, which is just
+a shorter alias for the same thing.
 
 ```scheme
 (pattern blip
@@ -302,10 +306,9 @@ pattern similar to the one we just built:
     (to: :scale-degree (over 2 [I VI III VIII]))))
 ```
 
-Now let's add another stream of events and try to set a property on
-these, the `:scale-degree`. From now on I'm going to write that as
-`:scd`, which is simply an alias that does the same thing. We'd
-probably do something like this:
+Now let's add another stream of events and try to set the `:scd`
+property on these, the `:scale-degree`. We'd probably start with
+something like this:
 
 ```scheme
 (pattern blip
@@ -318,10 +321,10 @@ probably do something like this:
 ```
 
 But if you evaluate that, you'll hear a problem. Our original notes
-have changed too! This is because the `to:` operator changes _all_ the
-events that pass through it. We need a way to separate out the events
-we want to change. Luckily, we have seen the solution before, with
-`o->`:
+have aquired the same pitch as our new notes! This is because the
+`to:` operator changes _all_ the events that pass through it. We need
+a way to separate out the events we want to change. Luckily, we have
+seen the solution before, with `o->`:
 
 ```scheme
 (pattern blip
@@ -373,13 +376,13 @@ back to our original 'problem'. What use is that? It lets us define
 transformations that are shared between different patterns:
 
 ```scheme
-(define (make-quiet)
+(define (quiet)
   (x-> (to: :amp 0.1)))
   
 (pattern one
-  (in! 4 (make-quiet)))
+  (in! 4 (quiet)))
 (pattern two
-  (in! 12 (make-quiet)))
+  (in! 12 (quiet)))
 ```
 
 If I had many patterns that shared some transformation, this could be
@@ -402,6 +405,30 @@ of time, and the addition of effects to spice up our rather 'dry'
 patterns.
 
 ### dynamic patterns
+
+In order to give our patterns more subtle variations we might want to
+change some properties over time in different ways. To begin, let's
+change the instrument our pattern is played on - a sine wave doesn't
+offer much opportunity for hearing dynamic changes in sound.
+
+```scheme
+(pattern blip
+  (in! (over 1 [1 [~ 1] [~ [1 1]] 1])
+       (to: :scd (over 2 [I VI III VIII])
+            :inst "pulse-pluck"
+            :octave -1
+            :cutoff (sine 4 0.2 0.8))))
+```
+
+We set a property `:inst` to `"pulse-pluck"`, which is the name of a
+simple instrument that's built into `aeon`. Note that like any other
+property, this could be a subdividing pattern, so you can send
+different events in the stream to different instruments. We also
+set `:octave` to `-1`, which lowers the pitch by an octave.
+
+But the change we're mostly interested in here is the value of
+`:cutoff`. 
+
 ### time-travel patterns
 ### control patterns
 ### effects patterns
