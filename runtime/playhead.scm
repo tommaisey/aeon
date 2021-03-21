@@ -1,5 +1,5 @@
 ;;-----------------------------------------------------------------
-(define bpm 100)
+(define bpm 115)
 (define playback-thread #f)
 (define playback-chunk 1/8) ; 1/8th beat for now
 (define playback-thread-semaphore (make-semaphore))

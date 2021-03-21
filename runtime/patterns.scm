@@ -32,3 +32,6 @@
 
 (define (files-with-playing-patterns root-path)
   (list-files-with-playing-patterns root-path pattern-dict pattern-form?))
+
+(define (pattern-names)
+  (list-pattern-names pattern-dict))

@@ -13,6 +13,7 @@
     get-pattern clear-patterns
     list-patterns-in-file
     list-files-with-playing-patterns
+    list-pattern-names
     semaphore semaphore? make-semaphore
     start-waiting stop-waiting waiting?
     start-suspendable-thread)
@@ -64,6 +65,10 @@
   (define (list-patterns dict)
     (let-values ([(keys values) (safe-val-apply hashtable-entries dict)])
       (vector->list values)))
+
+  (define (list-pattern-names dict)
+    (let-values ([(keys values) (safe-val-apply hashtable-entries dict)])
+      (vector->list keys)))
 
   (define (list-patterns-in-file file-path pattern-form?)
     (definitions-in-file file-path pattern-form? (lambda (f) (cadr f))))
