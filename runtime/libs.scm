@@ -22,7 +22,7 @@
 
 (import (prefix (rsc3) sc/)
         (prefix (sosc) so/)
-        (rename (matchable) (? ??))
+        (rename (matchable) (? ??) ($ $$))
         (doc)
         (event)
         (arc)

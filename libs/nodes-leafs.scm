@@ -18,8 +18,8 @@
 ;;----------------------------------------------------------------------
 (library (nodes-leafs)
   (export
-    ? rnd wpick pick
-    each every sine)
+   ? rnd wpick pick
+   each every sine)
 
   (import
     (chezscheme)
@@ -120,8 +120,8 @@
 
       ((_ a b) (? a b '()))
 
-      ((_ a ...)
-       (error '? "invalid number of args" 'a ...))))
+      ((_ args ...)
+       (error '? "invalid number of args" 'args ...))))
 
   ;; Tag so pdef recognises as a macro
   (tag-pdef-callable pick)
@@ -144,7 +144,10 @@
           (lambda (context)
             (let* ([t (context-now context)]
                    [n (trunc-int (/ t measures))])
-              (eval-leaf (list-ref lst (modulo n len)) context))))))))
+              (eval-leaf (list-ref lst (modulo n len)) context))))))
+      
+      ((_ args ...)
+       (error 'each "expects (measures values)" 'args ...))))
 
   ;; Normally chooses the first value, but every n measures chooses
   ;; the second value instead. If there are more than 2 values, the
@@ -156,6 +159,8 @@
               [len (length lst)])
          (when (< len 2)
            (error 'every "requires at least 2 values" len))
+         (when (zero? n)
+           (error 'every "n cannot be 0" n))
          (leaf-meta-ranged
           lst
           (lambda (context)
@@ -166,7 +171,10 @@
               (lif [n-wrapped (mod i n)]
                    (eq? n-wrapped (- n 1))
                    (eval-leaf (list-ref lst (choice)) context)
-                   (eval-leaf (car lst) context)))))))))
+                   (eval-leaf (car lst) context)))))))
+      
+      ((_ args ...)
+       (error 'every "expects (N measures values)" 'args ...))))
 
   ;; Tag so pdef recognises as a macro
   (tag-pdef-callable each)

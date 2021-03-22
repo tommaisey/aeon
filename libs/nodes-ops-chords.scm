@@ -5,14 +5,14 @@
 
   (import
     (scheme)
-    (matchable)
     (harmony)
     (event)
     (context)
     (node-eval)
     (nodes-chains)
     (nodes-subdivide)
-    (nodes-ops))
+    (nodes-ops)
+    (only (matchable) match ?))
 
   ;; Originally this was a 3 liner using +-> and to: but that turned out
   ;; to be slow. Perhaps too many levels of indirection? Hand-rolled instead.
