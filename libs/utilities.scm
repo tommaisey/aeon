@@ -25,7 +25,7 @@
           maybe-convert
           derecord
           define-immutable-record
-          println
+          println printfln
           make-safe-val
           safe-val?
           safe-val-apply
@@ -348,6 +348,10 @@
   (define (println . objs)
     (fresh-line)
     (for-each (lambda (x) (display x) (fresh-line)) objs))
+
+  (define (printfln format-string . vars)
+    (fresh-line)
+    (println (apply format format-string vars)))
 
   (define-syntax declare-keywords
     (syntax-rules ()

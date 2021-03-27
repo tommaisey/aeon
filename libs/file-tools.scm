@@ -2,6 +2,8 @@
 
   (export has-extension?
           valid-scheme-path?
+          file-parent-exists?
+          home-dir-path?
           path-append path+
           child-file-paths
           rmdir
@@ -42,12 +44,12 @@
         (and (for-all identity (map rmdir (child-file-paths dir)))
              (delete-directory dir))))
 
-  ;; Expands the home-directory ~ shortcut on Mac.
-  (define (expand-path path)
-    (if (and (eqv? os-symbol 'macos)
-             (eqv? #\~ (string-ref path 0)))
-        (error "not implemented yet")
-        path))
+  (define (home-dir-path? path)
+    (and (not (eqv? os-symbol 'windows))
+         (eqv? #\~ (string-ref path 0))))
+
+  (define (file-parent-exists? path)
+    (file-exists? (path-parent path)))
 
   ;; Returns a human-readable symbol for the os from Chez's cryptic machine-type.
   (define os-symbol

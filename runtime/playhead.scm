@@ -42,7 +42,7 @@
 
 ;; TODO: clear only the offending pattern on error
 (define (handle-error condition)
-  (let ([p (console-output-port)])
+  (let ([p (current-output-port)])
     (display-condition condition p)
     (newline p)
     (flush-output-port p)

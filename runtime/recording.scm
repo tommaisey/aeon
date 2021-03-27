@@ -4,25 +4,30 @@
 (define-syntax record
   (syntax-rules ()
     ((_ arc/len filepath)
-     (if rendered-point
-         (let ([bufnum (open-write-buffer filepath)]
-               [arc (if (number? arc/len)
-                        (let ([start (round-up rendered-point arc/len)])
-                          (make-arc start (+ start arc/len)))
-                        arc/len)])
+     (cond
+      [(home-dir-path? filepath)
+       (printfln "Sorry, the '~~' home dir shortcut isn't supported yet.")]
+      [(not (file-parent-exists? filepath))
+       (printfln "Parent directory doesn't exist: ~a" filepath)]
+      [(not rendered-point)
+       (printfln "Won't record to: ~a. Retry after playhead has begun." filepath)]
+      [(not (or (number? arc/len) (arc? arc/len)))
+       (printfln "Record: first arg should be an arc or a number: ~a" arc/len)]
+      [else
+       (let ([bufnum (open-write-buffer filepath)]
+             [arc (if (number? arc/len)
+                      (let ([start (round-up rendered-point arc/len)])
+                        (make-arc start (+ start arc/len)))
+                      arc/len)])
 
-           (unless (arc? arc)
-             (error 'record "first arg should be an arc or a number" arc/len))
+         (when active-recording
+           (lest [synth-id (recording-state-synth active-recording)]
+                 (stop-synth synth-id))
+           (close-write-buffer (recording-state-bufnum active-recording)))
 
-           (when active-recording
-             (lest [synth-id (recording-state-synth active-recording)]
-                   (stop-synth synth-id))
-             (close-write-buffer (recording-state-bufnum active-recording)))
-
-           (set! active-recording (make-recording-state arc bufnum))
-           (println (format "Recording starts in ~~~A measures"
-                            (exact (round (- (arc-start arc) rendered-point))))))
-         (println (format "Won't record to: ~a. Retry after playhead has begun." filepath))))))
+         (set! active-recording (make-recording-state arc bufnum))
+         (printfln "Recording starts in ~~~A measures"
+                   (exact (round (- (arc-start arc) rendered-point)))))]))))
 
 ;;----------------------------------------------------------------
 ;; Note: `disk-out` fails if num input channels doesn't match the
