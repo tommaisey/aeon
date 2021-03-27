@@ -34,7 +34,7 @@
   ;; Defines some globally reserved bus numbers. These are used for
   ;; standard effects busses in the synthdefs. The numbers start at
   ;; 16. Buses are all stereo.
-  (define (get-bus-num i) (* i 2))
+  (define (get-bus-num i) (+ 16 (* i 2)))
   (define :verb1  (get-bus-num 0))
   (define :verb2  (get-bus-num 1))
   (define :delay1 (get-bus-num 2))

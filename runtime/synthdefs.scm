@@ -145,7 +145,7 @@
     (* :in :gain)))
 
 (send-synth sc3 "send"
-  (fx-synth ([:amount 0.2] [:bus 0 ir])
+  (fx-synth ([:amount 0.2] [:bus 0 ir] [:fade 0.1 ir])
     (mrg2 :in (out (private-bus :bus) (* :in :amount)))))
 
 (send-synth sc3 "hpf"

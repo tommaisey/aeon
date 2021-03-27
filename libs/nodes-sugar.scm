@@ -30,7 +30,7 @@
   ;; sample instrument
   (define (sm: sample seq . ops)
     (unless (or (valid-sample? sample) (vector? sample)) 
-      (error 'sm: "1st arg must be a string" sample))
+      (error 'sm: "1st arg must be a sample or sample set" sample))
     (in! seq (apply x-> (to: :inst "sampler" :smpl sample) ops)))
 
   (define (g-> group-num . ops)
