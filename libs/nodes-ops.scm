@@ -32,7 +32,7 @@
   ;; The symbol ~ creates a rest.
   (define (in! seq . ops)
     (define (impl context value)
-      (let* ([value (eval-leaf-early value (context-start context) context)]
+      (let* ([value (eval-leaf-empty value (context-start context) context)]
              [num (max 1 value)]
              [dur (/ (context-length context) num)]
              [start (context-start context)]
@@ -45,7 +45,7 @@
   ;; Adds events with a single specified property
   (define (in: key seq . ops)
     (define (impl context value)
-      (let ([value (eval-leaf-early value (context-start context) context)])
+      (let ([value (eval-leaf-empty value (context-start context) context)])
         (context-insert (context-resolve context)
                         (make-event-fast (context-start context)
                                          (:sustain (context-length context))

@@ -39,7 +39,7 @@
             (if mul? (event-update e :sustain sus-spread 1/8) e))))
       (lambda (context leaf)
         (let* ([old-arc (context-arc context)]
-               [val (eval-leaf-early leaf (arc-start old-arc) context)])
+               [val (eval-leaf-empty leaf (arc-start old-arc) context)])
           (cond
             ((is-rest? val) (context-resolve context))
             ((not (number? val)) (error 'mv "number" val))

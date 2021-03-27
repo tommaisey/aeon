@@ -2,7 +2,7 @@
   (export
     render-arc
     eval-leaf
-    eval-leaf-early
+    eval-leaf-empty
     leaf-meta-ranged
     leaf-subdivider?
     maybe-leaf-meta
@@ -35,7 +35,7 @@
   ;; If we eval a leaf in order to add a new event, the context will look
   ;; wrong - the event doesn't yet exist, so e.g. rand seeding would be broken.
   ;; In this case, add an empty event to the context before evaluating.
-  (define (eval-leaf-early v time-to-add context)
+  (define (eval-leaf-empty v time-to-add context)
     (if (or (procedure? v) (leaf-meta? v))
         (eval-leaf v (context-insert context (make-event time-to-add)))
         v))
