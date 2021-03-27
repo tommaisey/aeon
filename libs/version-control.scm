@@ -105,7 +105,7 @@
   (define (jump-branch name)
     (let ([prev-commit (current-commit)])
       (run-command (format "git checkout ~a" name))
-      (println (format "Jumped to ~a" name))
+      (printfln "Jumped to ~a" name)
       (changed-files prev-commit)))
 
   ;; Jump n commits back (negative) or forward (positive).
@@ -123,7 +123,7 @@
       (if (> num 0)
           (let ([hash (list-ref commits num)])
             (run-command (format "git checkout ~a" hash))
-            (println (format "Jumped ~a ~a" txt num))
+            (printfln "Jumped ~a ~a" txt num)
             (changed-files prev-commit))
           (begin (println "Can't jump any further.") '()))))
 

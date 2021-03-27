@@ -59,9 +59,9 @@
            [oct-pos (if (< sc-deg 0) (- sc-deg (- sc-len 1)) sc-deg)]
            [oct-overflow (trunc-int (/ oct-pos sc-len))]
            [semitone-offset (vector-ref scale sc-idx)])
-      ; (println (format "sc-idx: ~A, sc-deg: ~A, scale: ~A, semitone: ~A" 
-      ;           sc-idx sc-deg scale semitone-offset))
-      ; (println (format "oct-overflow: ~A" oct-overflow))
+      ; (printfln "sc-idx: ~A, sc-deg: ~A, scale: ~A, semitone: ~A" 
+      ;            sc-idx sc-deg scale semitone-offset)
+      ; (printfln "oct-overflow: ~A" oct-overflow)
       (+ semitone-offset
          (* oct-overflow 12)
          (* octave 12))))

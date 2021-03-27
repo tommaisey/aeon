@@ -96,7 +96,7 @@
       ;; kill scsynth when scheme exits
       ;; TODO: doesn't work when we invoke `scheme aeon.scm`
       (exit-handler (lambda args (kill) (apply old-exit-handler args)))
-      (println (format "~a pid: ~d" (string-last path 32 "...") pid))
+      (printfln "~a pid: ~d" (string-last path 32 "...") pid)
       (values
         (lambda () (let* ([text (get-line stdout)]
                      [said? (lambda (x) (string-contains-ci text x))])
