@@ -5,8 +5,6 @@
   (syntax-rules ()
     ((_ arc/len filepath)
      (cond
-      [(home-dir-path? filepath)
-       (printfln "Sorry, the '~~' home dir shortcut isn't supported yet.")]
       [(not (file-parent-exists? filepath))
        (printfln "Parent directory doesn't exist: ~a" filepath)]
       [(not rendered-point)
@@ -14,7 +12,7 @@
       [(not (or (number? arc/len) (arc? arc/len)))
        (printfln "Record: first arg should be an arc or a number: ~a" arc/len)]
       [else
-       (let ([bufnum (open-write-buffer filepath)]
+       (let ([bufnum (open-write-buffer (expand-path filepath))]
              [arc (if (number? arc/len)
                       (let ([start (round-up rendered-point arc/len)])
                         (make-arc start (+ start arc/len)))

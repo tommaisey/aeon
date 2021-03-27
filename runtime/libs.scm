@@ -1,16 +1,19 @@
 (compile-imported-libraries #t)
 (optimize-level 2)
 
+(define aeon-dir
+  (if (top-level-bound? 'aeon-file) (path-parent aeon-file) "."))
+
 (library-extensions 
  (list ".chezscheme.sls" ".sc" ".ss" ".scm" ".sls" ".sch"))
 
 (library-directories
- (list "."
-       "./libs"
-       "./libs/third-party"
-       "./libs/third-party/thunder"
-       "./libs/third-party/sc3"
-       "./tests"))
+ (map (lambda (s) (string-append aeon-dir s))
+      (list  "/libs"
+             "/libs/third-party"
+             "/libs/third-party/thunder"
+             "/libs/third-party/sc3"
+             "/tests")))
 
 (import (scheme)
         (utilities)
@@ -18,7 +21,7 @@
         (system)
         (version-control))
 
-(build-aeon-libraries (current-directory))
+(build-aeon-libraries aeon-dir)
 
 (import (prefix (rsc3) sc/)
         (prefix (sosc) so/)

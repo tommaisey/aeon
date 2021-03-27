@@ -2,8 +2,7 @@
 
 ;;------------------------------------------------------------------
 ;; Load libraries
-(source-directories (list "." "./runtime"))
-(load "libs.scm")
+(load "runtime/libs.scm")
 
 ;;------------------------------------------------------------------
 ;; Prevent a chez global lock blocking on the playback thread in emacs geiser.
@@ -16,14 +15,14 @@
 
 ;;------------------------------------------------------------------
 ;; Load top-level state and functions
-(load "sc3.scm")
-(load "synthdefs.scm")
-(load "buffers.scm")
-(load "event-process.scm")
-(load "patterns.scm")
-(load "recording.scm")
-(load "playhead.scm")
-(load "comms.scm")
+(load "runtime/sc3.scm")
+(load "runtime/synthdefs.scm")
+(load "runtime/buffers.scm")
+(load "runtime/event-process.scm")
+(load "runtime/patterns.scm")
+(load "runtime/recording.scm")
+(load "runtime/playhead.scm")
+(load "runtime/comms.scm")
 
 (tag-pdef-callable map)
 (tag-pdef-callable filter)

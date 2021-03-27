@@ -6,7 +6,7 @@
           home-dir expand-path
           path-append path+
           child-file-paths
-          rmdir
+          rmdir mkdir-rec
           definitions-in-file
           file-lines
           os-symbol)
@@ -24,10 +24,10 @@
   (define valid-scheme-path? (has-extension? "scm"))
 
   ;; A safer way to add a file name to a directory
-  (define (path-append dir file)
+  (define (path-append dir . files)
     (let* ([sep (string (directory-separator))]
            [dir (if (string-suffix? sep dir) dir (str+ dir sep))])
-      (str+ dir file)))
+      (apply str+ dir files)))
 
   ;; Mirrors our string-append -> str+ alias.
   (alias path+ path-append)
@@ -62,6 +62,7 @@
     (and (not (eqv? os-symbol 'windows))
          (eqv? #\~ (string-ref path 0))))
 
+  ;; Check if a file's parent directory exists
   (define (file-parent-exists? path)
     (file-exists? (path-parent path)))
 
@@ -97,7 +98,7 @@
           ((eof-object? s) out)))
     (with-input-from-file file-path do-read))
 
-  ;; Simple routine to open a file as a textual (rather than binary) port.
+  ;; Open a file as a textual (rather than binary) port.
   (define (open-file-as-textual-port file)
     (open-file-input-port file (file-options) 'block (native-transcoder)))
   
@@ -113,4 +114,3 @@
   (define (file-lines file)
     (lines-from-port (open-file-as-textual-port file))))
 
-(current-directory)
