@@ -50,7 +50,7 @@
                 list-index
                 delete-duplicates
                 lset-difference)
-          (only (srfi s13 strings) 
+          (only (srfi s13 strings)
                 string-contains
                 string-contains-ci
 		string-suffix?)

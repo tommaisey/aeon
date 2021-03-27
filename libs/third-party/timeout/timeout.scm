@@ -1,10 +1,16 @@
 (library (timeout timeout)
   (export bytes-ready?)
-  (import (scheme))
+  (import (scheme) (file-tools))
 
-  ;; This isn't nice! Can't figure out how to 
-  ;; load this relative to this library directory.
-  (define lib (load-shared-object "./libs/third-party/timeout/libtimeout.dylib"))
+  ;; Loads the dynamic library.
+  (define lib
+    (let ([dir (caar (library-directories))]
+          [so "/third-party/timeout/libtimeout"]
+          [ext (case os-symbol
+                 ['windows ".dll"]
+                 ['macos ".dylib"]
+                 ['linux ".so"])])
+      (load-shared-object (string-append dir so ext))))
 
   ;; Takes a file descriptor and a timeout in ms. Returns
   ;; false if the file doesn't become available for reading

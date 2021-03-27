@@ -89,7 +89,7 @@
     (call-with-output-file ".gitignore"
       (lambda (port) (put-string port gitignore)))
     (run-commands
-     "git add .gitignore"
+     "git add --all"
      "git commit -m \"aeon init\""
      ;; Rename the branch: (git 2.20.1 compatibile)
      "git branch -m $(git rev-parse --abbrev-ref HEAD) main"))
