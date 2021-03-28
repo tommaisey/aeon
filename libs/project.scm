@@ -32,6 +32,9 @@
           (newline p)
           (display ";; Time to make some music..." p)
           (newline p)))
+      (call-with-output-file (path+ dir ".dir-locals.el")
+        (lambda (p)
+          (put-datum p dir-locals)))
       (current-directory dir)
       (init-repo)))
 
@@ -50,5 +53,10 @@
           (if (file-exists? f)
               (begin (set-top-level-value! 'aeon-file f) (values f))
               (error 'new-project "Can't find aeon.scm")))))
+
+  (define dir-locals
+    '((nil . ((indent-tabs-mode . nil)))
+      (scheme-mode . ((geiser-active-implementations . (chez . nil))))
+      (auto-revert-mode . t)))
   
   )
