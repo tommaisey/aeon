@@ -43,8 +43,8 @@
       ((_ values) (step 1/4 values))
 
       ((_ slice-dur values)
-       (let ([data (pdef values)]
-             [len (if (list? data) (length data) 1)])
+       (let* ([data (pdef values)]
+              [len (if (list? data) (length data) 1)])
          (make-subdivider (* slice-dur len) data)))))
 
   ;;-------------------------------------------------------------------

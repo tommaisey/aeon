@@ -3,7 +3,7 @@
   (export has-extension?
           valid-scheme-path?
           file-parent-exists?
-          home-dir-path?
+          home-dir expand-path
           path-append path+
           child-file-paths
           rmdir
@@ -44,6 +44,20 @@
         (and (for-all identity (map rmdir (child-file-paths dir)))
              (delete-directory dir))))
 
+  ;; Makes a dir recursively
+  (define (mkdir-rec dir)
+    (when (not (file-parent-exists? dir))
+      (mkdir-rec (path-parent dir)))
+    (or (file-exists? dir) (begin (mkdir dir) #t)))
+
+  ;; Expands out ~/ from a path on unix.
+  (define (expand-path path)
+    (if (home-dir-path? path)
+        (let ([len (string-length path)])
+          (path+ home-dir (substring path (min 2 len) len)))
+        (values path)))
+
+  ;; True if a path starts with '~' and we're on unix.
   (define (home-dir-path? path)
     (and (not (eqv? os-symbol 'windows))
          (eqv? #\~ (string-ref path 0))))
@@ -64,6 +78,12 @@
                     ("osx" . macos)
                     ("qnx" . qnx)
                     ("s2"  . solaris))))))
+
+  ;; The user's home directory.
+  (define home-dir
+    (if (eqv? os-symbol 'windows)
+        (path+ (getenv "SystemDrive") (getenv "HOMEPATH"))
+        (getenv "HOME")))
 
   ;;-----------------------------------------------------------------------
   ;; Looks for top-level forms in a file matching defining-form? and

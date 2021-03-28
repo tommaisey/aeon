@@ -26,20 +26,21 @@
   (define-syntax samples-dir
     (syntax-rules ()
       ((_ name dir-path pred)
-       (samples-impl name
-         (let* ([p (if (procedure? pred) pred (lambda (s) (string=? pred s)))]
-                [p (lambda (s) (and (p s) (valid-sample? s)))])
-           (map (lambda (x) (path-append dir-path x))
-                (filter p (list-sort string<? (directory-list dir-path)))))
-         (str+ " from ..." (string-last dir-path 42))))
+       (samples-impl
+        name
+        (let* ([path (expand-path dir-path)]
+               [flt (if (procedure? pred) pred (lambda (s) (equal? s pred)))]
+               [flt (lambda (s) (and (flt s) (valid-sample? s)))]
+               [sorted (list-sort string<? (directory-list path))])
+          (map (lambda (f) (path+ path f)) (filter flt sorted)))
+        (str+ " from ..." (string-last dir-path 42))))
 
       ((_ name dir-path)
        (samples-dir name dir-path (lambda (x) #t)))))
 
-  ;; Declares 4 new identifiers based off the `name`.
-  ;; - `name` is a value containing the first sample returned by list-impl.
+  ;; Declares 3 new identifiers based off the `name`.
+  ;; - `name` is a vector of samples returned by list-impl.
   ;; - `name/` is a fn that take indeces and returns samples
-  ;; - `name-list` is the raw list of samples
   ;; - `name-num` is the number of samples
   (define-syntax samples-impl
     (lambda (x)
