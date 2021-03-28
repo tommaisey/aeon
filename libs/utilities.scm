@@ -35,6 +35,7 @@
           string-contains-ci
           string-suffix?
           string-last
+          short-date-string
           str+
           gen-id
           with-identifiers
@@ -352,6 +353,16 @@
   (define (printfln format-string . vars)
     (fresh-line)
     (println (apply format format-string vars)))
+
+  (define (short-date-string)
+    (define (join list)
+      (string-concat "" list))
+    (define (stringifier date)
+      (lambda (x) (if (string? x) x (string-last (format "~2,'0d" (x date)) 2))))
+    (join (map (stringifier (current-date))
+               (list date-year date-month date-day
+                     "-"
+                     date-hour date-minute date-second))))
 
   (define-syntax declare-keywords
     (syntax-rules ()
