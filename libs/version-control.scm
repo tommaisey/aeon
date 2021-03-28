@@ -8,9 +8,15 @@
           list-saves
           print-saves
           init-repo
-          current-branch)
+          current-branch
+          commits-back
+          unstaged-changes)
   
-  (import (chezscheme) (utilities) (file-tools) (system))
+  (import (chezscheme)
+          (utilities)
+          (file-tools)
+          (system)
+          (ansi-colour))
 
   ;; Save the current state of the project, optionally in a new branch.
   ;; => (values success? error-msg)
@@ -44,9 +50,12 @@
       (str+ "git log --graph --decorate --all "
             "--date=relative "
             "--pretty='format:[%ad] %D'"))
+    (define (highlight-active s pos)
+      (colourise-text
+       :green-light (string-replace s pos (+ pos 4) "[x]")))
     (define (trans s)
-      (let ([pos (string-contains-ci s "HEAD")])
-        (or (and pos (string-replace s pos (+ pos 4) "x")) s)))
+      (let ([pos (string-contains s "HEAD")])
+        (or (and pos (highlight-active s pos)) s)))
     (apply println (map trans (lines-output cmd))))
 
   ;; Initialize a git repo in (current-directory).
@@ -79,6 +88,9 @@
   (define (changed-files ref)
     (lines-output (format "git diff --name-only HEAD ~a" ref)))
 
+  (define (unstaged-changes)
+    (lines-output "git status --porcelain"))
+
   (define (newest-branches)
     (define fn (compose lines-output filter-branches reverse))
     (fn "git branch --sort=authordate"))
@@ -105,7 +117,7 @@
   (define (jump-branch name)
     (let ([prev-commit (current-commit)])
       (run-command (format "git checkout ~a" name))
-      (printfln "Jumped to ~a" name)
+      (print-saves)
       (changed-files prev-commit)))
 
   ;; Jump n commits back (negative) or forward (positive).
@@ -121,16 +133,30 @@
            [num (min (abs n) (dec (length commits)))]
            [prev-commit (current-commit)])
       (if (> num 0)
-          (let ([hash (list-ref commits num)])
-            (run-command (format "git checkout ~a" hash))
-            (printfln "Jumped ~a ~a" txt num)
-            (changed-files prev-commit))
+          (let* ([hash (list-ref commits num)]
+                 [cmd (format "git checkout ~a" hash)])
+            (save-if-unstaged)
+            (let-values ([(res txt) (run-command cmd)])
+              (if res
+                  (begin
+                    (print-saves)
+                    (changed-files prev-commit))
+                  (values res txt))))
           (begin (println "Can't jump any further.") '()))))
+
+  ;; Save any unstaged changes
+  (define (save-if-unstaged)
+    (unless (null? (unstaged-changes))
+      (let* ([name (current-branch)]
+             [known? (not (or (equal? name "HEAD") (equal? name "")))]
+             [name (if known? name (str+ "auto-" (short-date-string)))])
+        (printfln "Saving changes to ~s" name)
+        (save name))))
 
   ;;-------------------------------------------------------------------
   ;; A standard .gitignore file's contents.
   (define gitignore
-    (str+ syscall-file-prefix "*\n*.DS_Store\n*~\n"))
+    (str+ syscall-file-prefix "*\n*.DS_Store\n*~\n.#\n"))
 
   ;; Whether the response to `git init` indicates an existing git repo.
   (define (git-reinitialized? init-output-lines)
