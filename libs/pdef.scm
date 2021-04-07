@@ -1,9 +1,9 @@
 #!chezscheme ;; Needed for using weird symbols as names.
 
-;; Defines a macro that is used in pattern definitions. It attempts
-;; to free the user from needing to understand lists, quasiquoting
-;; etc. Would all be a lot easier if we have Clojure's [] vector
-;; syntax!
+;; Defines a macro that is used in values lists for sequences.
+;; It attempts to free the user from needing to understand lists,
+;; quasiquoting etc. Would all be a lot easier if we have
+;; Clojure's [] vector syntax!
 (library (pdef)
   (export pdef ^
           ! !2 !3 !4 !5 !6 !7 !8 !9 !10 !11 !12 !13 !14 !15 !16

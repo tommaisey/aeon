@@ -51,9 +51,7 @@
                                          (:sustain (context-length context))
                                          (key value)))))
     (unless (symbol? key) (error 'in: "expected :key" key))
-    (if (null? ops)
-        (wrap-subdivide-fn impl seq)
-        (apply o-> (wrap-subdivide-fn impl seq) ops)))
+    (apply o-> (wrap-subdivide-fn impl seq) ops))
 
   ;; A node that sets a property of events according to the pattern.
   ;; key value ... -> (context -> context)

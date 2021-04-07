@@ -1,0 +1,262 @@
+[WARNING] This document format requires a nonempty <title> element.
+  Defaulting to '-' as the title.
+  To specify a title, use 'title' in metadata or --metadata title="...".
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>-</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="file:///Users/tom/.emacs.d/themes/github-pandoc.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<h1 id="aeon-manual">aeon manual</h1>
+<p>This is embryonic documentation for a system that's under heavy development. Things may change!!</p>
+<p>A large part of the motivation for writing these docs is to force myself to explain the main concepts to a beginner - I think this will help me to figure out where things make sense and where they need more work.</p>
+<h2 id="contents">contents</h2>
+<ol type="1">
+<li><a href="#overview">overview</a>
+<ol type="1">
+<li><a href="#note-on-examples">note on examples</a></li>
+</ol></li>
+<li><a href="#patterns">patterns</a>
+<ol type="1">
+<li><a href="#pattern-definitions">pattern definitions</a>
+<ol type="1">
+<li><a href="#quantise-changes">quantise changes</a></li>
+<li><a href="#play-length">play length</a></li>
+</ol></li>
+<li><a href="#pattern-operators">pattern operators</a>
+<ol type="1">
+<li><a href="#in-family">'in' family</a></li>
+<li><a href="#to-family">'to' family</a></li>
+<li><a href="#tt-family">'tt' family</a></li>
+</ol></li>
+<li><a href="#subdividing-generators">subdividing generators</a>
+<ol type="1">
+<li><a href="#subdivision">subdivision</a></li>
+<li><a href="#rests-ties-and-repeats">rests, ties and repeats</a></li>
+<li><a href="#over">over</a></li>
+<li><a href="#step">step</a></li>
+</ol></li>
+<li><a href="#continouous-generators">continuous generators</a>
+<ol type="1">
+<li><a href="#random">random</a></li>
+<li><a href="#sine">sine</a></li>
+<li><a href="#every">every</a></li>
+</ol></li>
+<li><a href="#algorithms">algorithms</a>
+<ol type="1">
+<li><a href="#euclidean">euclidean</a></li>
+<li><a href="#bits">bits</a></li>
+</ol></li>
+<li><a href="#groove-adjustment">temporal operators</a>
+<ol type="1">
+<li><a href="#swing">swing</a></li>
+<li><a href="#legato">legato</a></li>
+<li><a href="#taps">taps</a></li>
+</ol></li>
+<li><a href="#grouping-with-chains">grouping with chains</a>
+<ol type="1">
+<li><a href="#part">part o-&gt;</a></li>
+<li><a href="#with">with x-&gt;</a></li>
+<li><a href="#copy">copy +-&gt;</a></li>
+</ol></li>
+</ol></li>
+<li><a href="#drones-and-effects">drones and effects</a>
+<ol type="1">
+<li><a href="#drones">drones</a></li>
+<li><a href="#effect-groups">effect groups</a></li>
+<li><a href="#control-patterns">control patterns</a></li>
+</ol></li>
+<li><a href="#instruments-and-sound-design">instruments and sound design</a>
+<ol type="1">
+<li><a href="#sources">sources</a></li>
+<li><a href="#effects">effects</a></li>
+<li><a href="#send-effects">send effects</a></li>
+</ol></li>
+<li><a href="#projects-and-saves">projects and saves</a>
+<ol type="1">
+<li><a href="#creating-a-project">creating a project</a></li>
+<li><a href="#version-control">version-control</a></li>
+</ol></li>
+<li><a href="#recording-loops">recording loops</a></li>
+</ol>
+<h2 id="overview">overview</h2>
+<p><code>aeon</code> is a music live-coding and composition tool that runs on the <a href="https://scheme.com/tspl4/">Scheme</a> programming language (specifically <a href="https://scheme.com">Chez Scheme</a>). Its focus is on writing and transforming musical patterns in a way that's intuitive, discoverable and fast.</p>
+<p>This document lists all of the built-in forms that <code>aeon</code> provides, which can be composed into more complex custom forms as needed. This document is structured as a general reference, not a step-by-step guide to learning <code>aeon</code>. For that you should turn to the <a href="tutorial.md">tutorial</a>.</p>
+<h2 id="patterns">patterns</h2>
+<p>At the heart of <code>aeon</code> is a collection of tools for generating events in time. Often events represent notes to be played on a synthesizer or sampler instrument (either one you built yourself or a built-in template). But events can also represent control data for changing existing synth voices or effects.</p>
+<p>Events have 'properties', which are interpreted by the playback system when it generates sound. Each note destined for a synth or sampler, for example, may have any properties supported by that particular instrument. These could include frequency, envelope information, oscillator shape, effects or output sends, etc. The sky is the limit, and is customised per instrument (though many properties are shared between instruments). Thus you can sequence many more properties than are available in a traditional MIDI-based sequencer.</p>
+<p>The techniques for specifying when events happen and what properties they have are unified, flexible and powerful.</p>
+<h3 id="pattern-definitions">pattern definitions</h3>
+<p>A pattern definition tells the <code>aeon</code> system about a pattern you want to play. It has a name, so that it can be updated in the future, and a series of operator expressions that describe the pattern:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>(pattern name</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  (operator expression) <span class="op">...</span>)</span></code></pre></div>
+<p>Evaluating this form will begin playing the pattern instantly. Re-evaluating it will apply any changes to the pattern instantly. The pattern will continue playing until you stop it.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; stop one or more patterns</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>(stop pattern-names <span class="op">...</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; stop all patterns</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>(stop)</span></code></pre></div>
+<h4 id="quantise-changes">quantise changes</h4>
+<p>[<strong>note</strong>: unimplemented]</p>
+<p>If you don't want changes to happen instantly, you can quantise changes to a pattern to a certain number of measures like this:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(pattern (name quantised-measures)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (operator expression) <span class="op">...</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; play quarter notes</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; start/change on a 2 measure boundary</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>(pattern (x <span class="dv">2</span>) (in! <span class="dv">4</span>))</span></code></pre></div>
+<h4 id="play-length">play length</h4>
+<p>[<strong>note</strong>: unimplemented]</p>
+<p>Adding a third value into the first form of a pattern directs the system to play it for only a limited of measures. This can be useful for 'one-shot' effects or transitional sounds during a performance.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(pattern (name quantised-measures length-limit-measures)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (operator expression) <span class="op">...</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; play sixteenth notes</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; start/change on a 2 measure boundary</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; only play for 1 measure</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>(pattern (x <span class="dv">2</span> <span class="dv">1</span>) (in! <span class="dv">16</span>))</span></code></pre></div>
+<h3 id="pattern-operators">pattern operators</h3>
+<p>Operators are constructs that dictate how a pattern (or set of patterns) will be used to generate or modify events. There are different families of operators for generating and modifying events, but all of these can use the same pattern constructs to do their work.</p>
+<h4 id="in-family"><code>in</code> family</h4>
+<p>This family of operators is used for adding new events to a stream. The events can may be created 'blank' to add properties later, or with some properties already baked-in.</p>
+<h5 id="in"><code>in!</code></h5>
+<p>Creates blank events that will be given the instrument <code>"sine-grain"</code> and a <code>:freq</code> of 440 by default.</p>
+<p>Here is the general form of <code>in!</code>. It takes a pattern generator, followed by zero or more further operations:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(in! generator ops <span class="op">...</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; equivalent to:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>(part (in! generator) ops <span class="op">...</span>)</span></code></pre></div>
+<p>If further operations are supplied, it's as if the <code>in!</code> expression were wrapped in a <a href="#part">part chain</a>, so that those operations <em>only</em> get applied to the new events generated by <code>in!</code>, and not to existing events in the stream.</p>
+<p>Here are some further illustrative examples:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; four events per measure:</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>(in! <span class="dv">4</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; equivalent:</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>(in! (over <span class="dv">1</span> <span class="op">[</span><span class="dv">4</span><span class="op">]</span>))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; a more complex subdivided rhythm:</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>(in! (over <span class="dv">1</span> <span class="op">[</span><span class="dv">2</span> <span class="op">[</span>~ <span class="dv">1</span><span class="op">]</span> <span class="dv">1</span> <span class="op">$]</span>))</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">;; two event streams, with separate further operations:</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>(part</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  (in! <span class="dv">2</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>       (to: :scd I)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>       (tt* <span class="dv">1</span>/3))</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  (in! <span class="dv">8</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>       (to: :scd V)))</span></code></pre></div>
+<p>If the generator provided to <code>in!</code> is not a subdivider, it is wrapped in the <a href="#over">over</a> subdivider, with a length of 1 measure. Thus <code>4</code> is equivalent to <code>(over [4])</code>.</p>
+<p>Values other than <code>1</code> in a subdivider further subdivide the step that they reside in. Examples:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; These are equivalent:</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>(in! <span class="dv">4</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>(in! (over <span class="op">[</span><span class="dv">4</span><span class="op">]</span>))</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>(in! (over <span class="op">[</span><span class="dv">1</span> <span class="dv">1</span> <span class="dv">1</span> <span class="dv">1</span><span class="op">]</span>))</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; As are these:</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>(in! (over <span class="op">[</span><span class="dv">2</span> <span class="dv">1</span><span class="op">]</span>))</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>(in! (over <span class="op">[[</span><span class="dv">1</span> <span class="dv">1</span><span class="op">]</span> <span class="dv">1</span><span class="op">]</span>))</span></code></pre></div>
+<h5 id="in-1"><code>in:</code></h5>
+<p>Behaves very much like <code>in!</code> except the values returned from its pattern generator are used to set a property. Here is its general form:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(in: :property generator</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>     ops <span class="op">...</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; equivalent to:</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>(part (in: :property generator)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      ops <span class="op">...</span>)</span></code></pre></div>
+<p>Some examples. These must be wrapped in <code>(pattern name ...)</code> if you want to hear them.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; 4 events per measure, with different scale degrees</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>(in: :scd (over <span class="op">[</span>I IV VI V<span class="op">]</span>))</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; 2 events per half measure, on different instruments</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>(in: :inst (over <span class="dv">1</span>/2 <span class="op">[</span><span class="st">&quot;pulse-pluck&quot;</span> <span class="st">&quot;fm-grain&quot;</span><span class="op">]</span>))</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; 2 events per half measure, on different instruments</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>(in: :inst (over <span class="dv">1</span>/2 <span class="op">[</span><span class="st">&quot;pulse-pluck&quot;</span> <span class="st">&quot;fm-grain&quot;</span><span class="op">]</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>     (to: :scd (over <span class="dv">4</span> <span class="op">[</span>I VI VIII IV<span class="op">]</span>)))</span></code></pre></div>
+<h3 id="subdividing-generators">subdividing generators</h3>
+<h3 id="continuous-generators">continuous generators</h3>
+<p>A note: continuous generators can be used as the generator for an <code>in:</code> expression, but without further specification, the system won't know how often to generate events. By default it will generate them once per measure. To choose other frequencies, wrap it in an <code>over</code> expression:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; 1 event per measure, frequency chosen by sine:</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>(in: :freq (sine <span class="dv">4</span> <span class="dv">100</span> <span class="dv">1000</span>))</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; 8 events per measure:</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>(in: :freq (over <span class="dv">1</span>/8 (sine <span class="dv">4</span> <span class="dv">100</span> <span class="dv">1000</span>)))</span></code></pre></div>
+</body>
+</html>

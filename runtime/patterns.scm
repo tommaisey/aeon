@@ -3,12 +3,12 @@
 (define-syntax pattern
   (syntax-rules ()
     ((_ name p)
-     (pattern name #t p))
+     (begin
+       (define name p)
+       (add-pattern pattern-dict 'name p)))
 
-    ((_ name play-now? p)
-     (begin (define name p)
-            (when play-now?
-              (add-pattern pattern-dict 'name p))))))
+    ((_ name p ps ...)
+     (pattern name (o-> p ps ...)))))
 
 (define-syntax start
   (syntax-rules ()
@@ -17,10 +17,11 @@
 
 (define-syntax stop
   (syntax-rules ()
+    ((_)
+     (clear-patterns pattern-dict))
+
     ((_ name ...)
      (begin (remove-pattern pattern-dict 'name) ...))))
-
-(define (clear) (clear-patterns pattern-dict))
 
 ;;------------------------------------------------------------------
 (define (pattern-form? datum)
