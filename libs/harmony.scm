@@ -28,6 +28,17 @@
           (midinotes)
           (event))
 
+  ;; Event key definitions
+  (declare-keywords :octave :midinote
+                    :root :scale :tuning
+                    :chord-shape
+                    :scale-degree
+                    :chord-degree)
+  (alias :scd :scale-degree)
+  (alias :chd :chord-degree)
+  (alias :chs :chord-shape)
+
+  ;; Converts a midi note to a frequency
   (define (midicps midi freqA)
     (* freqA (expt 2 (/ (- midi 69) 12))))
 
@@ -47,7 +58,7 @@
             (let* ([s (chord-offset oct scd chd scale)]
                    [f (midicps (+ root s) 440)])
               (event-remove-multi (event-set e ':freq f)
-                                  (list :scale :chord-shape :root))))))))
+                                  '(:scale :chord-shape :root))))))))
 
   ;; Gets the semitone offset of a single note in a chord, computed
   ;; from the desired octave offset, scale degree, chord degree and scale.
@@ -65,16 +76,6 @@
       (+ semitone-offset
          (* oct-overflow 12)
          (* octave 12))))
-
-  ;; Event key definitions
-  (declare-keywords :octave :midinote
-                    :root :scale :tuning
-                    :chord-shape
-                    :scale-degree
-                    :chord-degree)
-  (alias :scd :scale-degree)
-  (alias :chd :chord-degree)
-  (alias :chs :chord-shape)
 
   (define I    0)
   (define II   1)

@@ -1,9 +1,9 @@
 #!chezscheme ;; Needed for extra symbols like »
 
 ;; Implements algorithms that slice a context up into chunks according
-;; to several schemes, and either return a value or call an implementation 
+;; to several schemes, and either return a value or call an implementation
 ;; function for each chunk.
-;; The implementation function will be retrieved from context-subdivide-fn 
+;; The implementation function will be retrieved from context-subdivide-fn
 ;; and must take a context (which will have the sliced arc) and a 'leaf'.
 ;; See node-eval for information on leafs.
 
@@ -52,7 +52,7 @@
   (define-syntax lerp
     (syntax-rules ()
       ((_ values) (lerp 1 values))
- 
+
       ((_ measures values)
        (let ([data (pdef values)])
          (error 'lerp "not implemented yet")))))
@@ -62,7 +62,7 @@
 
   ;;-------------------------------------------------------------------
   (make-doc subdivide-docs
-    (over 
+    (over
      "Creates a repeated sequence of values, spread evenly over the time period 'dur'.
 Sub-lists further subdivide the step they occupy, according to the rules of 'over'."
      ((dur [/opt Number 1]
@@ -73,13 +73,13 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
      (((over [1 2 3]) => "repeating sequence of [1 2 3] each 1 measure")
       ((over 2 [1 2 3]) => "repeating sequence of [1 2 3] every 2 measures")))
 
-    (step 
+    (step
      "Creates a repeated sequence of values, with each value applying for 'slice-dur'.
 The total length of the sequence is therefore (* slice-dur (length def)).
 Sub-lists further subdivide the step they occupy, according to the rules of 'over'."
-     ((slice-dur [/opt Number 1/4] 
+     ((slice-dur [/opt Number 1/4]
                  "The length of time each value will apply for")
-      (values [/list [Number or Function]] 
+      (values [/list [Number or Function]]
               "The values to be distributed, one per period 'slice-dur'"))
 
      (((step [1 2 3]) => "repeating sequence of [1 2 3] each 3/4 measure")
@@ -102,7 +102,7 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
   ;;
   ;; If the context has a subdivide-fn of #f, this simply returns an element of
   ;; from vals based on the time of the context's pointed to event (or its start
-  ;; if empty). 
+  ;; if empty).
   ;; If the context has a subdivide-fn, this calls it with each slice of the
   ;; input context and an associated leaf value. The subdivide-fn must return
   ;; a transformed context with the same arc.
@@ -111,7 +111,7 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
       (error 'subdivide "empty subdividing pdef" vals))
     (unless (unsafe-list? vals)
       (set! vals (list vals)))
-    
+
     (let ([slice-len (/ dur (length vals))])
       (define (process ctxt)
         (let loop ([c (make-context (context-arc ctxt))]
