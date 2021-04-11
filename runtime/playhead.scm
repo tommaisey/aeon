@@ -57,16 +57,14 @@
 
 (define (play)
   (start-thread playback-thread-semaphore)
-  (stop-waiting playback-thread-semaphore)
-  (pipe-out (playhead-sync-info)))
+  (stop-waiting playback-thread-semaphore))
 
 (define (pause)
   (start-waiting playback-thread-semaphore)
   (so/send sc3 sc/clear-sched)
   (cancel-recording)
   (set! rendered-point #f)
-  (set! last-process-time #f)
-  (pipe-out (playhead-sync-info)))
+  (set! last-process-time #f))
 
 (define* (rewind [/opt (keep-playing #t)])
   (pause)
@@ -78,7 +76,6 @@
 
 (define (set-bpm! n)
   (set! bpm n)
-  (pipe-out (playhead-sync-info))
   (play-event (make-event 0 
                           :tempo (bpm->mps n)
                           :control "tempo"

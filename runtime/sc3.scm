@@ -15,6 +15,9 @@
 (define (send-bundle t args)
   (so/send sc3 (so/bundle t args)))
 
+(define* (utc [/opt (offset-secs 0)])
+  (+ (sc/utc) offset-secs))
+
 ;;-----------------------------------------------------------------
 ;; We keep a list of all the groups that have been created so
 ;; we don't spam new group commands to SC. After init, these fns
@@ -47,7 +50,7 @@
 (define (voice-group-out-id group-id) (+ 32768 group-id))
 (define (voice-group-bus group-id) (+ 256 group-id))
 
-(define* (create-voice-group id [/opt (t (sc/utc))])
+(define* (create-voice-group id [/opt (t (utc 0.1))])
   (when (register-group id)
     (let ([out-id (voice-group-out-id id)])
       (send-bundle t
@@ -106,13 +109,13 @@
 
 ;; Useful for quick testing of synthdefs
 (define (play-now name arg-pairs)
-  (play-when name (sc/utc) standard-group arg-pairs))
+  (play-when name (utc) standard-group arg-pairs))
 
 ;; Much like play-when, but adds to tail
+;; Avoid confusing 'late' messages by delaying 0.1
 (define (start-send-effect name . arg-pairs)
-  (send-bundle (+ (sc/utc) 0.25) ;; Avoid confusing 'late' messages
-               (list (sc/s-new0 name -1 sc/add-to-tail send-effect-group)
-                     (sc/n-set -1 arg-pairs))))
+  (play-when name (utc 0.1) send-effect-group arg-pairs
+             -1 sc/add-to-tail))
 
 ;; Kills a running synth immediately (may cause clicks)
 (define* (stop-synth synth-id [/opt (t (sc/utc))])

@@ -4,7 +4,8 @@
 
 ;; Useful test function: (test-synth "sine-grain" :freq 330 :attack 1/16)
 (define (test-synth name . args)
-  (play-now name (event-symbols->strings (apply make-alist args))))
+  (play-when name (utc 0.1) default-group 
+             (event-symbols->strings (apply make-alist args))))
 
 ;;------------------------------------------------------------------
 ;; Keyword for specifying which synthdef an event applies to.
@@ -107,7 +108,7 @@
 
 (send-synth sc3 "dual-lopass"
   (src-synth ([:freq 440 kr 0.175]
-              [:attack 2] [:sustain 1] [:release 1]
+              [:attack 2] [:sustain 1] [:release 0.75]
               [:cutoff1 1 kr 0.5] [:cutoff2 2 kr 0.5] [:resonance 0.1])
 
     (define (make-osc freq flt-atk cutoff-prop)

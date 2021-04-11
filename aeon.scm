@@ -22,7 +22,6 @@
 (load "runtime/patterns.scm")
 (load "runtime/recording.scm")
 (load "runtime/playhead.scm")
-(load "runtime/comms.scm")
 
 (tag-pdef-callable map)
 (tag-pdef-callable filter)
@@ -31,7 +30,7 @@
 (play)
 
 ;;------------------------------------------------------------------
-(let ([divider (fold-left str+ "" (repeat 60 "-"))])
+(let ([divider (make-string 60 #\-)])
   (println divider)
   (println "[aeon] musical patterns")
   (println divider))
