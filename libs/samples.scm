@@ -33,7 +33,7 @@
                [flt (lambda (s) (and (flt s) (valid-sample? s)))]
                [sorted (list-sort string<? (directory-list path))])
           (map (lambda (f) (path+ path f)) (filter flt sorted)))
-        (str+ " from ..." (string-last dir-path 42))))
+        (str+ "from ..." (string-last dir-path 42))))
 
       ((_ name dir-path)
        (samples-dir name dir-path (lambda (x) #t)))))
@@ -58,10 +58,8 @@
                  (lambda (context)
                    (get-sample-safe id (eval-seq val context))))
 
-               (println (str+ (symbol->string 'id) ": "
-                              (number->string id-num)
-                              " samples added"
-                              source-string))))))))
+               (printfln "~a: ~a samples added ~a"
+                         'id id-num source-string)))))))
 
   (define (valid-sample? f)
     (and (string? f)
