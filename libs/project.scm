@@ -1,31 +1,31 @@
 ;; Handles creating and managing a new aeon music project.
 (library (project)
 
-  (export new-project switch-project)
+  (export new-project)
 
   (import (chezscheme)
           (utilities)
           (file-tools)
-          (version-control)
-          (srfi s13 environment ))
+          (version-control))
 
   (define (new-project name)
     (let* ([dir  (path+ home-dir "Music/aeon/" name)]
            [first-file (path+ dir "start.scm")]
            [config-file (path+ dir "config.scm")]
-           [code (aeon-finder-code)]) ; do early, could error
+           [code (aeon-finder-code)])   ; do early, could error
       (when (file-exists? dir)
         (error 'new-project
-          "Can't create project: directory already exists."))
+          "Directory already exists."))
       (mkdir-rec dir)
       (call-with-output-file config-file
         (lambda (p)
+          (display ";; Loads the aeon runtime. Don't delete this!" p)
+          (newline p)
+          (pretty-print code p)
+          (newline p)
+          (newline p)
           (display ";; You can add project-specific config here:" p)
-          (newline p)
-          (newline p)
-          (display ";; Loads the aeon runtime. Don't delete it!" p)
-          (newline p)
-          (put-datum p code)))
+          (newline p)))
       (call-with-output-file first-file
         (lambda (p)
           (put-datum p '(load "config.scm"))
@@ -34,14 +34,14 @@
           (newline p)))
       (call-with-output-file (path+ dir ".dir-locals.el")
         (lambda (p)
-          (put-datum p dir-locals)))
+          (pretty-print dir-locals p)))
       (current-directory dir)
       (init-repo)))
 
   (define (aeon-finder-code)
-    `(let ([f ,(get-aeon-file)] [sym 'aeon-file])
-       (unless (top-level-bound? sym)
-         (set-top-level-value! sym f)
+    `(let ([f ,(get-aeon-file)])
+       (unless (top-level-bound? 'aeon-file)
+         (set-top-level-value! 'aeon-file f)
          (source-directories (cons (path-parent f)
                                    (source-directories)))
          (load f))))

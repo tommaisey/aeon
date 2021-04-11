@@ -26,6 +26,7 @@
 (import (prefix (rsc3) sc/)
         (prefix (sosc) so/)
         (rename (matchable) (? ??) ($ $$))
+        (project)
         (doc)
         (event)
         (arc)
