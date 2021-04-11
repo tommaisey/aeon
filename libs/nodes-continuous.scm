@@ -16,7 +16,7 @@
 ;; Many of these actually return a special 'leaf' object, a function wrapped
 ;; with some metadata that may be needed to evaluate the graph accurately.
 ;;----------------------------------------------------------------------
-(library (nodes-leafs)
+(library (nodes-continuous)
   (export
    ? rnd wpick pick
    each every sine)

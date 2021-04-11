@@ -29,7 +29,7 @@
         (context)
         (pdef)
         (node-eval)
-        (nodes-leafs)
+        (nodes-continuous)
         (nodes-subdivide)
         (nodes-chains)
         (nodes-ops)

@@ -24,7 +24,7 @@
     (node-eval)
     (nodes-subdivide)
     (nodes-chains)
-    (nodes-leafs))
+    (nodes-continuous))
 
   ;; Adds blank events to the context.
   ;; A leaf value of 1 gives one event.

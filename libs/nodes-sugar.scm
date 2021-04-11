@@ -11,7 +11,7 @@
     (nodes-ops)
     (nodes-subdivide)
     (nodes-chains)
-    (nodes-leafs))
+    (nodes-continuous))
 
   (declare-keywords :inst :group :fx :control)
 
