@@ -1,6 +1,4 @@
 ;;----------------------------------------------------------------------
-;; leaves
-;;
 ;; Functions which might return different value based on the context they
 ;; are passed, i.e. 'contextual' values. This lets us maintain the
 ;; referential transparency that is key for the system to work.
@@ -13,7 +11,7 @@
 ;; Others of these functions don't really need a context - but may want to
 ;; treat _their_ arguments as callable leaves (which *may* need a context).
 ;;
-;; Many of these actually return a special 'leaf' object, a function wrapped
+;; Many of these actually return a special seq-meta object, a function wrapped
 ;; with some metadata that may be needed to evaluate the graph accurately.
 ;;----------------------------------------------------------------------
 (library (nodes-continuous)
@@ -37,10 +35,10 @@
       [(key) (rnd 0.0 1.0 key)]
       [(min max) (rnd min max '())]
       [(min max key/keys)
-       (leaf-meta-ranged (list min max)
+       (seq-meta-ranged (list min max)
                          (lambda (context)
-                           (let ([min (eval-leaf min context)]
-                                 [max (eval-leaf max context)]
+                           (let ([min (eval-seq min context)]
+                                 [max (eval-seq max context)]
                                  [seed (fold-by-keys * 10000 key/keys context)])
                              (pseudo-rand min max seed))))]))
 
@@ -53,11 +51,11 @@
        (let* ([lst (pdef qlist)]
               [len (length lst)]
               [rgen (rnd 0 len key/keys)])
-         (leaf-meta-ranged
+         (seq-meta-ranged
           lst
           (lambda (context)
-            (let ([choice (eval-leaf rgen context)])
-              (eval-leaf (list-ref lst choice) context))))))))
+            (let ([choice (eval-seq rgen context)])
+              (eval-seq (list-ref lst choice) context))))))))
 
   ;; Choose from a list randomly, with weightings
   (define-syntax wpick
@@ -89,11 +87,11 @@
                 [top (list-last cumulative-weights)]
                 [rgen (rnd 0 top key/keys)]
                 [picker (index-picker cumulative-weights)])
-           (leaf-meta-ranged
+           (seq-meta-ranged
             lst
             (lambda (context)
-              (let* ([v (eval-leaf rgen context)])
-                (eval-leaf (list-ref lst (picker v)) context)))))))))
+              (let* ([v (eval-seq rgen context)])
+                (eval-seq (list-ref lst (picker v)) context)))))))))
 
   ;; This short operator picks either rnd, pick or wpick depending
   ;; on the arguments. Two lists gets wpick, one list gets pick, and
@@ -139,12 +137,12 @@
               [len (length lst)])
          (when (< len 1)
            (error 'each "requires at least 1 value" len))
-         (leaf-meta-ranged
+         (seq-meta-ranged
           lst
           (lambda (context)
             (let* ([t (context-now context)]
                    [n (trunc-int (/ t measures))])
-              (eval-leaf (list-ref lst (modulo n len)) context))))))
+              (eval-seq (list-ref lst (modulo n len)) context))))))
       
       ((_ args ...)
        (error 'each "expects (measures values)" 'args ...))))
@@ -161,7 +159,7 @@
            (error 'every "requires at least 2 values" len))
          (when (zero? n)
            (error 'every "n cannot be 0" n))
-         (leaf-meta-ranged
+         (seq-meta-ranged
           lst
           (lambda (context)
             (let* ([t (context-now context)]
@@ -170,8 +168,8 @@
                    [choice (lambda () (+ 1 (mod n-cycles (- len 1))))])
               (lif [n-wrapped (mod i n)]
                    (eq? n-wrapped (- n 1))
-                   (eval-leaf (list-ref lst (choice)) context)
-                   (eval-leaf (car lst) context)))))))
+                   (eval-seq (list-ref lst (choice)) context)
+                   (eval-seq (car lst) context)))))))
       
       ((_ args ...)
        (error 'every "expects (N measures values)" 'args ...))))
@@ -181,12 +179,12 @@
   (tag-pdef-callable every)
 
   (define (sine freq lo hi)
-    (leaf-meta-ranged
+    (seq-meta-ranged
      (list lo hi)
      (lambda (context)
-       (let ([f (eval-leaf freq context)]
-             [l (eval-leaf lo context)]
-             [h (eval-leaf hi context)])
+       (let ([f (eval-seq freq context)]
+             [l (eval-seq lo context)]
+             [h (eval-seq hi context)])
          (range-sine f l h (context-now context))))))
 
   ;;--------------------------------------------------------------------

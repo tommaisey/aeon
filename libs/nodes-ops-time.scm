@@ -28,7 +28,7 @@
   (alias tt* mv*)
   (alias tt/ mv/)
 
-  ;; Resolves input context with an arc shifted by the leaf value,
+  ;; Resolves input context with an arc shifted by the seq value,
   ;; effectively moving a different slice of time into this one.
   (define (mv-math-impl math-fn inv-math-fn)
     (let ([mul? (or (eq? math-fn *) (eq? math-fn /))])
@@ -37,9 +37,9 @@
           (let ([e (event-move (context-event context) delta math-fn)]
                 [sus-spread (lambda (s) (math-fn (abs delta) s))])
             (if mul? (event-update e :sustain sus-spread 1/8) e))))
-      (lambda (context leaf)
+      (lambda (context seq)
         (let* ([old-arc (context-arc context)]
-               [val (eval-leaf-empty leaf (arc-start old-arc) context)])
+               [val (eval-seq-empty seq (arc-start old-arc) context)])
           (cond
             ((is-rest? val) (context-resolve context))
             ((not (number? val)) (error 'mv "number" val))
@@ -60,8 +60,8 @@
   (define (swing period amount)
 
     (define (mover context)
-      (let* ([period (eval-leaf period context)]
-             [amount (eval-leaf amount context)]
+      (let* ([period (eval-seq period context)]
+             [amount (eval-seq amount context)]
              [now (context-now context)]
              [ev (context-event context)]
              [b (event-beat ev)]
@@ -90,10 +90,10 @@
 
     ;; Compute furthest lookahead/lookback that might be required.
     (define possible-range
-      (let ([min-p (maybe-leaf-meta period leaf-meta-rng-min)]
-            [max-p (maybe-leaf-meta period leaf-meta-rng-max)]
-            [min-n (maybe-leaf-meta num leaf-meta-rng-min)]
-            [max-n (maybe-leaf-meta num leaf-meta-rng-max)])
+      (let ([min-p (maybe-seq-meta period seq-meta-rng-min)]
+            [max-p (maybe-seq-meta period seq-meta-rng-max)]
+            [min-n (maybe-seq-meta num seq-meta-rng-min)]
+            [max-n (maybe-seq-meta num seq-meta-rng-max)])
         (if (for-all identity (list min-p max-p min-n max-n))
             (let ([values (list (* min-p min-n)
                                 (* min-p max-n)
@@ -130,8 +130,8 @@
     (define (build-taps start end)
       (lambda (context)
         (let* ([t (context-now context)]
-               [period (eval-leaf period context)]
-               [num (eval-leaf num context)]
+               [period (eval-seq period context)]
+               [num (eval-seq num context)]
                [times-and-indeces (list-taps t period num start end)])
           (map (tap-maker (context-event context) period) times-and-indeces))))
 

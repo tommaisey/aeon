@@ -27,12 +27,12 @@
     (nodes-continuous))
 
   ;; Adds blank events to the context.
-  ;; A leaf value of 1 gives one event.
+  ;; A seq value of 1 gives one event.
   ;; For values > 1, creates N subdivided values.
   ;; The symbol ~ creates a rest.
   (define (in! seq . ops)
     (define (impl context value)
-      (let* ([value (eval-leaf-empty value (context-start context) context)]
+      (let* ([value (eval-seq-empty value (context-start context) context)]
              [num (max 1 value)]
              [dur (/ (context-length context) num)]
              [start (context-start context)]
@@ -45,7 +45,7 @@
   ;; Adds events with a single specified property
   (define (in: key seq . ops)
     (define (impl context value)
-      (let ([value (eval-leaf-empty value (context-start context) context)])
+      (let ([value (eval-seq-empty value (context-start context) context)])
         (context-insert (context-resolve context)
                         (make-event-fast (context-start context)
                                          (:sustain (context-length context))
@@ -84,7 +84,7 @@
   ;; it to a node or pattern of nodes.
   (define (sq: seq)
     (define (impl context value)
-      (let* ([value (eval-leaf value context)])
+      (let* ([value (eval-seq value context)])
         (cond
           ((context? value) value)
           ((is-rest? value) context)
@@ -127,10 +127,10 @@
 
   ;;-------------------------------------------------------------------
   ;; Helper for 'to' forms above.
-  (define (set-or-rest ctxt leaf key val-transform)
-    (let ([val (eval-leaf leaf ctxt)])
+  (define (set-or-rest ctxt seq key val-transform)
+    (let ([val (eval-seq seq ctxt)])
       (cond
-        ((context? val)  (error 'set-or-rest "evaluated to context" leaf))
+        ((context? val)  (error 'set-or-rest "evaluated to context" seq))
         ((is-rest? val)  (context-event ctxt))
         (else (event-set (context-event ctxt) key (val-transform val))))))
 

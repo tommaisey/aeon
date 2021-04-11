@@ -86,15 +86,15 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
       ((step 1/3 [1 2 3]) => "repeating sequence of [1 2 3] each 1 measure"))))
 
   ;;-------------------------------------------------------------------
-  ;; Wraps a leaf in a subdividing pattern, if it hasn't already declared
+  ;; Wraps a seq in a subdividing pattern, if it hasn't already declared
   ;; that it is one. Also sets a special subdivide-fn on the input context
   ;; and restores the previous subdivide-fn on the returned context.
-  (define (wrap-subdivide-fn sub-fn leaf)
+  (define (wrap-subdivide-fn sub-fn seq)
     (let* ([get-fn context-subdivide-fn]
            [set-fn context-with-subdivide-fn]
-           [leaf (if (leaf-subdivider? leaf) leaf (make-subdivider 1 leaf))])
+           [seq (if (seq-subdivider? seq) seq (make-subdivider 1 seq))])
       (lambda (context)
-        (set-fn (eval-leaf leaf (set-fn context sub-fn)) (get-fn context)))))
+        (set-fn (eval-seq seq (set-fn context sub-fn)) (get-fn context)))))
 
   ;;----------------------------------------------------------------------------
   ;; Iterates list 'vals', which is stretched over 'dur' with a subdividing
@@ -104,7 +104,7 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
   ;; from vals based on the time of the context's pointed to event (or its start
   ;; if empty).
   ;; If the context has a subdivide-fn, this calls it with each slice of the
-  ;; input context and an associated leaf value. The subdivide-fn must return
+  ;; input context and an associated seq value. The subdivide-fn must return
   ;; a transformed context with the same arc.
   (define (make-subdivider dur vals)
     (when (null? vals)
@@ -137,7 +137,7 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
                            (loop c next-t next-vals item))]
                  [(within-arc? arc (context-now ctxt)) item]
                  [else (loop subctxt next-t next-vals item)])))])))
-      (leaf-meta-ranged #t vals process)))
+      (seq-meta-ranged #t vals process)))
 
   ;; Used within the above function to apply subdivide-fn to item,
   ;; over a slice of time defined by subctxt. Returns subctxt filled
@@ -149,10 +149,10 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
                 [subctxt-no-subdiv (context-no-subdivide-fn subctxt)]
                 [time (context-now subctxt)]
                 [subdur (arc-length arc)]
-                [early (eval-leaf-empty item time subctxt-no-subdiv)])
+                [early (eval-seq-empty item time subctxt-no-subdiv)])
            (cond
             [(is-rest? early)     (context-resolve subctxt-no-subdiv)]
-            [(unsafe-list? early) (eval-leaf (make-subdivider subdur early) subctxt)]
+            [(unsafe-list? early) (eval-seq (make-subdivider subdur early) subctxt)]
             [else (subdivide-fn subctxt-no-subdiv item)]))
          subctxt))
 

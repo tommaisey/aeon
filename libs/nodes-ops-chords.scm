@@ -21,7 +21,7 @@
       (lambda (ctxt)
         (map (lambda (d) (event-set (context-event ctxt) :chd d)) degrees)))
     (define (impl context val)
-      (match (eval-leaf val context)
+      (match (eval-seq val context)
           [(? is-rest?) (context-resolve context)]
           [(? vector? v) (context-map (cmap (vector->list v))
                                     (context-resolve context)

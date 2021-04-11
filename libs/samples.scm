@@ -56,7 +56,7 @@
 
                (define (id/ val)
                  (lambda (context)
-                   (get-sample-safe id (eval-leaf val context))))
+                   (get-sample-safe id (eval-seq val context))))
 
                (println (str+ (symbol->string 'id) ": "
                               (number->string id-num)
