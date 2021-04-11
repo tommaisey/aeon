@@ -34,7 +34,7 @@
           (newline p)))
       (call-with-output-file (path+ dir ".dir-locals.el")
         (lambda (p)
-          (pretty-print dir-locals p)))
+          (display dir-locals p)))
       (current-directory dir)
       (init-repo)))
 
@@ -54,9 +54,11 @@
               (begin (set-top-level-value! 'aeon-file f) (values f))
               (error 'new-project "Can't find aeon.scm")))))
 
+  ;; Sadly Scheme's put-datum procedures don't output dots in
+  ;; between the mode name and variables list, which Emacs wants.
   (define dir-locals
-    '((nil . ((indent-tabs-mode . nil)))
-      (scheme-mode . ((geiser-active-implementations . (chez . nil))))
-      (auto-revert-mode . t)))
+    "((nil . ((indent-tabs-mode . nil)))
+ (scheme-mode . ((geiser-active-implementations . (chez . nil))))
+ (auto-revert-mode . t))\n")
   
   )
