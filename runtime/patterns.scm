@@ -1,5 +1,6 @@
 (define pattern-dict (make-pattern-dict))
 
+;; Starts/updates a pattern
 (define-syntax pattern
   (syntax-rules ()
     ((_ name p)
@@ -10,11 +11,13 @@
     ((_ name p ps ...)
      (pattern name (part p ps ...)))))
 
-(define-syntax start
+;; Switch a pattern off
+(define-syntax ~pattern
   (syntax-rules ()
-    ((_ name ...) 
-     (begin (add-pattern pattern-dict 'name name) ...))))
+    ((_ name ps ...)
+     (stop name))))
 
+;; Another, more explicit way to stop a pattern:
 (define-syntax stop
   (syntax-rules ()
     ((_)

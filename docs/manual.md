@@ -187,6 +187,16 @@ The pattern will continue playing until you stop it.
 (stop)
 ```
 
+Another way to stop a pattern is to simply append `~` to the
+word `pattern`. This is a quick and convenient way to switch
+patterns on and off:
+
+``` scheme
+;; stops pattern with this name
+(~pattern name
+  (operator) ...)
+```
+
 #### quantise changes
 [**note**: unimplemented]
 

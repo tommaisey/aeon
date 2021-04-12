@@ -45,22 +45,28 @@ background. You can evaluate the following to stop the pattern, after
 which re-evaluating the `pattern` expression will start it again.
 
 ```scheme
+;; stop one pattern:
 (stop blip)
+
+;; stop multiple patterns:
+(stop blip drums hum)
+
+;; stop all patterns:
+(stop)
 ```
 
 To start the pattern again, re-evaluate the `pattern` expression.
 
 You can start as many patterns as you want, but they must all have
-unique names. You can stop multiple pattern by supplying more names:
+unique names. They can then be stopped using those same names.
+
+There's one more way to stop a pattern that's less explicit, but very
+convenient because it's single character change:
 
 ```scheme
-(stop blip drums hum)
-```
-
-Or you can stop all patterns like this:
-
-```scheme
-(stop)
+;; notice we appended '~' to 'pattern'
+(~pattern blip
+  (in! 1))
 ```
 
 For the time being let's stick with one pattern, `blip`, to keep
