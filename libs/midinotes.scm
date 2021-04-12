@@ -8,8 +8,8 @@
 
     (define (octavize name value)
       (define (n->n+v i)
-        (list (string->symbol (string-append 
-                               (symbol->string name)        
+        (list (string->symbol (string-append
+                               (symbol->string name)
                                (number->string i)))
               (+ 24 (* i 12) value)))
       (cons (list name (+ 60 value)) (map n->n+v numbers)))

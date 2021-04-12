@@ -5,7 +5,7 @@
           (context))
 
   (testp  "[context-map]" (make-arc 3.3 4)
-          (o->
+          (part
             (in! 4)
             (lambda (c) 
               (context-map (lambda (c) (event-set (context-event c) :freq 99)) 
@@ -14,7 +14,7 @@
           (:beat 15/4 :freq 99)))
 
   (testp  "[context-filter]" (make-arc 3 4)
-          (o->
+          (part
             (in! 4)
             (to: :freq (over 1/2 [100 500]))
             (lambda (c) 

@@ -10,31 +10,31 @@
   ;;----------------------------------------------------------
   ;; [tt+] and [tt-] simple tests
   (testp "[tt+] 1/4" (make-arc 0 1)
-    (o->
+    (part
       (in! 1)
       (tt+ 1/4))
     ((:beat 1/4 :sustain 1)))
 
   (testp "[tt+] -1/4" (make-arc -1 0)
-    (o->
+    (part
       (in! 1)
       (tt+ 1/4))
     ((:beat -3/4 :sustain 1)))
 
   (testp "[tt-] 1/4" (make-arc -1 0)
-    (o->
+    (part
       (in! 1)
       (tt- 1/4))
     ((:beat -1/4 :sustain 1)))
 
   (testp "[tt-] -1/4" (make-arc 0 1)
-    (o->
+    (part
       (in! 1)
       (tt- -1/4))
     ((:beat 1/4 :sustain 1)))
 
   (testp "[tt+] followed by [to:]" (make-arc 0 1)
-    (o->
+    (part
       (in! 1)
       (tt+ 1/4)
       (to: :scd (over 1/2 [I V])))
@@ -43,20 +43,20 @@
   ;;----------------------------------------------------------
   ;; [tt*] simple tests
   (testp "[tt*] simple" (make-arc 0 1)
-    (o->
+    (part
       (in! (over [1 ~]))
       (tt* 1))
     ((:beat 0)))
 
   (testp "[tt*] simple" (make-arc 0 1)
-    (o->
+    (part
       (in! (over [1 ~]))
       (tt* 1/2))
     ((:beat 0)
      (:beat 1/2)))
 
   (testp "[tt*] simple" (make-arc 0 1)
-    (o->
+    (part
       (in! (over [1 ~]))
       (tt* 1/3))
     ((:beat 0)
@@ -64,7 +64,7 @@
      (:beat 2/3)))
 
   (testp "[tt*] simple negative" (make-arc 0 1)
-    (o->
+    (part
       (in! (over [1 [1 1]]))
       (tt* -1))
     ((:beat 0)
@@ -72,7 +72,7 @@
      (:beat 1/2)))
 
   (testp "[tt*] simple negative" (make-arc 0 1)
-    (o->
+    (part
       (in! (over [1 [1 1]]))
       (tt* -3/4))
     ((:beat 0)
@@ -84,7 +84,7 @@
   ;;----------------------------------------------------------
   ;; [tt*] followed by [to:]
   (testp "[tt*] positive followed by [to:]" (make-arc 0 1)
-    (o->
+    (part
       (in! (over [1 ~ [1 1]]))
       (tt* 1/2)
       (to: :scd (over 1 [V X])))
@@ -96,7 +96,7 @@
      (:beat 11/12 :scd X)))
 
   (testp "[tt*] negative followed by [to:]" (make-arc 0 1)
-    (o->
+    (part
       (in! (over [1 ~ [1 1]]))
       (tt* -1/2)
       (to: :scd (over 1 [V X])))
@@ -110,7 +110,7 @@
   (for-each
     (lambda (n)
       (testp "[tt*] negative followed by [to:]" (make-arc n (+ n 1))
-        (o->
+        (part
           (in! (over [1 ~ [1 1]]))
           (tt* -1/2)
           (to: :scd (over 1 [V X])))
@@ -126,7 +126,7 @@
   ;; legato
 
   (testp "[legato]" (make-arc 0 1)
-     (o->
+     (part
        (in! (over 1 [1 ~ ~ [1 ~ 1 ~] ~ ~ ~ 1]))
        (legato 1))
      ((:beat 0    :sustain 3/8)

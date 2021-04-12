@@ -9,7 +9,7 @@
        (to: :amp (sbdv [0.2 [0.05 0.2] [0.2 0.1] » »]))))
 
 (pattern p1
-  (o->
+  (part
     (rp: (sbdv 2 [! kik1 kik2]))
     (to: :sample bd
          :sample-idx 81)

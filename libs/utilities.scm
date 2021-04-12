@@ -2,8 +2,8 @@
 
   (export identity compose nth-value
           pseudo-rand
-          trunc-int round-down round-up round-nearest 
-          inc dec clamp 
+          trunc-int round-down round-up round-nearest
+          inc dec clamp
           between? between-inclusive?
           pi range-sine
           pair first rest cons-r
@@ -208,7 +208,7 @@
 
   ;;-------------------------------------------------------------------
   ;; Logic
-  
+
   ;; let+if
   (define-syntax lif
     (syntax-rules ()
@@ -286,12 +286,12 @@
        (if (and (eq? k key) (eq? v value))
            alist (cons (cons key value) alist))]
       [else (error 'alist-set "doesn't appear to be an alist" alist)]))
-  
+
   ;; Set a value in an alist if it's not already present.
   (define (alist-set-if-not alist key value)
     (if (alist-get alist key #f) alist
         (alist-set alist key value)))
-  
+
   ;; Get multiple alist values in one go.
   ;; Can be more efficient than searching seperately for each value.
   ;; key-default-pairs should be an alist of: (key default-val).
@@ -366,7 +366,7 @@
 
   (define-syntax declare-keywords
     (syntax-rules ()
-      ((_ name1 name2 ...) 
+      ((_ name1 name2 ...)
        (begin
          (define name1 'name1)
          (define name2 'name2) ...))))
@@ -376,7 +376,7 @@
   (define-syntax check-type
     (syntax-rules ()
       ((_ pred val context-id)
-       (unless (pred val) 
+       (unless (pred val)
          (error context-id (format "~A should satisfy ~A" 'val 'pred) val)))))
 
   ;; If the object matches pred, apply converter to it

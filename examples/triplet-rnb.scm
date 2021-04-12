@@ -1,8 +1,8 @@
 ;; A groovy little number...
 
 (pattern p1
-  (o->
-    (o-> ;; Keys
+  (part
+    (part ;; Keys
       (in: :scd (sbdv 2 [[I III] I VI ~])
            (to: :octave (sbdv [0 1 (? [1 0]) 0]))
            (rp: (sbdv 4 [! (chord triad) (chord 7th) (chord 9th)])))
@@ -25,7 +25,7 @@
 
       (to* :release 0.3)
 
-      (o-> ;; Drums
+      (part ;; Drums
         (in: :sample (sbdv 1/3 [~ hh × ×])
              (to: :sample-idx 12
                   :amp 0.1

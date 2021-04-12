@@ -1,6 +1,6 @@
 
 (pattern arp-pattern
-  (o->
+  (part
     (in: :scd (sbdv [I V VII])
          (to: :octave -1))
 
@@ -22,7 +22,7 @@
     (to+ :cutoff (sine 7 -0.4 5.0))))
 
 (pattern pad-pattern
-  (o->
+  (part
     (in: :scd (sbdv 8 [I VII])
          (to: :root (sbdv 16 [I III])
               :inst "dual-lopass"
@@ -36,7 +36,7 @@
          (cp: (to: :octave 1)))))
 
 (pattern drum-pattern
-  (o->
+  (part
     (in! (sbdv [1 [~ 1] ~ (? [1 1 2 [~ 1]]) (? [~ 1 [~ 1]]) (? [~ 1])])
          (to: :sample bd
               :sample-idx 2

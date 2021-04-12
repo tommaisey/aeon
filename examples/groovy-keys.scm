@@ -3,7 +3,7 @@
 (define bassln2 (pdef [I IV III II]))
 
 (pattern p1
-  (o->
+  (part
     (in: :scd (sbdv 2 [I II [V III]])
          (rp: (sbdv 2/3 [~ (? [(chord triad) (chord 11th) (chord 13th)]) 
                            [(chord 7th) (chord 9th)]])))

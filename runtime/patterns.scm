@@ -8,7 +8,7 @@
        (add-pattern pattern-dict 'name p)))
 
     ((_ name p ps ...)
-     (pattern name (o-> p ps ...)))))
+     (pattern name (part p ps ...)))))
 
 (define-syntax start
   (syntax-rules ()

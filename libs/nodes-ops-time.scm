@@ -16,7 +16,7 @@
   ;; shifting it in time.
   (define (mv math-op inv-math-op . pdefs)
     (let ([impl (mv-math-impl math-op inv-math-op)])
-      (apply x-> (map (lambda (p) (wrap-subdivide-fn impl p)) pdefs))))
+      (apply with (map (lambda (p) (wrap-subdivide-fn impl p)) pdefs))))
 
   (define (mv+ . pdefs) (apply mv + - pdefs))
   (define (mv- . pdefs) (apply mv - + pdefs))
@@ -122,7 +122,7 @@
                [i (cdr time-and-idx)]
                [e (event-set ev :beat t)])
           (if (eq? iterative-node #f) e
-              (context-event ((apply x-> (repeat i iterative-node))
+              (context-event ((apply with (repeat i iterative-node))
                               (make-context (make-arc t (+ t period)) 
                                             (list e))))))))
 

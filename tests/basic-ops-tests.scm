@@ -88,26 +88,26 @@
 
   ;;----------------------------------------------------------
   (testp "[to:] basic" (make-arc 0 1)
-    (o->
+    (part
       (in! 2)
       (to: :scd V))
     ((:beat 0 :scd V) (:beat 1/2 :scd V)))
 
   (testp "[to:] basic subdivide" (make-arc 0 1)
-    (o->
+    (part
       (in! 2)
       (to: :scd (over 1 [V X])))
     ((:beat 0 :scd V) (:beat 1/2 :scd X)))
 
   (testp "[to:] multiple keys" (make-arc 0 1)
-    (o->
+    (part
       (in! 2)
       (to: :scd (over 1 [V X])
            :cutoff (over 1 [100 50])))
     ((:beat 0 :scd V :cutoff 100) (:beat 1/2 :scd X :cutoff 50)))
 
   (testp "[to:] over multiple events" (make-arc 0 1)
-    (o->
+    (part
       (in! 4)
       (to: :scd (over 1 [V X])
            :cutoff (over 1 [100 50])))
@@ -118,7 +118,7 @@
 
   ;;----------------------------------------------------------
   (testp "[sq:] modify" (make-arc 0 1)
-    (o->
+    (part
       (in! 4)
       (sq: (over 1 [(to: :scd I) (to: :scd V)])))
     ((:beat 0   :scd I)
@@ -127,7 +127,7 @@
      (:beat 3/4 :scd V)))
 
   (testp "[sq:] add" (make-arc 0 1)
-    (o->
+    (part
       (sq: (over 1 [(in! 4 (to: :scd I)) (in! 2 (to: :scd V))])))
     ((:beat 0   :scd I)
      (:beat 1/4 :scd I)

@@ -18,8 +18,8 @@
   (import
     (chezscheme)
     (doc)
-    (utilities) 
-    (event) 
+    (utilities)
+    (event)
     (context)
     (node-eval)
     (nodes-subdivide)
@@ -37,10 +37,10 @@
              [dur (/ (context-length context) num)]
              [start (context-start context)]
              [make (lambda (i) (make-event-fast (+ start (* i dur)) (:sustain dur)))])
-        (fold-left (lambda (c i) (context-insert c (make i))) 
-                   (context-resolve context) 
+        (fold-left (lambda (c i) (context-insert c (make i)))
+                   (context-resolve context)
                    (reverse (iota num)))))
-    (apply o-> (wrap-subdivide-fn impl seq) ops))
+    (apply part (wrap-subdivide-fn impl seq) ops))
 
   ;; Adds events with a single specified property
   (define (in: key seq . ops)
@@ -53,7 +53,7 @@
     (unless (symbol? key) (error 'in: "expected :key" key))
     (if (null? ops)
         (wrap-subdivide-fn impl seq)
-        (apply o-> (wrap-subdivide-fn impl seq) ops)))
+        (apply part (wrap-subdivide-fn impl seq) ops)))
 
   ;; A node that sets a property of events according to the pattern.
   ;; key value ... -> (context -> context)
@@ -96,21 +96,21 @@
               (warning 'seq "got raw value, wants procedure or ~" value)
               context)))))
     (wrap-subdivide-fn impl seq))
-  
+
   ;;---------------------------------------------------------------
   ;; Composite chaining operators.
 
-  ;; Same as x->, but also filters events by pred.
+  ;; Same as 'with', but also filters events by pred.
   ;; Confusing? People may expect this to replace only events
   ;; matching pred, and to let the others through.
   (define (tr? pred . nodes)
     (lambda (context)
-      (context-filter pred ((apply x-> nodes) context))))
+      (context-filter pred ((apply with nodes) context))))
 
-  ;; Same as x-> but returns both the copies and the originals.
+  ;; Same as 'with' but returns both the copies and the originals.
   (define (cp: . nodes)
     (lambda (context)
-      (contexts-merge ((apply x-> nodes) context)
+      (contexts-merge ((apply with nodes) context)
                       (context-resolve context))))
 
   ;; Same as tr?, but returns both the filtered copies and the originals.
@@ -147,39 +147,39 @@
     (let ([pairs (pairwise kv-pairs)])
       (unless pairs (error err-symbol "invalid key-value pairs" kv-pairs))
 
-      (apply x-> (map make-subdivider pairs))))
+      (apply with (map make-subdivider pairs))))
 
 
   ;;-------------------------------------------------------------------
   (make-doc nodes-ops-docs
-    (in! 
+    (in!
      "Adds blank events according to a repeated subdividing sequence.
 An event is present where a 1 is encountered, but not where a ~ is encountered.
 Numbers greater than 1 are translated into a sub-list of N elements of 1."
-     ((seq [Number or Sequence] 
+     ((seq [Number or Sequence]
            "A Number or sequence of Numbers and rests (~).")
       (ops... Function
-              "Further operators to apply to the blank events, 
-              as if wrapped in 'o->'."))
+              "Further operators to apply to the blank events,
+              as if wrapped in 'part'."))
 
      (((testp (in! (over 1 [1 ~]))) => [(:beat 0 :sustain 1/2)])
-      ((testp (in! (over 1 [1 [1 1]]))) => [(:beat 0 :sustain 1/2) 
-                                            (:beat 1/2 :sustain 1/4) 
+      ((testp (in! (over 1 [1 [1 1]]))) => [(:beat 0 :sustain 1/2)
+                                            (:beat 1/2 :sustain 1/4)
                                             (:beat 3/4 :sustain 1/4)])
-      ((testp (in! (over 1 [~ 2]))) => [(:beat 1/2 :sustain 1/4) 
+      ((testp (in! (over 1 [~ 2]))) => [(:beat 1/2 :sustain 1/4)
                                         (:beat 3/4 :sustain 1/4)])))
 
     (in:
      "Adds events according to a repeated subdividing sequence.
-Each value encountered in the sequence results in an event with a 
+Each value encountered in the sequence results in an event with a
 property 'key' of that value."
      ((key :Keyword
            "The key which will be set according to values found in 'seq'")
       (seq [Any or Sequence]
            "The sequence of values and rests (~) used to generate events.")
-      (ops... Function 
-              "Further operators to apply to the blank events, 
-              as if wrapped in 'o->'."))
+      (ops... Function
+              "Further operators to apply to the blank events,
+              as if wrapped in 'part'."))
 
      (((testp (in: :freq (over 1 [440 ~])))
           => [(:beat 0 :sustain 1/2 :freq 440)])
@@ -187,7 +187,7 @@ property 'key' of that value."
           => [(:beat 0 :sustain 1/2 :freq 50)
               (:beat 1/2 :sustain 1/4 :freq 60)
               (:beat 3/4 :sustain 1/4 :freq 70)])))
-    
+
     (to:
      "Sets properties on events according to a repeated subdividing sequence.
 Note that arguments can be more than one pair of :key value definitions."
@@ -198,5 +198,5 @@ Note that arguments can be more than one pair of :key value definitions."
 
      (((testp (in! 2 (to: :amp 0.1 :freq (over 1 [440 660]))))
        => [(:beat 0  :amp 0.1 :freq 440) (:beat 0  :amp 0.1 :freq 660)]))))
-  
+
   ) ; end module 'logic-nodes'

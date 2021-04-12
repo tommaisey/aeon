@@ -1,8 +1,7 @@
-#!chezscheme ;; Needed for the extra symbols like +->
-
 (library (nodes-chains)
 
-  (export chain-docs o-> x-> +-> part with copy off)
+  (export chain-docs
+          off part with copy)
 
   (import (chezscheme) 
           (utilities) 
@@ -11,49 +10,44 @@
           (node-eval) 
           (doc))
 
-  (define (x-> . nodes)
-    (let ([nodes (reverse nodes)])
-      (lambda (context)
-        (context-resolve (context-push-chain context nodes)))))
+  (define (off . args)
+    (lambda (context) (context-resolve context)))
 
-  (define (o-> . nodes)
-    (let ([nodes (reverse nodes)])
+  (define (with . ops)
+    (let ([ops (reverse ops)])
       (lambda (context)
-        (let ([inner (context-with-chain context nodes)])
+        (context-resolve (context-push-chain context ops)))))
+
+  (define (part . ops)
+    (let ([ops (reverse ops)])
+      (lambda (context)
+        (let ([inner (context-with-chain context ops)])
           (contexts-merge (context-resolve inner)
                           (context-resolve context))))))
 
-  (define (+-> . nodes)
+  (define (copy . ops)
     (lambda (context)
       (let ([context (make-caching-context context)])
         (define (sum c node)
           (contexts-merge (node context) c))
-        (fold-left sum context nodes))))
-
-  ;;--------------------------------------------------------------
-  (define (off . args)
-    (lambda (context) (context-resolve context)))
-
-  (alias part o->)
-  (alias with x->)
-  (alias copy +->)
+        (fold-left sum context ops))))
 
   ;;--------------------------------------------------------------
   (make-doc chain-docs
-    (x-> "Applies any number of operators successively to an input. 
+    (with "Applies any number of operators successively to an input. 
 Replaces the input."
-         ((nodes [/... Operator] "0 or more pattern operator nodes"))
-         ())
+          ((ops [/... Operator] "0 or more pattern operators"))
+          ())
 
-    (o-> "Applies any number of operators successively, starting with 
+    (part "Applies any number of operators successively, starting with 
 an empty events list. Merges the result with the input."
-         ((nodes [/... Operator] "0 or more pattern operator nodes"))
-         ())
+          ((ops [/... Operator] "0 or more pattern operators"))
+          ())
 
-    (+-> "Applies each operator to the input separately, summing the 
+    (copy "Applies each operator to the input separately, summing the 
 results to a blank context. Replaces the input."
-         ((nodes [/... Operator] "0 or more pattern operator nodes"))
-         ())
+          ((ops [/... Operator] "0 or more pattern operators"))
+          ())
 
     (off "A quick way to disable an operator and its sub-operators.
 All arguments are ignored, and a no-op is returned."
