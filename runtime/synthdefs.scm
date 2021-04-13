@@ -4,7 +4,7 @@
 
 ;; Useful test function: (test-synth "sine-grain" :freq 330 :attack 1/16)
 (define (test-synth name . args)
-  (play-when name (utc 0.1) default-group 
+  (play-when name (utc 0.1) default-group
              (event-symbols->strings (apply make-alist args))))
 
 ;;------------------------------------------------------------------
@@ -23,7 +23,7 @@
 ;; Abbreviated aliases for common envelope keywords.
 (alias :atk :attack)
 (alias :sus :sustain)
-(alias :rel :release)
+(alias :rls :release)
 
 ;; Time-based properties that will be preprocessed to be relative to the tempo.
 ;; They are paired with #f so this list can be used directly with alist-get-multi.
@@ -102,7 +102,7 @@
            [osc2 (make-osc 1.0 4/3 0.04)]
            [osc3 (make-osc 1.5 3/2 0.01)]
            [sig (+ osc1 osc2 osc3)])
-      (* (rlpf sig (scale-cutoff :cutoff) 1.0) 
+      (* (rlpf sig (scale-cutoff :cutoff) 1.0)
          (make-asr :attack :sustain :release)
          (freq->amp :freq :amp)))))
 
@@ -140,6 +140,33 @@
          (freq->amp :freq :amp)))))
 
 ;;-------------------------------------------------------------------
+;; The drum synthdef nursery...
+(send-synth sc3 "bd"
+  (src-synth ([:attack 0.005 ir] [:sustain 1 ir]
+              [:freq 62 kr]
+              [:tone-amt 1/3 ir]
+              [:tone-rls 1/7 ir])
+    (let* ([freq-rise (* 10 :tone-amt)]
+           [freq-env (make-ar 0 :tone-rls freq-rise -3 do-nothing)]
+           [freq (*+ :freq freq-env :freq)]
+           [env (make-ar :attack :sustain)])
+      (* (sin-osc ar freq 0) env))))
+
+(send-synth sc3 "cp"
+  (src-synth ([:attack 0.005 ir] [:sustain 1/6 ir]
+              [:freq 62 kr]
+              [:tone-amt 1/3 ir]
+              [:tone-rls 1/7 ir])
+    (let* ([mod 0.7]
+           [env (make-ar :attack :sustain 1 -5)]
+           [env2 (make-ar :attack (* :sustain 2/3) mod -5 do-nothing)]
+           [lfo (saw ar 120)]
+           [noise (white-noise ar)]
+           [noise (b-peak-eq noise 400 3 12)]
+           [noise (b-peak-eq noise 1800 3 8)])
+      (* noise env (+ mod (* lfo env2))))))
+
+;;-------------------------------------------------------------------
 ;; The fx synthdef nursery...
 (send-synth sc3 "gain"
   (fx-synth ([:gain 1.0])
@@ -165,7 +192,7 @@
   (fx-synth ([:coarse 100])
     (latch :in (impulse ar (/ sample-rate :coarse) 0))))
 
-;; 
+;;
 (send-synth sc3 "shape"
   (fx-synth ([:shape 0])
     (let* ([amp 1]
@@ -187,7 +214,7 @@
 
 (send-synth sc3 "ramp"
   (fx-synth ([:start 0.2] [:end 1])
-    (* :in (lin-exp (line kr :start :end :sustain do-nothing) 
+    (* :in (lin-exp (line kr :start :end :sustain do-nothing)
                     :start :end :start :end))))
 
 (send-synth sc3 "ramp-lpf"
@@ -208,7 +235,7 @@
 (send-synth sc3 "bus-delay"
   (letc ([:time-l 0.5]  [:time-r 1.0]
          [:decay-l 2.0] [:decay-r 1.5]
-         [:width 0.5]   
+         [:width 0.5]
          [:tempo 0.5]
          [:inbus :delay1])
     (let* ([t (fdiv 0.25 :tempo)]

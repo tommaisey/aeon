@@ -2,7 +2,7 @@
 ;; the rsc3 library to communicate with SuperCollider.
 (library (synthesis)
 
-  (export send-synth 
+  (export send-synth
           letc src-synth fx-synth
           get-bus-num
           private-bus
@@ -18,7 +18,7 @@
           clamp-cutoff
           convert-q
           freq->amp
-          :group :fx :control 
+          :group :fx :control
           :verb1 :verb2 :delay1)
 
   (import (scheme)
@@ -45,18 +45,18 @@
   ;;-------------------------------------------------------------------
   ;; Envelopes generator - plays back envelope stages.
   (define rm-synth sc/remove-synth)
-  
+
   (define* (make-env-gen env [/opt (peak 1) (action rm-synth)])
     (sc/env-gen sc/kr 1 peak 0 1 action env))
 
   ;; Attack Sustain Release
-  (define* (make-asr atk sus rel 
+  (define* (make-asr atk sus rel
                      [/opt (peak 1) (curve -4) (action rm-synth)])
     (let ([env (sc/env-linen atk sus rel 1 (convert-curve curve 4))])
       (make-env-gen env peak action)))
 
   ;; Attack Decay Sustain Release
-  (define* (make-adsr atk dec sus rel susLvl 
+  (define* (make-adsr atk dec sus rel susLvl
                       [/opt (peak 1) (curve -4) (action rm-synth)])
     (let ([env (sc/env (list 0.0 1 susLvl susLvl 0.0)
                        (list atk dec sus rel)
@@ -121,7 +121,7 @@
     (if (for-all number? args)
         (apply arith-op args)
         (fold-left sc-op (car args) (cdr args))))
-  
+
   (define (u* . args)
     (fold-binary-op * sc/mul args))
   (define (u- . args)
