@@ -11,7 +11,7 @@
           current-branch
           commits-back
           unstaged-changes)
-  
+
   (import (chezscheme)
           (utilities)
           (file-tools)
@@ -34,7 +34,7 @@
   ;; => (files-that-changed ...)
   (define* (jump dest [/opt target-branch-forwards])
     (cond
-     [(string? dest)  (jump-branch dest)]
+     [(string? dest)  (jump-to dest)]
      [(integer? dest) (jump-by dest target-branch-forwards)]
      [else (error 'jump "requires an integer or string, got" dest)]))
 
@@ -92,8 +92,9 @@
     (lines-output "git status --porcelain"))
 
   (define (newest-branches)
-    (define fn (compose lines-output filter-branches reverse))
-    (fn "git branch --sort=authordate"))
+    (trim-sorted-branches "git branch --sort=authordate"))
+  (define* (branches-here [/opt (ref "HEAD")])
+    (trim-sorted-branches (format "git branch --points-at ~a --sort=authordate" ref)))
 
   ;;-------------------------------------------------------------------
   ;; Make the first commit to a freshly initalized repo.
@@ -114,11 +115,15 @@
        (format "git commit -m ~s" msg-string))))
 
   ;; Jump directly to a branch
-  (define (jump-branch name)
+  (define (jump-to ref)
     (let ([prev-commit (current-commit)])
-      (run-command (format "git checkout ~a" name))
-      (print-saves)
-      (changed-files prev-commit)))
+      (save-if-unstaged)
+      (let-values ([(res txt) (run-command (format "git checkout ~a" ref))])
+        (if res
+            (begin
+              (print-saves)
+              (changed-files prev-commit))
+            (values res txt)))))
 
   ;; Jump n commits back (negative) or forward (positive).
   ;; Since there may be many branches in the forward direction,
@@ -130,18 +135,12 @@
            [commits (if (> n 0)
                         (commits-forward end-ref)
                         (commits-back))]
-           [num (min (abs n) (dec (length commits)))]
-           [prev-commit (current-commit)])
+           [num (min (abs n) (dec (length commits)))])
       (if (> num 0)
           (let* ([hash (list-ref commits num)]
-                 [cmd (format "git checkout ~a" hash)])
-            (save-if-unstaged)
-            (let-values ([(res txt) (run-command cmd)])
-              (if res
-                  (begin
-                    (print-saves)
-                    (changed-files prev-commit))
-                  (values res txt))))
+                 [branches (branches-here hash)]
+                 [ref (if (null? branches) hash (car branches))])
+            (jump-to ref))
           (begin (println "Can't jump any further.") '()))))
 
   ;; Save any unstaged changes
@@ -172,7 +171,7 @@
         (if (and (zero? exit-code) (pair? lines))
             (handle-lines-fn lines)
             (values default)))))
-  
+
   (define (lines-output cmd)
     (output-or cmd '() identity))
 
@@ -185,5 +184,8 @@
     (define (ref? b) (not (string-contains b "HEAD detached")))
     (define (trim b) (substring b 2 (string-length b)))
     (map trim (filter ref? branches)))
+
+  (define trim-sorted-branches
+    (compose lines-output filter-branches reverse))
 
   )
