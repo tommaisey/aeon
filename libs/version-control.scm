@@ -41,7 +41,10 @@
   ;; Returns a list of the repo's branches, with the current
   ;; branch (if applicable) at the front.
   (define (list-saves)
-    (define (first? a b) (or (string-contains a "*") (string-ci<? a b)))
+    (define (first? a b)
+      (cond [(string-contains a "*") #t]
+            [(string-contains b "*") #f]
+            [else (string-ci<? a b)]))
     (filter-branches (list-sort first? (lines-output "git branch"))))
 
   ;; Prints the branches in a tree view.
