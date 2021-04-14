@@ -4,7 +4,7 @@
 (define aeon-dir
   (if (top-level-bound? 'aeon-file) (path-parent aeon-file) "."))
 
-(library-extensions 
+(library-extensions
  (list ".chezscheme.sls" ".sc" ".ss" ".scm" ".sls" ".sch"))
 
 (library-directories
@@ -19,7 +19,7 @@
         (utilities)
         (file-tools)
         (system)
-        (version-control))
+        (rename (version-control) (jump vc:jump)))
 
 (build-aeon-libraries aeon-dir)
 

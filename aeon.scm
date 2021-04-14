@@ -22,6 +22,7 @@
 (load "runtime/patterns.scm")
 (load "runtime/recording.scm")
 (load "runtime/playhead.scm")
+(load "runtime/projects.scm")
 
 (tag-pdef-callable map)
 (tag-pdef-callable filter)
