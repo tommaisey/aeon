@@ -5,6 +5,11 @@
 (load "runtime/libs.scm")
 
 ;;------------------------------------------------------------------
+;; Register the location of this file, if not already done.
+(unless (top-level-bound? 'aeon-file)
+  (set-top-level-value! 'aeon-file (path+ (current-directory) "aeon.scm")))
+
+;;------------------------------------------------------------------
 ;; Prevent a chez global lock blocking on the playback thread in emacs geiser.
 (when (top-level-bound? 'geiser:eval)
   (display "Geiser detected: disabling expression editor")

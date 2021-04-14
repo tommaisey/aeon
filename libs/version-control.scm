@@ -36,12 +36,12 @@
     (cond
      [(string? dest)  (jump-to dest)]
      [(integer? dest) (jump-by dest target-branch-forwards)]
-     [else (error 'jump "requires an integer or string, got" dest)]))
+     [else (error 'jump "requires an integer or string" dest)]))
 
   ;; Returns a list of the repo's branches, with the current
   ;; branch (if applicable) at the front.
   (define (list-saves)
-    (define (first? a b) (or (string-contains a "* ") (string-ci<? a b)))
+    (define (first? a b) (or (string-contains a "*") (string-ci<? a b)))
     (filter-branches (list-sort first? (lines-output "git branch"))))
 
   ;; Prints the branches in a tree view.
@@ -76,14 +76,12 @@
   (define (current-commit)
     (single-output "git rev-parse HEAD"))
 
-  ;; Includes HEAD
   (define (commits-back)
-    (lines-output "git rev-list HEAD"))
+    (lines-output "git rev-list HEAD~1"))
 
-  ;; Includes HEAD (added for consistency with commits-back)
   (define (commits-forward branch)
     (let ([cmd "git rev-list --reverse --ancestry-path HEAD...~a"])
-      (cons (current-commit) (lines-output (format cmd branch)))))
+      (lines-output (format cmd branch))))
 
   (define (changed-files ref)
     (lines-output (format "git diff --name-only HEAD ~a" ref)))
@@ -93,8 +91,10 @@
 
   (define (newest-branches)
     (trim-sorted-branches "git branch --sort=authordate"))
+
   (define* (branches-here [/opt (ref "HEAD")])
-    (trim-sorted-branches (format "git branch --points-at ~a --sort=authordate" ref)))
+    (let ([cmd (format "git branch --points-at ~a --sort=authordate" ref)])
+      (trim-sorted-branches cmd)))
 
   ;;-------------------------------------------------------------------
   ;; Make the first commit to a freshly initalized repo.
@@ -135,13 +135,20 @@
            [commits (if (> n 0)
                         (commits-forward end-ref)
                         (commits-back))]
-           [num (min (abs n) (dec (length commits)))])
-      (if (> num 0)
-          (let* ([hash (list-ref commits num)]
-                 [branches (branches-here hash)]
-                 [ref (if (null? branches) hash (car branches))])
-            (jump-to ref))
-          (begin (println "Can't jump any further.") '()))))
+           [num-commits (length commits)]
+           [idx (if (> n 0)
+                    (dec (min (abs n) num-commits))
+                    (dec (min (abs n) (dec num-commits))))])
+      (cond
+       [(and (< n 0) (eq? num-commits 1))
+        (begin (println "Won't jump to first (empty) save") '())]
+       [(or (< idx 0) (zero? num-commits))
+        (begin (println "Can't jump any further.") '())]
+       [else
+        (let* ([hash (list-ref commits idx)]
+               [branches (branches-here hash)]
+               [ref (if (null? branches) hash (car branches))])
+          (jump-to ref))])))
 
   ;; Save any unstaged changes
   (define (save-if-unstaged)
