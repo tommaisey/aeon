@@ -18,7 +18,7 @@
     start-waiting stop-waiting waiting?
     start-suspendable-thread)
 
-  (import (scheme) (context) (utilities) (file-tools))
+  (import (scheme) (context) (node-eval) (utilities) (file-tools))
 
   ;;------------------------------------------------
   ;; Some useful functions for dealing with time.
@@ -46,8 +46,20 @@
   (define (make-pattern-dict)
     (make-safe-val (make-hashtable symbol-hash eq? 32)))
 
+  ;; Before adding the pattern, we run it in a few contexts
+  ;; on this thread. That way, we get early error reporting,
+  ;; and less chance of a broken pattern on the playback thread.
   (define (add-pattern dict id fn)
-    (safe-val-apply hashtable-set! dict id fn))
+    (define (handle-error condition)
+      (display-condition condition)
+      (println "^^^ Pattern appears broken!!!"))
+    (guard (x [else (handle-error x)])
+      (let ([pos (random 10000)]
+            [neg (* -1 (random 1000))])
+        (render-arc fn 0 8)
+        (render-arc fn pos (+ pos 8))
+        (render-arc fn neg (+ neg 10))
+        (safe-val-apply hashtable-set! dict id fn))))
 
   (define (remove-pattern dict id)
     (safe-val-apply hashtable-delete! dict id))
