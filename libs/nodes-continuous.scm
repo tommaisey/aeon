@@ -16,8 +16,7 @@
 ;;----------------------------------------------------------------------
 (library (nodes-continuous)
   (export
-   ? rnd wpick pick
-   each every sine)
+   ? rnd wpick pick sine)
 
   (import
     (chezscheme)
@@ -27,6 +26,8 @@
     (node-eval)
     (for (pdef) expand))
 
+  (define default-seed 99)
+
   ;;-------------------------------------------------------------------
   ;; Pseudo-random values and choices.
   (define rnd
@@ -34,23 +35,23 @@
       [() (rnd '())]
       [(key) (rnd 0.0 1.0 key)]
       [(min max) (rnd min max '())]
-      [(min max key/keys)
+      [(min max seed)
        (seq-meta-ranged (list min max)
-                         (lambda (context)
-                           (let ([min (eval-seq min context)]
-                                 [max (eval-seq max context)]
-                                 [seed (fold-by-keys * 10000 key/keys context)])
-                             (pseudo-rand min max seed))))]))
+                        (lambda (context)
+                          (let ([min (eval-seq min context)]
+                                [max (eval-seq max context)]
+                                [seed (trunc-int (* seed (context-now context)))])
+                            (pseudo-rand min max seed))))]))
 
   ;; Choose from a list randomly
   (define-syntax pick
     (syntax-rules ()
-      ((_ qlist) (pick qlist '()))
+      ((_ vals) (pick vals default-seed))
 
-      ((_ qlist key/keys)
-       (let* ([lst (pdef qlist)]
+      ((_ vals seed)
+       (let* ([lst (pdef vals)]
               [len (length lst)]
-              [rgen (rnd 0 len key/keys)])
+              [rgen (rnd 0 len seed)])
          (seq-meta-ranged
           lst
           (lambda (context)
@@ -60,11 +61,11 @@
   ;; Choose from a list randomly, with weightings
   (define-syntax wpick
     (syntax-rules ()
-      ((_ qlist weights) (wpick qlist weights '()))
+      ((_ vals weights) (wpick vals weights default-seed))
 
-      ((_ qlist weights key/keys)
+      ((_ vals weights seed)
 
-       (let ([lst (pdef qlist)] [wts (pdef weights)])
+       (let ([lst (pdef vals)] [wts (pdef weights)])
          (define (to-cumulative lst)
            (let loop ([count 0] [o '()] [lst lst])
              (match lst
@@ -77,7 +78,7 @@
                (or (list-index (lambda (x) (>= x v)) cumulative-weights)
                    (- len 1)))))
 
-         (when (or (not (unsafe-list? lst)) (not (unsafe-list? wts)) 
+         (when (or (not (unsafe-list? lst)) (not (unsafe-list? wts))
                    (null? lst) (null? wts))
            (error 'wpick "requires 2 lists" lst wts))
 
@@ -85,7 +86,7 @@
                 [wts (extend-repeating-last wts len)]
                 [cumulative-weights (to-cumulative wts)]
                 [top (list-last cumulative-weights)]
-                [rgen (rnd 0 top key/keys)]
+                [rgen (rnd 0 top seed)]
                 [picker (index-picker cumulative-weights)])
            (seq-meta-ranged
             lst
@@ -98,25 +99,24 @@
   ;; two non-lists gets rnd. Any other combination of args is illegal.
   (define-syntax ?
     (syntax-rules ()
-      ((_ a b key/keys)
+      ((_ a b seed)
        (let ([ad (pdef a)] [bd (pdef b)])
-         (unless (or (symbol? key/keys) (unsafe-list? key/keys))
-           (error '? "3rd arg must be a key or key list" ad bd key/keys))
+         (unless (integer? seed)
+           (error '? "3rd arg must be an integer seed" ad bd seed))
          (if (unsafe-list? ad)
              (if (unsafe-list? bd)
-                 (wpick ad bd key/keys)
+                 (wpick ad bd seed)
                  (error '? "2nd arg must be a list if 1st is" ad bd))
-             (rnd ad bd key/keys))))
+             (rnd ad bd seed))))
 
-      ((_ [a b ...] key/keys)
-       (lif [ks (pdef key/keys)]
-            (for-all symbol? ks)
-            (pick [a b ...] key/keys)
-            (? [a b ...] key/keys '())))
+      ((_ [a b ...] seed)
+       (if (integer? seed)
+           (pick [a b ...] seed)
+           (? [a b ...] seed)))
 
       ((_ [a b ...]) (pick [a b ...]))
 
-      ((_ a b) (? a b '()))
+      ((_ a b) (? a b default-seed))
 
       ((_ args ...)
        (error '? "invalid number of args" 'args ...))))
@@ -128,56 +128,6 @@
 
   ;;--------------------------------------------------------------------
   ;; Rhythmic & sequencing operations.
-
-  ;; Choose from a list according to the current measure.
-  (define-syntax each
-    (syntax-rules ()
-      ((_ measures qlist)
-       (let* ([lst (pdef qlist)]
-              [len (length lst)])
-         (when (< len 1)
-           (error 'each "requires at least 1 value" len))
-         (seq-meta-ranged
-          lst
-          (lambda (context)
-            (let* ([t (context-now context)]
-                   [n (trunc-int (/ t measures))])
-              (eval-seq (list-ref lst (modulo n len)) context))))))
-      
-      ((_ args ...)
-       (error 'each "expects (measures values)" 'args ...))))
-
-  ;; Normally chooses the first value, but every n measures chooses
-  ;; the second value instead. If there are more than 2 values, the
-  ;; 2nd through nth values are cycled each n measures.
-  (define-syntax every
-    (syntax-rules ()
-      ((_ n measures qlist)
-       (let* ([lst (pdef qlist)]
-              [len (length lst)])
-         (when (< len 2)
-           (error 'every "requires at least 2 values" len))
-         (when (zero? n)
-           (error 'every "n cannot be 0" n))
-         (seq-meta-ranged
-          lst
-          (lambda (context)
-            (let* ([t (context-now context)]
-                   [i (if (zero? t) 0 (trunc-int (/ t measures)))]
-                   [n-cycles (trunc-int (/ i n))]
-                   [choice (lambda () (+ 1 (mod n-cycles (- len 1))))])
-              (lif [n-wrapped (mod i n)]
-                   (eq? n-wrapped (- n 1))
-                   (eval-seq (list-ref lst (choice)) context)
-                   (eval-seq (car lst) context)))))))
-      
-      ((_ args ...)
-       (error 'every "expects (N measures values)" 'args ...))))
-
-  ;; Tag so pdef recognises as a macro
-  (tag-pdef-callable each)
-  (tag-pdef-callable every)
-
   (define (sine freq lo hi)
     (seq-meta-ranged
      (list lo hi)
@@ -186,21 +136,6 @@
              [l (eval-seq lo context)]
              [h (eval-seq hi context)])
          (range-sine f l h (context-now context))))))
-
-  ;;--------------------------------------------------------------------
-  ;; Some leaves allow the user to specify which properties of the
-  ;; context's current event are considered when contextualising. This
-  ;; makes the implementation of that simpler.
-  (define (fold-by-keys fn init key/keys context)
-    (define (matches-key? pair)
-      (find (lambda (k) (eq? k (car pair))) key/keys))
-    (let ([time (context-now context)]
-          [event (context-event context)])
-      (match key/keys
-        [() (fn init time)]
-        [(?? symbol?) (fn init (event-get event key/keys 1))]
-        [(?? unsafe-list?)
-         (fold-left fn init (event-clean (filter matches-key? event)))])))
 
   ;; Helper for `this`, `next` and `nearest`.
   (define (get c key default)
