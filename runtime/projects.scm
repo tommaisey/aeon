@@ -2,7 +2,11 @@
 ;; file, which will usually restart its patterns afresh.
 (define (reinit-project)
   (if (file-exists? "main.scm")
-      (begin (stop) (load "main.scm"))
+      (let ([j jump])
+        (set! jump (lambda args '()))
+        (stop)
+        (load "main.scm")
+        (set! jump j))
       (println "No active aeon project. Try: (switch-project \"name\")")))
 
 (define (jump . args)
