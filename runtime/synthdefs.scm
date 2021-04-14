@@ -144,27 +144,40 @@
 (send-synth sc3 "bd"
   (src-synth ([:attack 0.005 ir] [:sustain 1 ir]
               [:freq 62 kr]
-              [:tone-amt 1/3 ir]
-              [:tone-rls 1/7 ir])
-    (let* ([freq-rise (* 10 :tone-amt)]
-           [freq-env (make-ar 0 :tone-rls freq-rise -3 do-nothing)]
-           [freq (*+ :freq freq-env :freq)]
-           [env (make-ar :attack :sustain)])
-      (* (sin-osc ar freq 0) env))))
+              [:freq-amt 0.3 ir]
+              [:freq-rls 0.22 ir])
+    (let* ([freq-rise (* 10 :freq-amt)]
+           [freq-env (make-ar 0 :freq-rls freq-rise -4 do-nothing)]
+           [freq (* :freq 1/8)] ;; lower octave by default
+           [freq (*+ freq freq-env freq)]
+           [noise-env (make-ar 0 0.04 0.4 -6 do-nothing)]
+           [noise (* (pink-noise ar) noise-env)]
+           [env (make-ar :attack :sustain :amp)])
+      (*+ (sin-osc ar freq (* pi 1/4)) env noise))))
 
 (send-synth sc3 "cp"
-  (src-synth ([:attack 0.005 ir] [:sustain 1/6 ir]
-              [:freq 62 kr]
-              [:tone-amt 1/3 ir]
-              [:tone-rls 1/7 ir])
+  (src-synth ([:attack 0.005 ir] [:sustain 1/6 ir])
     (let* ([mod 0.7]
-           [env (make-ar :attack :sustain 1 -5)]
-           [env2 (make-ar :attack (* :sustain 2/3) mod -5 do-nothing)]
+           [lfo-env (make-ar :attack (* :sustain 2/3) mod -5 do-nothing)]
            [lfo (saw ar 120)]
            [noise (white-noise ar)]
            [noise (b-peak-eq noise 400 3 12)]
-           [noise (b-peak-eq noise 1800 3 8)])
-      (* noise env (+ mod (* lfo env2))))))
+           [noise (b-peak-eq noise 1800 3 8)]
+           [env (make-ar :attack :sustain :amp -5)])
+      (* noise env (*+ lfo lfo-env mod)))))
+
+(send-synth sc3 "hh"
+  (src-synth ([:attack 0.005 ir] [:sustain 1/6 ir]
+              [:hi 0.8])
+    (let* ([mod 0.7]
+           [lfo-env (make-ar :attack (* :sustain 1/5) mod -5 do-nothing)]
+           [lfo (saw ar 120)]
+           [noise (white-noise ar)]
+           [noise (b-peak-eq noise 2200 3 12)]
+           [noise (b-peak-eq noise 10000 3 8)]
+           [noise (hpf noise (scale-cutoff :hi 500 11000))]
+           [env (make-ar :attack :sustain :amp -7)])
+      (* noise env (*+ lfo lfo-env mod)))))
 
 ;;-------------------------------------------------------------------
 ;; The fx synthdef nursery...
