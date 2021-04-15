@@ -3,14 +3,21 @@
 (define sc-possible-paths
   (list
    "/Applications/SuperCollider/SuperCollider.app/Contents/Resources/scsynth" ; regular mac
-   "/Applications/SuperCollider.app/Contents/Resources/scsynth")) ; homebrew ma
-
-(launch-supercollider sc-port sc-possible-paths)
+   "/Applications/SuperCollider.app/Contents/Resources/scsynth")) ; homebrew mac
 
 ;;-----------------------------------------------------------------
-;; Open the UDP connection to SuperCollider
+;; Open a UDP connection to SuperCollider
 (define sc3 (so/udp:open "127.0.0.1" sc-port))
 
+;; If there's an SC instance running, use it, otherwise launch one.
+(with-exception-handler
+  (lambda (err)
+    (launch-supercollider sc-port sc-possible-paths))
+  (lambda ()
+    (sc/server-sample-rate-nominal sc3)
+    (printfln "Using SuperCollider process at port: ~a" sc-port)))
+
+;;-----------------------------------------------------------------
 ;; Send a timestamped OSC bundle.
 (define (send-bundle t args)
   (so/send sc3 (so/bundle t args)))
