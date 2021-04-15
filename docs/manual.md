@@ -180,22 +180,21 @@ The pattern will continue playing until you stop it.
 
 
 ``` scheme
-;; stop one or more patterns
+;; stop one or more patterns by name
 (stop pattern-names ...)
+
+;; prepend 'stop' to an existing pattern definition
+(stop pattern my-pattern-name
+  (in! 8))
 
 ;; stop all patterns
 (stop)
 ```
 
-Another way to stop a pattern is to simply append `~` to the
-word `pattern`. This is a quick and convenient way to switch
-patterns on and off:
-
-``` scheme
-;; stops pattern with this name
-(~pattern name
-  (operator) ...)
-```
+The second form is useful because it switches the pattern off
+in the same place that it's defined. That makes it less likely
+you'll leave a separate `stop` expression in a file and get
+confused later when the pattern doesn't play.
 
 #### quantise changes
 [**note**: unimplemented]
