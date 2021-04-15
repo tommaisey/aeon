@@ -4,7 +4,7 @@
 
 ;; Useful test function: (test-synth "sine-grain" :freq 330 :attack 1/16)
 (define (test-synth name . args)
-  (play-when name (utc 0.1) default-group
+  (play-when name (utc 0.1)
              (event-symbols->strings (apply make-alist args))))
 
 ;;------------------------------------------------------------------
@@ -222,8 +222,15 @@
       (* :in (+ (* osc :depth) (- 1 :depth))))))
 
 (send-synth sc3 "compress"
-  (fx-synth ([:thresh 0.75] [:ratio 3] [:attack 0.05] [:release 0.2])
+  (fx-synth ([:thresh 0.75] [:ratio 3] [:attack 0.1] [:release 0.2])
     (compander :in :in :thresh 1 (/ 1 :ratio) :attack :release)))
+
+(send-synth sc3 "disco-smile"
+  (fx-synth ([:thresh 0.75] [:ratio 6] [:attack 0.1] [:release 0.2])
+    (let* ([eqed (b-hi-pass :in 38 1)]
+           [eqed (b-low-shelf eqed 400 1 6)]
+           [eqed (b-hi-shelf eqed 3000 1 6)])
+      (compander eqed eqed :thresh 1 (/ 1 :ratio) :attack :release))))
 
 (send-synth sc3 "ramp"
   (fx-synth ([:start 0.2] [:end 1])

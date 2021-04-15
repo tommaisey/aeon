@@ -1,5 +1,5 @@
 ;; -----------------------------------------------------------
-;; Socket functions from ip.ikarus.scm, reimplemented using 
+;; Socket functions from ip.ikarus.scm, reimplemented using
 ;; Chez library socket (see above)
 
 (define-record-type udp* (fields fd h p))
@@ -41,24 +41,24 @@
 (define tcp:socket? tcp*?)
 
 ;; string -> int -> socket
-(define tcp:open 
+(define tcp:open
   (lambda (ip port)
     (let* ([fd (socket:socket AF_INET SOCK_STREAM IPPROTO_IP)])
       (socket:connect fd AF_INET ip port)
       (make-tcp* fd ip port))))
 
 ;; socket -> bytevector -> ()
-(define tcp:send 
+(define tcp:send
   (lambda (t bv)
     (socket:write (tcp*-fd t) bv)))
 
 ;; socket -> int -> maybe bytevector
-(define tcp:read 
+(define tcp:read
   (lambda (t n)
     (socket:read (tcp*-fd t) n)))
 
 ;; socket -> ()
-(define tcp:close 
+(define tcp:close
   (lambda (t)
     (socket:close (tcp*-fd t))
     (socket:cleanup)))

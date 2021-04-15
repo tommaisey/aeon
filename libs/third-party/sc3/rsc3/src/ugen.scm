@@ -50,6 +50,10 @@
   (lambda (input freq rq)
     (mk-ugen (list "BHiPass" (list 0) (list input freq rq) nil 1 nil nil))))
 
+(define b-hi-pass4
+  (lambda (input freq rq)
+    (mk-ugen (list "BHiPass4" (list 0) (list input freq rq) nil 1 nil nil))))
+
 (define b-hi-shelf
   (lambda (input freq rs db)
     (mk-ugen (list "BHiShelf" (list 0) (list input freq rs db) nil 1 nil nil))))
@@ -57,6 +61,10 @@
 (define b-low-pass
   (lambda (input freq rq)
     (mk-ugen (list "BLowPass" (list 0) (list input freq rq) nil 1 nil nil))))
+
+(define b-low-pass4
+  (lambda (input freq rq)
+    (mk-ugen (list "BLowPass4" (list 0) (list input freq rq) nil 1 nil nil))))
 
 (define b-low-shelf
   (lambda (input freq rs db)

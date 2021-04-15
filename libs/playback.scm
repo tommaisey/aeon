@@ -49,9 +49,9 @@
     (make-safe-val (make-hashtable symbol-hash eq? 32)))
 
   (define pattern-success-symbols
-    (make-parameter '(success nice ok)))
+    (make-parameter '(success done ok you-betcha)))
   (define pattern-error-symbols
-    (make-parameter '(error !!! nope)))
+    (make-parameter '(error !!! nope try-again)))
 
   ;; Before adding the pattern, we run it in a few contexts
   ;; on this thread. That way, we get early error reporting,

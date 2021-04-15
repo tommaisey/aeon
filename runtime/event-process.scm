@@ -17,9 +17,9 @@
                  [with-bus (lambda (key) (cons (cons key bus) args))])
             (create-voice-group group)
             (cond
-              [ctrl (control-when time group args)]
-              [fx   (fx-when inst time group (with-bus ":in"))]
-              [else (play-when inst time group (with-bus ":out"))]))
+              [ctrl (control-when time args group)]
+              [fx   (fx-when inst time (with-bus ":in") group)]
+              [else (play-when inst time (with-bus ":out") group)]))
           (println "Error: event didn't specify a valid group.")))))
 
 (define (time-at-beat beat beat-now time-now)

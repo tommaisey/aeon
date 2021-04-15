@@ -63,7 +63,7 @@
            [event (make-event 0 :inbus 0 :outbuf bufnum)]
            [args (event-symbols->strings event)]
            [synth-id 55378008]) ; only one at a time for now
-      (play-when "recorder2" t recording-group args synth-id)
+      (play-when "recorder2" t args recording-group sc/add-to-head synth-id)
       (set! active-recording (recording-state-with-synth active-recording synth-id))
       (println "Recording started!"))))
 

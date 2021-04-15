@@ -22,13 +22,6 @@
 ;; We keep a list of all the groups that have been created so
 ;; we don't spam new group commands to SC. After init, these fns
 ;; and data are accessed only from the playback thread.
-(define default-group 1) ;; See SC docs on default_group
-(define group-id-counter default-group)
-
-(define (make-unused-group-id)
-  (set! group-id-counter (+ group-id-counter 1))
-  group-id-counter)
-
 (define known-groups (list))
 (define (known-group? id) (member id known-groups))
 
@@ -93,29 +86,31 @@
 ;;-----------------------------------------------------------------
 ;; Send a timestamped OSC bundle to launch a new synth with some arguments.
 ;; Usually there's no need to specify a synth-id unless you know what you're doing.
-(define* (play-when name t group arg-pairs 
-                    [/opt (synth-id -1) (target sc/add-to-head)])
-  (send-bundle t (list (sc/s-new0 name synth-id target group)
+(define* (play-when name t arg-pairs
+                    [/opt (target standard-group)
+                          (action sc/add-to-head)
+                          (synth-id -1)])
+  (send-bundle t (list (sc/s-new0 name synth-id action target)
                        (sc/n-set synth-id arg-pairs))))
 
 ;; Sends a control change to all the voices in group.
-(define (control-when t group arg-pairs)
+(define (control-when t arg-pairs group)
   (send-bundle t (list (sc/n-set group arg-pairs))))
 
 ;; Add an effect to all the voices in group.
-(define (fx-when name t group arg-pairs)
+(define (fx-when name t arg-pairs group)
   (let ([out-synth-id (voice-group-out-id group)])
-    (play-when name t out-synth-id arg-pairs -1 sc/add-before)))
+    (play-when name t arg-pairs out-synth-id sc/add-before)))
 
 ;; Useful for quick testing of synthdefs
 (define (play-now name arg-pairs)
-  (play-when name (utc) standard-group arg-pairs))
+  (play-when name (utc) arg-pairs))
 
 ;; Much like play-when, but adds to tail
 ;; Avoid confusing 'late' messages by delaying 0.1
 (define (start-send-effect name . arg-pairs)
-  (play-when name (utc 0.1) send-effect-group arg-pairs
-             -1 sc/add-to-tail))
+  (play-when name (utc 0.1) arg-pairs
+             send-effect-group sc/add-to-tail))
 
 ;; Kills a running synth immediately (may cause clicks)
 (define* (stop-synth synth-id [/opt (t (sc/utc))])
