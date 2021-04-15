@@ -50,7 +50,7 @@
             (else
              (syntax (if (procedure? v)
                          (v q ...)
-                         (list (pdef v) 
+                         (list (pdef v)
                                (pdef q) ...)))))))
         ((_ (v ...))
          (syntax (pdef (^ v ...))))

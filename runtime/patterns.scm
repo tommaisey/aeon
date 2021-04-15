@@ -39,3 +39,9 @@
 
 (define (pattern-names)
   (list-pattern-names pattern-dict))
+
+;;------------------------------------------------------------------
+;; Tag these at the top level to disambiguate pattern syntax.
+(tag-pdef-callable quote)
+(tag-pdef-callable lambda)
+
