@@ -4,19 +4,21 @@
 ;; pushes them on to our sound engine back-ends (e.g. OSC , MIDI).
 (library (playback)
   (export
-    bpm->mps bpm->spm
-    measures->secs secs->measures
-    secs-until sleep-secs
-    make-pattern-dict
-    iterate-patterns list-patterns
-    add-pattern remove-pattern
-    get-pattern clear-patterns
-    list-patterns-in-file
-    list-files-with-playing-patterns
-    list-pattern-names
-    semaphore semaphore? make-semaphore
-    start-waiting stop-waiting waiting?
-    start-suspendable-thread)
+   bpm->mps bpm->spm
+   measures->secs secs->measures
+   secs-until sleep-secs
+   make-pattern-dict
+   iterate-patterns list-patterns
+   add-pattern remove-pattern
+   get-pattern clear-patterns
+   pattern-success-symbols
+   pattern-error-symbols
+   list-patterns-in-file
+   list-files-with-playing-patterns
+   list-pattern-names
+   semaphore semaphore? make-semaphore
+   start-waiting stop-waiting waiting?
+   start-suspendable-thread)
 
   (import (scheme) (context) (node-eval) (utilities) (file-tools))
 
@@ -46,20 +48,32 @@
   (define (make-pattern-dict)
     (make-safe-val (make-hashtable symbol-hash eq? 32)))
 
+  (define pattern-success-symbols
+    (make-parameter '(success nice ok)))
+  (define pattern-error-symbols
+    (make-parameter '(error !!! nope)))
+
   ;; Before adding the pattern, we run it in a few contexts
   ;; on this thread. That way, we get early error reporting,
   ;; and less chance of a broken pattern on the playback thread.
   (define (add-pattern dict id fn)
+    (define (choose symbols)
+      (let ([len (length symbols)])
+        (if (eq? len 1)
+            (list-ref symbols 0)
+            (list-ref symbols (random (dec len))))))
     (define (handle-error condition)
       (display-condition condition)
-      (println "^^^ Pattern appears broken!!!"))
+      (println "^^^ Pattern appears broken!!!")
+      (choose (pattern-error-symbols)))
     (guard (x [else (handle-error x)])
       (let ([pos (random 10000)]
             [neg (* -1 (random 1000))])
         (render-arc fn 0 8)
         (render-arc fn pos (+ pos 8))
         (render-arc fn neg (+ neg 10))
-        (safe-val-apply hashtable-set! dict id fn))))
+        (safe-val-apply hashtable-set! dict id fn)
+        (choose (pattern-success-symbols)))))
 
   (define (remove-pattern dict id)
     (safe-val-apply hashtable-delete! dict id))
@@ -94,11 +108,11 @@
 
     (define (build result file)
       (let ([recur (lambda (f) (list-files-with-playing-patterns
-                                f pattern-dict pattern-form?))])
+                           f pattern-dict pattern-form?))])
         (cond
-          ((file-directory? file) (append (recur file) result))
-          ((contains-playing? file) (cons file result))
-          (else result))))
+         ((file-directory? file) (append (recur file) result))
+         ((contains-playing? file) (cons file result))
+         (else result))))
 
     (fold-left build '() (child-file-paths root-path)))
 
