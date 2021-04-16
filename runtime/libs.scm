@@ -2,7 +2,9 @@
 (optimize-level 2)
 
 (define aeon-dir
-  (if (top-level-bound? 'aeon-file) (path-parent aeon-file) "."))
+  (if (top-level-bound? 'aeon-file)
+      (path-parent aeon-file)
+      (current-directory)))
 
 (library-extensions
  (list ".chezscheme.sls" ".sc" ".ss" ".scm" ".sls" ".sch"))

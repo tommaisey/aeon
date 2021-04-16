@@ -19,7 +19,7 @@
       (let ([ext (string-downcase (path-extension path))]
             [exts (map string-downcase exts)])
         (for-any (lambda (e) (string=? e ext)) exts))))
-  
+
   ;; Checks a path's extension for an extension associated with scheme.
   (define valid-scheme-path? (has-extension? "scm"))
 
@@ -101,16 +101,15 @@
   ;; Open a file as a textual (rather than binary) port.
   (define (open-file-as-textual-port file)
     (open-file-input-port file (file-options) 'block (native-transcoder)))
-  
+
   ;; Read a port into a list of lines.
   (define (lines-from-port p)
     (do ([line (get-line p) (get-line p)]
          [lines (list) (cons line lines)])
         ((eof-object? line)
          (begin (close-port p) (reverse lines)))))
-  
+
   ;; Read an entire file into a list of lines.
   ;; Don't do this with huge files!
   (define (file-lines file)
     (lines-from-port (open-file-as-textual-port file))))
-

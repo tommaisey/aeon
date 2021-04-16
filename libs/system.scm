@@ -9,7 +9,7 @@
           build-aeon-libraries
           clean-aeon-libraries
           syscall-file-prefix)
-  
+
   (import (chezscheme) (utilities) (file-tools))
 
   ;; Runs a process, blocking until it completes.
@@ -49,7 +49,7 @@
   ;; These files should get cleaned up automatically.
   (define (syscall-file-name)
     (str+ syscall-file-prefix (number->string (random 9999))))
-  
+
   (define syscall-file-prefix ".aeon-syscall")
 
   ;;-------------------------------------------------------------------
@@ -83,7 +83,7 @@
 
   ;; Keywords returned by make-sc-process as it scans SC's output.
   (declare-keywords :quit :late :error :ready :other)
-  
+
   ;; Runs a SuperCollider process using the executable at the given
   ;; path and using the given port. Returns a procedure for reading
   ;; SC output that keeps returning => (values :event text)
@@ -129,7 +129,7 @@
     (parameterize ([source-directories (cons dir (source-directories))]
                    [current-directory dir]
                    [command-line (list "mk.scm" dest-dir)])
-      (load (path+ dir "mk.scm"))))
+      (load-program "mk.scm")))
 
   (define (c-mk libname c-files)
     (let* ([fs (fold-left (lambda (a b) (str+ a " " b)) "" c-files)]
@@ -142,6 +142,7 @@
 
   ;; Builds the rsc3 libraries for e.g. OSC communication.
   (define (build-aeon-libraries aeon-root-dir)
+    (assert (path-absolute? aeon-root-dir))
     (let* ([third-dir (third-dir-from aeon-root-dir)]
            [sc3-dir (sc3-dir-from aeon-root-dir)]
            [sc3-sub (lambda (sub) (path+ sc3-dir sub))]
@@ -154,7 +155,7 @@
           (rohan-drake-mk (sc3-sub "rsc3/mk") sc3-dir))
         (parameterize ([current-directory (path+ third-dir "timeout")])
           (c-mk "libtimeout" (list "timeout.c"))))))
-  
+
   ;; Clean the build scheme and c libraries out.
   (define (clean-aeon-libraries aeon-root-dir)
     (let* ([del? (has-extension? "sls" "so" "dylib")]
@@ -165,5 +166,5 @@
       (and
        (for-all identity (map delete-file timeout-files))
        (for-all identity (map delete-file sc3-files)))))
-  
+
   )

@@ -6,28 +6,46 @@
    "/Applications/SuperCollider.app/Contents/Resources/scsynth")) ; homebrew mac
 
 ;;-----------------------------------------------------------------
-;; Open a UDP connection to SuperCollider
+;; Open a UDP connection to SuperCollider (SC3)
 (define sc3 (so/udp:open "127.0.0.1" sc-port))
 
-;; If there's an SC instance running, use it, otherwise launch one.
-(with-exception-handler
-  (lambda (err)
-    (launch-supercollider sc-port sc-possible-paths))
-  (lambda ()
-    (sc/server-sample-rate-nominal sc3)
-    (printfln "Using SuperCollider process at port: ~a" sc-port)))
+(define (sc3-responds?)
+  (guard (x [else #f])
+    (sc/server-sample-rate-nominal sc3) #t))
+
+;; If there's an SC3 instance running, use it, otherwise launch one.
+(if (sc3-responds?)
+    (printfln "Reusing SuperCollider process at port: ~a" sc-port)
+    (begin (printfln "Launching SuperCollider process at port: ~a" sc-port)
+           (launch-supercollider sc-port sc-possible-paths)
+           (sleep-secs 0.2)))
+
+;; Reset to a blank server with default (root) group 1
+;; TODO: Rude if someone has a running session...
+;; Can we instead only reset groups created by a previous
+;; aeon session? How would we do that?
+(if (sc3-responds?)
+    (begin (sc/reset sc3)
+           (sleep-secs 0.2))
+    (error "init" "\nUnable to launch SuperCollider."))
 
 ;;-----------------------------------------------------------------
-;; Send a timestamped OSC bundle.
-(define (send-bundle t args)
-  (so/send sc3 (so/bundle t args)))
-
+;; Get the time in a format that SC3 understands
 (define* (utc [/opt (offset-secs 0)])
   (+ (sc/utc) offset-secs))
 
+;; Send a timestamped OSC bundle to SC3.
+(define (send-bundle t args)
+  (so/send sc3 (so/bundle t args)))
+
 ;;-----------------------------------------------------------------
-;; We keep a list of all the groups that have been created so
-;; we don't spam new group commands to SC. After init, these fns
+;; Groups are used to organise our synths on the SC3 server.
+(define standard-group    (make-unused-group-id)) ;; voices with no :group go here
+(define send-effect-group (make-unused-group-id)) ;; send fx go here
+(define recording-group   (make-unused-group-id)) ;; recording synths go here
+
+;; We keep a list of all other groups that get created so we
+;; don't spam new group commands to SC. After init, these fns
 ;; and data are accessed only from the playback thread.
 (define known-groups (list))
 (define (known-group? id) (member id known-groups))
@@ -38,57 +56,36 @@
       (set! known-groups (cons id known-groups)))
     needs-adding))
 
-;; Create a group with no special routing (e.g. for send fx, recording)
-(define (create-group id order target)
+;; Create a generic group with no special routing.
+(define (create-group id target order)
   (when (register-group id)
     (so/send sc3 (sc/g-new1 id order target))))
 
-;; Groups containing voices and fx are each given their own bus.
-;; Voices write to this bus using Out, while fx use ReplaceOut.
-;; A special synth at the end of the group routes the result to main out.
-(define voice-group-out-synth "voice-group-out-synth")
+;; A 'voice group' contains N voices, then N effects, then
+;; one special synth to route the output to master.
+;; Each voice group has its own audio bus. Voices write
+;; to this using Out, effects use ReplaceOut.
 (define (voice-group-out-id group-id) (+ 32768 group-id))
 (define (voice-group-bus group-id) (+ 256 group-id))
+
+(send-synth sc3 "voice-group-out-synth"
+  (letc ([:in 0 ir])
+    (mrg2 (out 0 (stereo-in :in))
+          (replace-out :in (silence 2)))))
 
 (define* (create-voice-group id [/opt (t (utc 0.1))])
   (when (register-group id)
     (let ([out-id (voice-group-out-id id)])
-      (send-bundle t
-        (list (sc/g-new1 id sc/add-to-head default-group)
-              (sc/s-new0 voice-group-out-synth out-id sc/add-to-tail id)
-              (sc/n-set out-id (make-alist ":in" (voice-group-bus id))))))))
+      (send-bundle t (list (sc/g-new1 id sc/add-to-head root-group)
+                           (sc/s-new0 "voice-group-out-synth" out-id sc/add-to-tail id)
+                           (sc/n-set out-id (make-alist ":in" (voice-group-bus id))))))))
 
-;; n.b. SC docs seem to imply that the default_group is
-;; automatically created if SC is started from its GUI, not
-;; if it's started from cmd-line? Check that.
-(define standard-group (make-unused-group-id))
-(define send-effect-group (make-unused-group-id))
-(define recording-group (make-unused-group-id))
-
-;; Scratch audio bus that's overwritten by successive source and fx synths.
-;; TODO: just the defaults! How do I find out if SC has been started with
-;; a different bus? Don't want scratch to clash with anything.
-(define num-audio-buses 1024)
-(define scratch-audio-bus (dec num-audio-buses))
-
-;;-----------------------------------------------------------------
-;; Poke the server to check whether it's available.
-;; If it is, reset it to a blank state: free all synths, add our main groups.
-(let ([fail-msg "\nSuperCollider not found."])
-  (sleep-secs 0.2)
-  (sc/reset sc3) ;; Blank server with default group 1
-  (sleep-secs 0.2)
-  (with-exception-handler
-   (lambda (x) (when (error? x) (error "init" fail-msg)))
-   (lambda () (sc/server-sample-rate-nominal sc3)))
-  (send-synth sc3 voice-group-out-synth
-    (letc ([:in 0 ir])
-      (mrg2 (out 0 (stereo-in :in))
-            (replace-out :in (silence 2)))))
-  (create-voice-group standard-group)
-  (create-group send-effect-group sc/add-to-tail default-group)
-  (create-group recording-group sc/add-to-tail default-group)
-  (sleep-secs 0.125))
+;; Finally we create the basic groups.
+;; Other groups will be created as needed.
+(create-voice-group standard-group)
+(create-group send-effect-group root-group sc/add-to-tail)
+(create-group recording-group root-group sc/add-to-tail)
+(sleep-secs 0.125)
 
 ;;-----------------------------------------------------------------
 ;; Send a timestamped OSC bundle to launch a new synth with some arguments.

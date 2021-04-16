@@ -6,7 +6,7 @@
           letc src-synth fx-synth
           get-bus-num
           private-bus
-          default-group
+          root-group
           make-unused-group-id
           make-env-gen
           make-asr
@@ -44,15 +44,13 @@
   (define (private-bus i)
     (u+ i sc/num-output-buses sc/num-input-buses))
 
-  ;; Define the default-group. See SC docs on default_group.
-  (define default-group 1)
+  ;; Define a root-group. Corresponds to SC's default_group (see SC docs).
+  (define root-group 1)
 
   ;;Define a way to get a known unused group.
-  (define (make-unused-group-id)
-    (set! group-id-counter (+ group-id-counter 1))
-    group-id-counter)
-
-  (define group-id-counter default-group)
+  (define make-unused-group-id
+    (let ([id root-group])
+      (lambda () (set! id (inc id)) id)))
 
   ;;-------------------------------------------------------------------
   ;; Envelopes generator - plays back envelope stages.
