@@ -53,14 +53,16 @@
 
   (testp "[in! over] subdivide" (make-arc 0 1)
     (in! (over 1 [1 [1 1]]))
-    ((:beat 0) (:beat 1/2 :sustain 1/4)
-               (:beat 3/4 :sustain 1/4)))
+    ((:beat 0)
+     (:beat 1/2 :sustain 1/4)
+     (:beat 3/4 :sustain 1/4)))
 
   (testp "[in! over] subdivide numeric" (make-arc 0 1)
     (in! (over 1 [1 [1 2]]))
-    ((:beat 0) (:beat 1/2 :sustain 1/4)
-               (:beat 3/4 :sustain 1/8)
-               (:beat 7/8 :sustain 1/8)))
+    ((:beat 0)
+     (:beat 1/2 :sustain 1/4)
+     (:beat 3/4 :sustain 1/8)
+     (:beat 7/8 :sustain 1/8)))
 
   (testp "[in! over] subdivide arc positive" (make-arc 21/2 22/2)
     (in! (over 1 [1 [1 1]]))
@@ -69,6 +71,20 @@
   (testp "[in! over] subdivide arc negative" (make-arc -800 (+ -800 2/3))
     (in! (over 1 [1 [1 1]]))
     ((:beat -800 :sustain 1/2) (:beat (+ -800 1/2) :sustain 1/4)))
+
+  (testp "[in! over] repeat !" (make-arc 0 1)
+    (in! (over 1 [1 !]))
+    ((:beat 0 :sustain 1/2) (:beat 1/2 :sustain 1/2)))
+
+  (testp "[in! over] repeat !3" (make-arc 0 1)
+    (in! (over 1 [1 !3]))
+    ((:beat 0 :sustain 1/3)
+     (:beat 1/3 :sustain 1/3)
+     (:beat 2/3 :sustain 1/3)))
+
+  (testp "[in! over] sustain $" (make-arc 0 1)
+    (in! (over 1 [1 1 $]))
+    ((:beat 0 :sustain 1/3) (:beat 1/3 :sustain 2/3)))
 
   ;;----------------------------------------------------------
   (testp "[in:] basic" (make-arc 0 1)

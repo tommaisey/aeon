@@ -13,11 +13,10 @@
 
     (part
       (in: :chd (over 1/2 [I I (? [I III]) I])
-           (to+ :chd (every 4 1/2 [I V VI XI]))
+           (to+ :chd (over 8 [I !7 (over 32 [V VI XI])]))
            (to: :group grp1 :control "pitchbend"
-                :scd (over 2 [I (each 2 [VI III])])
+                :scd (over 2 [I (over 2 [VI III])])
                 :octave (over 2 [-1 (? [0 1]) (? [0 1 -1])])
-                :bus1-amt (rnd 0.0 0.125)
                 :pan (over 1/2 [0.4 0.6])))
       (tt* (? [1 3/2 2])))
 

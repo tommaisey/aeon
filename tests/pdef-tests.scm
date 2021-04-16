@@ -1,4 +1,4 @@
-(module subdivide-tests ()
+(module pdef-tests ()
 
   (import (chezscheme)
           (testing)

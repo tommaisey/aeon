@@ -37,7 +37,8 @@
     (lambda (x)
       (syntax-case x (^)
 
-        ((_ (^ v ...)) (syntax (resolve-repeats (list (pdef v) ...))))
+        ((_ (^ v ...))
+         (syntax (resolve-repeats (list (pdef v) ...))))
 
         ((_ (v q ...))
          (identifier? #'v)
@@ -46,12 +47,11 @@
             ((property-lookup #'v #'pdef-call-tag)
              (syntax (v q ...)))
             ((property-lookup #'v #'pdef-not-call-tag)
-             (syntax (list v (pdef q) ...)))
+             (syntax (pdef (^ v q ...))))
             (else
              (syntax (if (procedure? v)
                          (v q ...)
-                         (list (pdef v)
-                               (pdef q) ...)))))))
+                         (pdef (^ v q ...))))))))
         ((_ (v ...))
          (syntax (pdef (^ v ...))))
 
