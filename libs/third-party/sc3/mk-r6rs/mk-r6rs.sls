@@ -1,6 +1,8 @@
 (library (mk-r6rs)
   (export mk-r5rs mk-r6rs mk-r7rs)
-  (import (rnrs))
+  (import (chezscheme))
+  ;; Change to 'write' for (rnrs) compatiblilty
+  (define write-form pretty-print)
 
   (define concat
     (lambda (l)
@@ -91,7 +93,8 @@
 	(lambda (p)
 	  (let* ((xs (concat (map all-values srcs))))
 	    (map (lambda (x)
-                   (write x p))
+                   (write-form x p)
+                   (newline p))
 		 xs))))))
 
   (define mk-r6rs
@@ -102,12 +105,13 @@
 		 (xs-p (excluding xs (append are-private to-exclude))))
             (display "#!r6rs" p)
             (newline p)
-            (write `(library
-			,lib
-                      ,(export-list 'export xs-p)
-                      (import ,@imports)
-                      ,@xs)
-                   p))))))
+            (write-form
+             `(library
+		  ,lib
+                ,(export-list 'export xs-p)
+                (import ,@imports)
+                ,@xs)
+             p))))))
 
   (define mk-r7rs
     (lambda (lib srcs dst imports are-private to-exclude)
@@ -115,11 +119,12 @@
 	(lambda (p)
           (let* ((xs (concat (map all-values srcs)))
 		 (xs-p (excluding xs (append are-private to-exclude))))
-            (write `(define-library
-			,lib
-                      ,(export-list 'export xs-p)
-                      (import ,@imports)
-                      (begin ,@xs))
-                   p))))))
+            (write-form
+             `(define-library
+		  ,lib
+                ,(export-list 'export xs-p)
+                (import ,@imports)
+                (begin ,@xs))
+             p))))))
 
 )
