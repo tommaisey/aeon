@@ -17,10 +17,10 @@
   ;; Call on the root of a tree to fill a context with events.
   (define render-arc
     (case-lambda
-      ((pattern-fn arc) 
+      ((pattern-fn arc)
        (context-trim (pattern-fn (make-context arc))))
 
-      ((pattern-fn start end) 
+      ((pattern-fn start end)
        (render-arc pattern-fn (make-arc start end)))))
 
   ;;--------------------------------------------------------------
@@ -33,8 +33,10 @@
       [else v]))
 
   ;; If we eval a seq in order to add a new event, the context will look
-  ;; wrong - the event doesn't yet exist, so e.g. rand seeding would be broken.
-  ;; In this case, add an empty event to the context before evaluating.
+  ;; wrong - the event doesn't yet exist, but some functions relt on that.
+  ;; So we add an empty event to the context before evaluating.
+  ;; TODO: is this needed? rand seeding doesn't use the event any more.
+  ;;       are there other functions that need this?
   (define (eval-seq-empty v time-to-add context)
     (if (or (procedure? v) (seq-meta? v))
         (eval-seq v (context-insert context (make-event time-to-add)))
@@ -70,8 +72,9 @@
                              (list (car chain) (make-cacher)))))
 
   ;;-------------------------------------------------------------------
-  ;; An object containing a contextual function as well as some metadata
-  ;; that are needed to evaluate the graph correctly in some situations.
+  ;; An object containing a seq function as well as some metadata
+  ;; that help to evaluate the tree correctly in some situations.
+  ;; A record-writer is defined at the bottom of the file.
   (define-record-type seq-meta
     (fields (immutable rng-min) ;; #f if impossible to detect
             (immutable rng-max) ;; #f if impossible to detect
@@ -119,4 +122,19 @@
            (and result meta)
            (fn result meta) #f))
     (fold-left combine start-val values))
+
+  ;; This has to be after all definitions.
+  (record-writer
+   (type-descriptor seq-meta)
+   (lambda (rec p wr)
+     (display "#[seq" p)
+     (when (seq-meta-subdivider? rec)
+       (display " subdiv" p))
+     (when (seq-meta-rng-min rec)
+       (display " hi:" p)
+       (display (number->string (seq-meta-rng-min rec)) p)
+       (display " lo:" p)
+       (display (number->string (seq-meta-rng-max rec)) p)
+       (display "" p))
+     (display "]" p)))
   )

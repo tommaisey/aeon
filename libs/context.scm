@@ -266,5 +266,19 @@
                [nxt (context-events-next moved)]
                [prv (context-events-prev moved)])
           (context-with-events c (cons new-event nxt) prv))))
-  
+
+  (record-writer
+   (type-descriptor context)
+   (lambda (rec p wr)
+     (display "#[context " p)
+     (wr (context-arc rec) p)
+     (let ([fwd (length (context-events-next rec))]
+           [back (length (context-events-prev rec))])
+       (display " evts: " p)
+       (wr (+ fwd back) p)
+       (display " at: " p)
+       (wr back p))
+     (when (context-subdivide-fn rec)
+       (display " <subdiv>"))
+     (display "]" p)))
   ) ; end module context
