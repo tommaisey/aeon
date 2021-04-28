@@ -86,6 +86,22 @@
     (in! (over 1 [1 1 $]))
     ((:beat 0 :sustain 1/3) (:beat 1/3 :sustain 2/3)))
 
+  (testp "[in!] key-value ops" (make-arc 0 1)
+    (in! (over 1 [1 1])
+         :freq 100)
+    ((:beat 0 :sustain 1/2 :freq 100)
+     (:beat 1/2 :sustain 1/2 :freq 100)))
+
+  (testp "[in!] mixed key-value ops" (make-arc 0 1)
+    (in! (over 1 [1 1])
+         :freq (over [100 200])
+         (tt/ 2)
+         :sustain 1/8)
+    ((:beat 0 :sustain 1/8 :freq 100)
+     (:beat 1/4 :sustain 1/8 :freq 200)
+     (:beat 1/2 :sustain 1/8 :freq 100)
+     (:beat 3/4 :sustain 1/8 :freq 200)))
+
   ;;----------------------------------------------------------
   (testp "[in:] basic" (make-arc 0 1)
     (in: :scd I)
@@ -101,6 +117,22 @@
     ((:beat 0 :sustain 1/4 :scd I)
      (:beat 1/4 :sustain 1/4 :scd II)
      (:beat 1/2 :sustain 1/2 :scd V)))
+
+  (testp "[in:] key-value ops" (make-arc 0 1)
+    (in: :freq (over [50 50])
+         :freq 100)
+    ((:beat 0 :sustain 1/2 :freq 100)
+     (:beat 1/2 :sustain 1/2 :freq 100)))
+
+  (testp "[in:] mixed key-value ops" (make-arc 0 1)
+    (in: :freq (over [50 50])
+         :freq (over [100 200])
+         (tt/ 2)
+         :sustain 1/8)
+    ((:beat 0 :sustain 1/8 :freq 100)
+     (:beat 1/4 :sustain 1/8 :freq 200)
+     (:beat 1/2 :sustain 1/8 :freq 100)
+     (:beat 3/4 :sustain 1/8 :freq 200)))
 
   ;;----------------------------------------------------------
   (testp "[to:] basic" (make-arc 0 1)

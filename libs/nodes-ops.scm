@@ -26,10 +26,12 @@
     (nodes-chains)
     (nodes-continuous))
 
-  ;; Adds blank events to the context.
+  ;; Adds blank events to the context using seq.
   ;; A seq value of 1 gives one event.
   ;; For values > 1, creates N subdivided values.
   ;; The symbol ~ creates a rest.
+  ;; The remaining ops can be a mixed list of :key value
+  ;; pairs and individual transformer functions.
   (define (in! seq . ops)
     (define (impl context value)
       (let* ([value (eval-seq-empty value (context-start context) context)]
@@ -40,9 +42,13 @@
         (fold-left (lambda (c i) (context-insert c (make i)))
                    (context-resolve context)
                    (reverse (iota num)))))
-    (apply part (wrap-subdivide-fn impl seq) ops))
+    (lif (event-maker (wrap-subdivide-fn impl seq))
+         (null? ops) event-maker
+         (apply part event-maker (extract-kvs 'in! ops))))
 
-  ;; Adds events with a single specified property
+  ;; Adds events to the context with property 'key' initialised using seq.
+  ;; The remaining ops can be a mixed list of :key value
+  ;; pairs and individual transformer functions.
   (define (in: key seq . ops)
     (define (impl context value)
       (let ([value (eval-seq-empty value (context-start context) context)])
@@ -51,9 +57,9 @@
                                          (:sustain (context-length context))
                                          (key value)))))
     (unless (symbol? key) (error 'in: "expected :key" key))
-    (if (null? ops)
-        (wrap-subdivide-fn impl seq)
-        (apply part (wrap-subdivide-fn impl seq) ops)))
+    (lif (event-maker (wrap-subdivide-fn impl seq))
+         (null? ops) event-maker
+         (apply part event-maker (extract-kvs 'in: ops))))
 
   ;; A node that sets a property of events according to the pattern.
   ;; key value ... -> (context -> context)
@@ -64,8 +70,14 @@
                      (context-resolve context))))
     (build-kv kv-pairs 'to: impl))
 
-  ;; A general 'to', taking a math op, a key and a def. The math op is
-  ;; called with the current value for key and the value returned by def.
+  (define (to+ . kv-pairs) (to + kv-pairs))
+  (define (to- . kv-pairs) (to - kv-pairs))
+  (define (to* . kv-pairs) (to * kv-pairs))
+  (define (to/ . kv-pairs) (to / kv-pairs))
+
+  ;; A general 'to', taking a math op, and a flat list of :key value pairs.
+  ;; The math op is called with the current value for key and the value
+  ;; returned by each value-seq.
   (define (to math-op kv-pairs)
     (define (impl key)
       (lambda (context value)
@@ -76,11 +88,6 @@
                 (context-event c)))
          (context-resolve context))))
     (build-kv kv-pairs 'to-math impl))
-
-  (define (to+ . kv-pairs) (to + kv-pairs))
-  (define (to- . kv-pairs) (to - kv-pairs))
-  (define (to* . kv-pairs) (to * kv-pairs))
-  (define (to/ . kv-pairs) (to / kv-pairs))
 
   ;; A node that replaces the input with the result of applying
   ;; it to a node or pattern of nodes.
@@ -136,19 +143,44 @@
         ((is-rest? val)  (context-event ctxt))
         (else (event-set (context-event ctxt) key (val-transform val))))))
 
-  ;; Builds a list of transformers. Each one is built from the value of a key-value
-  ;; pair, which should be an context op function, and a transform-fn, which is
-  ;; built by calling impl with the key.
+  ;; Builds a list of transformers from a flat list of :key value pairs.
+  ;; Each value should be a value or value-producing context function.
+  ;; 'impl' is called on each key.
+  ;; wrap-subdivide-fn is given the result of that, along with the value.
   (define (build-kv kv-pairs err-symbol impl)
-
     (define (make-subdivider key-value)
         (wrap-subdivide-fn (impl (car key-value)) (cdr key-value)))
 
     (let ([pairs (pairwise kv-pairs)])
       (unless pairs (error err-symbol "invalid key-value pairs" kv-pairs))
 
-      (apply with (map make-subdivider pairs))))
+      (if (= 1 (length pairs))
+          (make-subdivider (car pairs))
+          (apply with (map make-subdivider pairs)))))
 
+  ;; Builds a list of transformers from a mixed flat list of key-value
+  ;; pairs and non-key-value raw transformers. Abstractly:
+  ;; (:key1 val1 non-kv-transformer :key3 val3)
+  ;;   => ((to: key1 val1) non-kv-transformer (to: key3 val3))
+  (define (extract-kvs err-symbol ops)
+    (let* ([test-ctxt (make-empty-context 0 1)]
+           [value-seq? (lambda (seq) (not (context? (eval-seq seq test-ctxt))))])
+      (let loop ([result '()] [src ops])
+        (if (null? src)
+            (reverse result)
+            (let ([head (car src)] [tail (cdr src)])
+              (cond
+               ((not (symbol? head))
+                (when (value-seq? head)
+                  (error err-symbol "seq in place of transformer" ops))
+                (loop (cons head result) tail))
+               ((null? tail)
+                (error err-symbol ":key followed by no seq" head))
+               (else
+                (let ([seq (cadr src)] [rest (cddr src)])
+                  (unless (value-seq? seq)
+                    (error err-symbol "non-seq for :key" head))
+                  (loop (cons (to: head seq) result) rest)))))))))
 
   ;;-------------------------------------------------------------------
   (make-doc nodes-ops-docs
