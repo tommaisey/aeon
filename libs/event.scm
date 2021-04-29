@@ -57,7 +57,7 @@
     (unless (symbol? key)
       (error 'event-set "trying to set a non-symbol event key" key))
     (alist-set event key value))
-  
+
   (define (event-update event key update-fn default)
     (event-set event key (update-fn (event-get event key default))))
 

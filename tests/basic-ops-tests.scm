@@ -77,7 +77,7 @@
     ((:beat 0 :sustain 1/2) (:beat 1/2 :sustain 1/2)))
 
   (testp "[in! over] repeat !3" (make-arc 0 1)
-    (in! (over 1 [1 !3]))
+    (in! (over 1 [1 (! 3)]))
     ((:beat 0 :sustain 1/3)
      (:beat 1/3 :sustain 1/3)
      (:beat 2/3 :sustain 1/3)))
@@ -133,6 +133,28 @@
      (:beat 1/4 :sustain 1/8 :freq 200)
      (:beat 1/2 :sustain 1/8 :freq 100)
      (:beat 3/4 :sustain 1/8 :freq 200)))
+
+  ;;----------------------------------------------------------
+  (testp "[in!] embedded seq" (make-arc 0 1)
+    (in! (over [1 (over 1/4 1)]))
+    ((:beat 0 :sustain 1/2)
+     (:beat 1/2 :sustain 1/4)
+     (:beat 3/4 :sustain 1/4)))
+
+  ;; Tests that embedded seqs act as if they only run
+  ;; in the slice allotted to them, and are paused
+  ;; the rest of the time. Note the order of 4 & 8
+  ;; change the second time around.
+  (testp "[in:] embedded seq" (make-arc 0 2)
+    (in: :freq (over [5 (over 1/3 [4 8])]))
+    ((:beat 0 :sustain 1/2 :freq 5)
+     (:beat 1/2 :sustain 1/6 :freq 4)
+     (:beat 2/3 :sustain 1/6 :freq 8)
+     (:beat 5/6 :sustain 1/6 :freq 4)
+     (:beat 1 :sustain 1/2 :freq 5)
+     (:beat 3/2 :sustain 1/6 :freq 8)
+     (:beat 5/3 :sustain 1/6 :freq 4)
+     (:beat 11/6 :sustain 1/6 :freq 8)))
 
   ;;----------------------------------------------------------
   (testp "[to:] basic" (make-arc 0 1)

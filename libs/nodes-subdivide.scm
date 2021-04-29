@@ -96,16 +96,17 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
       (lambda (context)
         (set-fn (eval-seq seq (set-fn context sub-fn)) (get-fn context)))))
 
-  ;;----------------------------------------------------------------------------
-  ;; Iterates list 'vals', which is stretched over 'dur' with a subdividing
-  ;; pattern according to its sublists.
+  ;;-------------------------------------------------------------------
+  ;; Iterates list 'vals', which is stretched over 'dur' with a
+  ;; subdividing pattern according to its sublists/subsequences.
   ;;
-  ;; If the context has a subdivide-fn of #f, this simply returns an element of
-  ;; from vals based on the time of the context's pointed to event (or its start
-  ;; if empty).
-  ;; If the context has a subdivide-fn, this calls it with each slice of the
-  ;; input context and an associated seq value. The subdivide-fn must return
-  ;; a transformed context with the same arc.
+  ;; If the context has a subdivide-fn of #f, this simply returns an
+  ;; element from vals based on the time of the context's pointed
+  ;; to event (or its start if empty).
+  ;;
+  ;; If the context has a subdivide-fn, this calls it with each slice
+  ;; of the input context and an associated seq value. The
+  ;; subdivide-fn must return a transformed context with the same arc.
   (define (make-subdivider dur vals)
     (when (null? vals)
       (error 'subdivide "empty subdividing pdef" vals))
@@ -114,34 +115,37 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
 
     (let ([slice-len (/ dur (length vals))])
       (define (process ctxt)
-        (let loop ([c (make-context (context-arc ctxt))]
-                   [t (round-down (context-start ctxt) dur)]
-                   [next vals]
-                   [prev #f])
-          (cond
-           [(null? next) (loop c t vals #f)]
-           [(>= t (context-end ctxt))
-            (if (context-subdivide-fn ctxt)
-                (context-trim (rearc c (context-arc ctxt)))
-                (car next))]
-           [else
-            (let-values ([[num-slices next-vals] (drop-sustained next)])
-              (let* ([item (car next)]
-                     [next-t (+ t (* num-slices slice-len))]
-                     [arc (make-arc t next-t)]
-                     [subctxt (rearc ctxt arc)]
-                     [sub-fn (context-subdivide-fn ctxt)])
+        (let ([fn (context-subdivide-fn ctxt)]
+              [loop-start (round-down (context-start ctxt) dur)])
+          (let loop
+              ([c (make-context (context-arc ctxt))]
+               [t loop-start]
+               [next vals])
+            (cond
+             [(null? next) (loop c t vals)]
+             [(>= t (context-end ctxt))
+              (if (context-subdivide-fn ctxt)
+                  (context-trim (rearc c (context-arc ctxt)))
+                  (car next))]
+             [else
+              (let*-values
+                  ([[num-slices next-vals] (drop-sustained next)]
+                   [[item] (car next)]
+                   [[next-t] (+ t (* num-slices slice-len))]
+                   [[arc] (make-arc t next-t)]
+                   [[subctxt] (rearc ctxt arc)])
                 (cond
-                 [sub-fn (let* ([s (eval-slice item sub-fn ctxt subctxt)]
-                                [c (contexts-merge s c)])
-                           (loop c next-t next-vals item))]
+                 [fn (let* ([s (if (seq-subdivider? item)
+                                   (eval-sub-seq item fn ctxt subctxt dur)
+                                   (eval-slice item fn ctxt subctxt))])
+                       (loop (contexts-merge s c) next-t next-vals))]
                  [(within-arc? arc (context-now ctxt)) item]
-                 [else (loop subctxt next-t next-vals item)])))])))
+                 [else (loop subctxt next-t next-vals)]))]))))
       (seq-meta-ranged #t vals process)))
 
-  ;; Used within the above function to apply subdivide-fn to item,
+  ;; Used within make-subdivider to apply subdivide-fn to item,
   ;; over a slice of time defined by subctxt. Returns subctxt filled
-  ;; with new or modified values, which are created by subdivide.
+  ;; with new or modified values.
   (define (eval-slice item subdivide-fn ctxt subctxt)
     (lif (arc (context-arc subctxt))
          (arcs-overlap? (context-arc ctxt) arc)
@@ -151,10 +155,35 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
                 [subdur (arc-length arc)]
                 [early (eval-seq-empty item time subctxt-no-subdiv)])
            (cond
-            [(is-rest? early)     (context-resolve subctxt-no-subdiv)]
-            [(unsafe-list? early) (eval-seq (make-subdivider subdur early) subctxt)]
-            [else (subdivide-fn subctxt-no-subdiv item)]))
+            [(is-rest? early)
+             (context-resolve subctxt-no-subdiv)]
+            [(unsafe-list? early)
+             (eval-seq (make-subdivider subdur early) subctxt)]
+            [else
+             (subdivide-fn subctxt-no-subdiv item)]))
          subctxt))
+
+  ;; Used within make-subdivider to evaluate a nested seq, over a
+  ;; slice of time defined by subctxt. Returns subctxt filled with new
+  ;; or modified values.
+  ;;
+  ;; The nested seq is evaluated as if it only runs during its alloted
+  ;; slice of the parent seq, and is stopped otherwise. We offset the
+  ;; context it is given is offset to acount for that.
+  (define (eval-sub-seq item subdivide-fn ctxt subctxt dur)
+    (assert (seq-subdivider? item))
+    (let* ([arc (context-arc subctxt)]
+           [start (arc-start arc)]
+           [loop-start (round-down start dur)]
+           [offset (- loop-start start)]
+           [gaps (* (/ loop-start dur) (- dur (arc-length arc)))]
+           [total (+ offset gaps)]
+           [arc-offset (arc-math arc + total)]
+           [beat-shift (lambda (b) (- b total))]
+           [ev-shift (lambda (c) (event-update (context-event c) :beat beat-shift 0))]
+           [subctxt (rearc subctxt arc-offset)]
+           [subctxt (eval-seq item subctxt)])
+      (context-trim (rearc (context-map ev-shift subctxt) arc))))
 
   ;;-----------------------------------------------------------------------
   ;; General helpers for main time-chunking routine subdivider.
@@ -171,7 +200,7 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
       (if (and (not (null? lst))
                (or (zero? n)
                    (is-sustain? (car lst))))
-          (loop (cdr lst) (+ n 1))
+          (loop (cdr lst) (add1 n))
           (values n lst))))
 
   ;;-------------------------------------------------------------------

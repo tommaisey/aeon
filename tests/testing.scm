@@ -25,7 +25,7 @@
     (let* ([template "[aeon] tests: [~A pass] [~A fail]"]
            [results (format template tests-passed tests-failed)])
       (println divider results divider)))
-  
+
   (define (reset-test-results)
     (set! tests-passed 0)
     (set! tests-failed 0))
@@ -61,7 +61,7 @@
        (test-impl name result form
                   result
                   (format "~A" name)))))
-  
+
   (define-syntax test-eq
     (syntax-rules ()
       ((_ name val form)
@@ -114,8 +114,14 @@
                  [len-expected (length expected)]
                  [len-actual (length cleaned)])
             (if (eqv? len-expected len-actual)
-                (format "~A.\nExpected: ~A\nGot: ~A"
-                        name expected cleaned)
+                (call-with-string-output-port
+                 (lambda (p)
+                   (display name p)
+                   (display "\nExpected:\n" p)
+                   (format p "~A.\nExpected:\n" name)
+                   (pretty-print expected p)
+                   (display "Got:\n" p)
+                   (pretty-print cleaned p)))
                 (format "~A. Expected ~A events, but got ~A."
                         name len-expected len-actual))))))))
 

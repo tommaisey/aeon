@@ -76,7 +76,7 @@
 
 (define (set-bpm! n)
   (set! bpm n)
-  (play-event (make-event 0 
+  (play-event (make-event 0
                           :tempo (bpm->mps n)
                           :control "tempo"
                           :group send-effect-group) 0))
