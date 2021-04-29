@@ -3,11 +3,11 @@
   (export chain-docs
           off part with copy)
 
-  (import (chezscheme) 
-          (utilities) 
-          (context) 
+  (import (chezscheme)
+          (utilities)
+          (context)
           (event)
-          (node-eval) 
+          (node-eval)
           (doc))
 
   (define (off . args)
@@ -34,17 +34,17 @@
 
   ;;--------------------------------------------------------------
   (make-doc chain-docs
-    (with "Applies any number of operators successively to an input. 
+    (with "Applies any number of operators successively to an input.
 Replaces the input."
           ((ops [/... Operator] "0 or more pattern operators"))
           ())
 
-    (part "Applies any number of operators successively, starting with 
+    (part "Applies any number of operators successively, starting with
 an empty events list. Merges the result with the input."
           ((ops [/... Operator] "0 or more pattern operators"))
           ())
 
-    (copy "Applies each operator to the input separately, summing the 
+    (copy "Applies each operator to the input separately, summing the
 results to a blank context. Replaces the input."
           ((ops [/... Operator] "0 or more pattern operators"))
           ())
