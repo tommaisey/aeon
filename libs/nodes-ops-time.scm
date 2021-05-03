@@ -90,10 +90,10 @@
 
     ;; Compute furthest lookahead/lookback that might be required.
     (define possible-range
-      (let ([min-p (maybe-seq-meta period seq-meta-rng-min)]
-            [max-p (maybe-seq-meta period seq-meta-rng-max)]
-            [min-n (maybe-seq-meta num seq-meta-rng-min)]
-            [max-n (maybe-seq-meta num seq-meta-rng-max)])
+      (let ([min-p (seq-meta-field period seq-meta-rng-min)]
+            [max-p (seq-meta-field period seq-meta-rng-max)]
+            [min-n (seq-meta-field num seq-meta-rng-min)]
+            [max-n (seq-meta-field num seq-meta-rng-max)])
         (if (for-all identity (list min-p max-p min-n max-n))
             (let ([values (list (* min-p min-n)
                                 (* min-p max-n)

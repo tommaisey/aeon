@@ -5,7 +5,7 @@
     eval-seq-empty
     seq-meta-ranged
     seq-subdivider?
-    maybe-seq-meta
+    seq-meta-field
     seq-meta-rng-max
     seq-meta-rng-min
     context-resolve
@@ -74,7 +74,18 @@
   ;;-------------------------------------------------------------------
   ;; An object containing a seq function as well as some metadata
   ;; that help to evaluate the tree correctly in some situations.
-  ;; A record-writer is defined at the bottom of the file.
+  ;;
+  ;; The metadata contains the maximum and minimum values that the
+  ;; seq can produce, if this can be ascertained. This can be used
+  ;; to optimise evaluation of the graph in some cases - in others
+  ;; it's impossible to evaluate the graph without it (e.g. when
+  ;; the seq is doing a transformation of events in time).
+  ;;
+  ;; There's also a tag describing whether the seq function is a
+  ;; subdivider, which influences how it will be evaluated in some
+  ;; cases (e.g. nested subdividers).
+  ;;
+  ;; A record-writer for this is defined at the bottom of the file.
   (define-record-type seq-meta
     (fields (immutable rng-min) ;; #f if impossible to detect
             (immutable rng-max) ;; #f if impossible to detect
@@ -105,7 +116,7 @@
 
   ;; Tries to get field from a seq - if it's an undecorated procedure
   ;; we return false. Otherwise we return a primitive value.
-  (define (maybe-seq-meta v seq-field)
+  (define (seq-meta-field v seq-field)
     (cond
       ((or (eq? v #f)        ;; propagate failure
            (procedure? v)    ;; undecorated fn, can't get metadata
@@ -118,7 +129,7 @@
   ;; functions and seq objects. Helpful in constructing seq objects.
   (define (seq-foldl seq-field fn start-val values)
     (define (combine result v)
-      (lif [meta (maybe-seq-meta v seq-field)]
+      (lif [meta (seq-meta-field v seq-field)]
            (and result meta)
            (fn result meta) #f))
     (fold-left combine start-val values))
