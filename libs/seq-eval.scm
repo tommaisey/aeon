@@ -1,75 +1,33 @@
-(library (node-eval)
+(library (seq-eval)
   (export
-    render-arc
     eval-seq
     eval-seq-empty
     seq-meta-ranged
     seq-subdivider?
     seq-meta-field
     seq-meta-rng-max
-    seq-meta-rng-min
-    context-resolve
-    make-caching-context)
+    seq-meta-rng-min)
 
   (import (scheme) (utilities) (matchable) (arc) (event) (context))
 
   ;;--------------------------------------------------------------
-  ;; Call on the root of a tree to fill a context with events.
-  (define render-arc
-    (case-lambda
-      ((pattern-fn arc)
-       (context-trim (pattern-fn (make-context arc))))
-
-      ((pattern-fn start end)
-       (render-arc pattern-fn (make-arc start end)))))
-
-  ;;--------------------------------------------------------------
   ;; Get a value from a seq. The source seq might be a plain value, a
   ;; naked contextual function or a 'decorated' seq-meta object.
-  (define (eval-seq v context)
+  (define (eval-seq seq context)
     (cond
-      [(procedure? v) (eval-seq (v context) context)]
-      [(seq-meta? v) (eval-seq (seq-meta-fn v) context)]
-      [else v]))
+      [(procedure? seq) (eval-seq (seq context) context)]
+      [(seq-meta? seq) (eval-seq (seq-meta-fn seq) context)]
+      [else seq]))
 
   ;; If we eval a seq in order to add a new event, the context will look
   ;; wrong - the event doesn't yet exist, but some functions relt on that.
   ;; So we add an empty event to the context before evaluating.
   ;; TODO: is this needed? rand seeding doesn't use the event any more.
   ;;       are there other functions that need this?
-  (define (eval-seq-empty v time-to-add context)
-    (if (or (procedure? v) (seq-meta? v))
-        (eval-seq v (context-insert context (make-event time-to-add)))
-        v))
-
-  ;; Pop the top lambda off the context's chain, and call it
-  ;; with the context itself. This will be done recursively
-  ;; up the chain.
-  (define (context-resolve c)
-    (lif (ch (context-chain c)) (null? ch) c
-         (eval-seq (car ch) (context-pop-chain c))))
-
-  ;; Makes a context with a special caching function added behind the top fn
-  ;; in the chain. Repeated requests for the same arc return a cached result.
-  (define (make-caching-context context)
-    (define (test-arc arc-fn c1 c2)
-      (arc-fn (context-arc c1) (context-arc c2)))
-    (define (make-cacher)
-      (let ([cached-list '()])
-        (lambda (ctxt)
-          (let loop ([cl cached-list])
-            (match cl
-              [() (begin
-                    (set! cached-list (cons (context-resolve ctxt) cached-list))
-                    (car cached-list))]
-              [(c . rst) (cond [(test-arc arc-eq? c ctxt) c]
-                               [(test-arc arc-contains? c ctxt)
-                                (context-trim (rearc c (context-arc ctxt)))]
-                               [else (loop rst)])])))))
-
-    (lif (chain (context-chain context)) (null? chain) context
-         (context-push-chain (context-pop-chain context)
-                             (list (car chain) (make-cacher)))))
+  (define (eval-seq-empty seq time-to-add context)
+    (if (or (procedure? seq) (seq-meta? seq))
+        (eval-seq seq (context-insert context (make-event time-to-add)))
+        seq))
 
   ;;-------------------------------------------------------------------
   ;; An object containing a seq function as well as some metadata

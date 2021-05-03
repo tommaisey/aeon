@@ -5,7 +5,7 @@
           (event)
           (context)
           (nodes-chains)
-          (nodes-subdivide))
+          (seq-subdivide))
 
   ;;----------------------------------------------------------
   ;; [tt+] and [tt-] simple tests

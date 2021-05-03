@@ -13,7 +13,7 @@
           (only (utilities) str+ println repeat inc make-alist)
           (only (event) event-check event-optimise)
           (only (context) context-move context-events-next)
-          (only (node-eval) render-arc))
+          (only (context-render) render-arc))
 
   ;;----------------------------------------------------------
   ;; Set to #t to get printouts for test passes (fails always printed).

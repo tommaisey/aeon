@@ -1,4 +1,4 @@
-(library (nodes-ops-chords)
+(library (ops-chords)
   (export chord)
 
   (import
@@ -6,10 +6,11 @@
     (harmony)
     (event)
     (context)
-    (node-eval)
-    (nodes-chains)
-    (nodes-subdivide)
-    (nodes-ops)
+    (context-render)
+    (seq-eval)
+    (ops-chains)
+    (seq-subdivide)
+    (ops-basic)
     (only (matchable) match ?))
 
   ;; Originally this was a 3 liner using 'with' and 'to:' but

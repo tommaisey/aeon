@@ -1,4 +1,4 @@
-(library (nodes-chains)
+(library (ops-chains)
 
   (export chain-docs
           off part with copy)
@@ -6,8 +6,8 @@
   (import (chezscheme)
           (utilities)
           (context)
-          (event)
-          (node-eval)
+          (context-render)
+          (seq-eval)
           (doc))
 
   (define (off . args)

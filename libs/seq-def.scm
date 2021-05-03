@@ -4,17 +4,17 @@
 ;; It attempts to free the user from needing to understand lists,
 ;; quasiquoting etc. Would all be a lot easier if we have
 ;; Clojure's [] vector syntax!
-(library (pdef)
-  (export pdef ^ !
-          tag-pdef-callable
-          tag-pdef-not-call
+(library (seq-def)
+  (export sdef ^ !
+          tag-sdef-callable
+          tag-sdef-not-call
           seq-marker?
           seq-marker-dur
           seq-marker-val)
   (import (chezscheme) (utilities))
 
   ;;-------------------------------------------------------------------
-  ;; ^ Prevents interpreting as a function in pdefs
+  ;; ^ Prevents interpreting as a function in sdefs
   ;; ! Represents a repeat of the previous value.
   (declare-keywords ^ !)
 
@@ -33,9 +33,9 @@
   ;; time environment. See:
   ;; http://cisco.github.io/ChezScheme/csug9.5/syntax.html#./syntax:h4
   ;;
-  ;; (pdef [1 "hi" (+ 2 2) (5 (+ 5 5) !)]) => (1 "hi" 4 (5 10 10))
-  ;; (pdef [0 (pick [2 3 ~]) (rnd 0 3)]) => (0 <proc> <proc>)
-  (define-syntax pdef
+  ;; (sdef [1 "hi" (+ 2 2) (5 (+ 5 5) !)]) => (1 "hi" 4 (5 10 10))
+  ;; (sdef [0 (pick [2 3 ~]) (rnd 0 3)]) => (0 <proc> <proc>)
+  (define-syntax sdef
     (lambda (x)
       (syntax-case x (^ * / !)
 
@@ -46,63 +46,63 @@
         ;; object representing the speed/slow?
         ((_ (^ v [* n] . rest))
          (syntax
-          (let ([vs (pdef v)])
-            (pdef [(make-seq-marker vs n) . rest]))))
+          (let ([vs (sdef v)])
+            (sdef [(make-seq-marker vs n) . rest]))))
         ((_ (^ v [*] . rest))
-         (syntax (pdef (^ v [* 2] . rest))))
+         (syntax (sdef (^ v [* 2] . rest))))
         ((_ (^ v * . rest))
-         (syntax (pdef (^ v [* 2] . rest))))
+         (syntax (sdef (^ v [* 2] . rest))))
 
         ;; / - Subdividing repeats
         ((_ (^ v [/ n] . rest))
          (syntax
-          (let ([vs (pdef v)])
-            (pdef [(make-seq-marker vs (/ 1 n)) . rest]))))
+          (let ([vs (sdef v)])
+            (sdef [(make-seq-marker vs (/ 1 n)) . rest]))))
         ((_ (^ v [/] . rest))
-         (syntax (pdef (^ v [/ 2] . rest))))
+         (syntax (sdef (^ v [/ 2] . rest))))
         ((_ (^ v * . rest))
-         (syntax (pdef (^ v [/ 2] . rest))))
+         (syntax (sdef (^ v [/ 2] . rest))))
 
         ;; ! - Spliced repeats.
         ((_ (^ v [! n] . rest))
          (let* ((n-datum (syntax->datum #'n)))
            (if (> n-datum 1)
                (with-syntax ((n-1 (datum->syntax #'x (sub1 n-datum))))
-                 (syntax (pdef (^ v v [! n-1] . rest))))
-               (syntax (pdef (^ v . rest))))))
+                 (syntax (sdef (^ v v [! n-1] . rest))))
+               (syntax (sdef (^ v . rest))))))
         ((_ (^ v [!] . rest))
-         (syntax (pdef (^ v [! 2] . rest))))
+         (syntax (sdef (^ v [! 2] . rest))))
         ((_ (^ v ! . rest))
-         (syntax (pdef (^ v [! 2] . rest))))
+         (syntax (sdef (^ v [! 2] . rest))))
 
         ;; Build the list recursively.
         ((_ (^ v . rest))
-         (syntax (cons (pdef v) (pdef rest))))
+         (syntax (cons (sdef v) (sdef rest))))
 
         ;; Distinguishing macro & function calls.
         ((_ (v vs ...))
          (identifier? #'v)
          (lambda (property-lookup)
            (cond
-            ((property-lookup #'v #'pdef-call-tag)
+            ((property-lookup #'v #'sdef-call-tag)
              (syntax (v vs ...)))
-            ((property-lookup #'v #'pdef-not-call-tag)
-             (syntax (pdef (^ v vs ...))))
+            ((property-lookup #'v #'sdef-not-call-tag)
+             (syntax (sdef (^ v vs ...))))
             (else
              (syntax (if (procedure? v)
                          (v vs ...)
-                         (pdef (^ v vs ...))))))))
+                         (sdef (^ v vs ...))))))))
 
         ;; Base cases
         ((_ ())
          (syntax '()))
         ((_ (v ...))
-         (syntax (pdef (^ v ...))))
+         (syntax (sdef (^ v ...))))
         ((_ v)
          (syntax v)))))
 
   ;;-------------------------------------------------------------------
-  ;; When a pdef encounters a value that needs to be transformed into
+  ;; When a sdef encounters a value that needs to be transformed into
   ;; a further subdivision (e.g. it's followed by (* 2)), it wraps it
   ;; in this object. This can be interpreted by the outer subdividing
   ;; seq.
@@ -111,18 +111,18 @@
     [dur 1])
 
   ;;------------------------------------------------------------------
-  ;; Used for compile-time tagging, see comment to pdef.
-  (define pdef-call-tag)
-  (define pdef-not-call-tag)
+  ;; Used for compile-time tagging, see comment to sdef.
+  (define sdef-call-tag)
+  (define sdef-not-call-tag)
 
-  (define-syntax tag-pdef-callable
+  (define-syntax tag-sdef-callable
     (syntax-rules ()
       ((_ id ...)
-       (begin (define-property id pdef-call-tag #t) ...))))
+       (begin (define-property id sdef-call-tag #t) ...))))
 
-  (define-syntax tag-pdef-not-call
+  (define-syntax tag-sdef-not-call
     (syntax-rules ()
       ((_ id ...)
-       (begin (define-property id pdef-not-call-tag #t) ...))))
+       (begin (define-property id sdef-not-call-tag #t) ...))))
 
   )

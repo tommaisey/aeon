@@ -8,9 +8,9 @@
 ;; The cnodes can be chained and combined with fns in @trunk.
 ;; The 'leaves' of our system are described in @leaf.
 ;; ------------------------------------------------------------
-(library (nodes-ops)
+(library (ops-basic)
   (export
-    nodes-ops-docs
+    ops-basic-docs
     in! in:
     to: to+ to- to* to/ to?
     sq: tr? cp: cp?)
@@ -21,10 +21,11 @@
     (utilities)
     (event)
     (context)
-    (node-eval)
-    (nodes-subdivide)
-    (nodes-chains)
-    (nodes-continuous))
+    (seq-eval)
+    (seq-subdivide)
+    (seq-continuous)
+    (ops-chains)
+    (context-render))
 
   ;; Adds blank events to the context using seq.
   ;; A seq value of 1 gives one event.
@@ -183,7 +184,7 @@
                   (loop (cons (to: head seq) result) rest)))))))))
 
   ;;-------------------------------------------------------------------
-  (make-doc nodes-ops-docs
+  (make-doc ops-basic-docs
     (in!
      "Adds blank events according to a repeated subdividing sequence.
 An event is present where a 1 is encountered, but not where a ~ is encountered.

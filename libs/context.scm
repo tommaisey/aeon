@@ -48,7 +48,7 @@
   ;;
   ;; However, the context might be as-yet 'unresolved', meaning that it
   ;; consists only of a list of functions which can materialise the events
-  ;; on request (see context-resolve in node-eval). This is the 'chain'.
+  ;; on request (see context-resolve in context-render). This is the 'chain'.
   ;;
   ;; Calling the first fn in the chain should materialise the events - it does
   ;; so by calling the second one, etc. This allows each of the fns to call

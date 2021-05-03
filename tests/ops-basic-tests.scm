@@ -7,9 +7,9 @@
           (testing)
           (event)
           (context)
-          (nodes-ops)
-          (nodes-chains)
-          (nodes-subdivide))
+          (ops-basic)
+          (ops-chains)
+          (seq-subdivide))
 
   (declare-keywords :cutoff)
 
@@ -155,6 +155,17 @@
      (:beat 3/2 :sustain 1/6 :freq 8)
      (:beat 5/3 :sustain 1/6 :freq 4)
      (:beat 11/6 :sustain 1/6 :freq 8)))
+
+  (testp "[in!] embedded seq (* 2)" (make-arc 0 1)
+    (in! (over [1 1 (* 2)]))
+    ((:beat 0 :sustain 1/2)
+     (:beat 1/2 :sustain 1/4)
+     (:beat 3/4 :sustain 1/4)))
+
+  (testp "[in!] embedded seq (/ 2)" (make-arc 0 1)
+    (in! (over [1 [1 1] (/ 2)]))
+    ((:beat 0 :sustain 1/2)
+     (:beat 1/2 :sustain 1)))
 
   ;;----------------------------------------------------------
   (testp "[to:] basic" (make-arc 0 1)

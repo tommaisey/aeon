@@ -1,12 +1,13 @@
-(library (nodes-ops-time)
+(library (ops-time)
   (export mv- mv+ mv/ mv* tt+ tt- tt* tt/
           flip-time swing taps legato)
 
   (import (chezscheme)
           (utilities) (context) (arc) (event)
-          (node-eval)
-          (nodes-subdivide)
-          (nodes-chains)
+          (context-render)
+          (seq-eval)
+          (seq-subdivide)
+          (ops-chains)
           (rhythm)
           (only (samples) :sidx))
 
@@ -14,14 +15,14 @@
   ;; called with each segment's current time and the value returned by
   ;; def. The input context is resolved with a different arc, in effect
   ;; shifting it in time.
-  (define (mv math-op inv-math-op . pdefs)
+  (define (mv math-op inv-math-op . sdefs)
     (let ([impl (mv-math-impl math-op inv-math-op)])
-      (apply with (map (lambda (p) (wrap-subdivide-fn impl p)) pdefs))))
+      (apply with (map (lambda (p) (wrap-subdivide-fn impl p)) sdefs))))
 
-  (define (mv+ . pdefs) (apply mv + - pdefs))
-  (define (mv- . pdefs) (apply mv - + pdefs))
-  (define (mv* . pdefs) (apply mv * / pdefs))
-  (define (mv/ . pdefs) (apply mv / * pdefs))
+  (define (mv+ . sdefs) (apply mv + - sdefs))
+  (define (mv- . sdefs) (apply mv - + sdefs))
+  (define (mv* . sdefs) (apply mv * / sdefs))
+  (define (mv/ . sdefs) (apply mv / * sdefs))
 
   (alias tt+ mv+)
   (alias tt- mv-)

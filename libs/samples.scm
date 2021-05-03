@@ -1,7 +1,7 @@
 (library (samples)
 
   (export
-    :sample :sample-idx 
+    :sample :sample-idx
     :smpl :sidx
     samples
     samples-dir
@@ -11,8 +11,8 @@
     name-contains?
     number-strings)
 
-  (import (scheme) (utilities) (node-eval) 
-          (file-tools) (context))
+  (import (scheme) (utilities) (file-tools)
+          (seq-eval) (context))
 
   (declare-keywords :sample :sample-idx)
   (alias :smpl :sample)
@@ -94,5 +94,5 @@
     (let ([raw-nums (map (lambda (x) (+ start x)) (iota (+ 1 (- end start))))]
           [f-str (string-append "~" (number->string num-chars) ",'0d")])
       (map (lambda (x) (format f-str x)) raw-nums)))
-  
+
   )

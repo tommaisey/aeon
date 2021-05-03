@@ -1,6 +1,6 @@
 
-(define bassln1 (pdef [[I V] II III [V VII]]))
-(define bassln2 (pdef [I IV III II]))
+(define bassln1 (sdef [[I V] II III [V VII]]))
+(define bassln2 (sdef [I IV III II]))
 
 (pattern p1
   (part

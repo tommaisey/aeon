@@ -20,7 +20,12 @@
    start-waiting stop-waiting waiting?
    start-suspendable-thread)
 
-  (import (scheme) (context) (node-eval) (utilities) (file-tools))
+  (import (scheme)
+          (context)
+          (context-render)
+          (seq-eval)
+          (utilities)
+          (file-tools))
 
   ;;------------------------------------------------
   ;; Some useful functions for dealing with time.
@@ -64,7 +69,7 @@
             (list-ref symbols (random (dec len))))))
     (define (handle-error condition)
       (display-condition condition)
-      (println "^^^ Pattern appears broken!!!")
+      (println "^^^ Pattern appears broken.")
       (choose (pattern-error-symbols)))
     (guard (x [else (handle-error x)])
       (let ([pos (random 10000)]

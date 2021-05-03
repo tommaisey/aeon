@@ -589,10 +589,10 @@ in =aeon= /without/ quoting the inner lists?
 The reason is that =over= and =?= are macros. These are constructs that
 let us temporarily bend or break the rules of Scheme within the scope of
 their parentheses. To make writing =aeon= patterns easier we use the
-macro [[#../libs/pdef.scm][pdef]] to acheive a similar effect to quoting
+macro [[#../libs/sdef.scm][sdef]] to acheive a similar effect to quoting
 (or quasiquoting) the list.
 
-=pdef= contains some special magic to discern function calls withing
+=sdef= contains some special magic to discern function calls withing
 lists so that the following works, even though to Scheme the =[4 6]=
 form isn't much different to the =(+ 2 2)=.
 

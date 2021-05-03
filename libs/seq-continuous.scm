@@ -1,20 +1,21 @@
 ;;----------------------------------------------------------------------
-;; Functions which might return different value based on the context they
-;; are passed, i.e. 'contextual' values. This lets us maintain the
-;; referential transparency that is key for the system to work.
+;; Sequences that can return values of infinite resolution at different
+;; times - unlike subdividing sequences, which usually returns the same
+;; value for a given 'chunk' of time.
 ;;
-;; They form the 'leaves' of a tree of functions defining musical patterns.
+;; These take the form of functions that taking a context, and produce a
+;; a value on demand - although sometimes this function is wrapped in a
+;; 'seq-meta' object with some extra metadata. All functions must be
+;; referentially transparent, or 'pure', even when they appear to yeild
+;; 'random' values.
 ;;
-;; Many of these functions base their value on the time/beat of the current
-;; event in the context, unless passed one or more extra keys to look at.
+;; Many of these functions determine their value based on the time/beat
+;; of the event at the context's 'cursor'.
 ;;
-;; Others of these functions don't really need a context - but may want to
-;; treat _their_ arguments as callable leaves (which *may* need a context).
-;;
-;; Many of these actually return a special seq-meta object, a function wrapped
-;; with some metadata that may be needed to evaluate the graph accurately.
+;; Others don't really need a context - but may want to treat _their_
+;; arguments as callable sequences (which *may* need a context).
 ;;----------------------------------------------------------------------
-(library (nodes-continuous)
+(library (seq-continuous)
   (export
    ? rnd wpick pick sine)
 
@@ -23,8 +24,8 @@
     (utilities)
     (rename (matchable) (? ??))
     (context) (event)
-    (node-eval)
-    (for (pdef) expand))
+    (seq-eval)
+    (for (seq-def) expand))
 
   (define default-seed 99)
 
@@ -36,12 +37,13 @@
       [(key) (rnd 0.0 1.0 key)]
       [(min max) (rnd min max '())]
       [(min max seed)
-       (seq-meta-ranged (list min max)
-                        (lambda (context)
-                          (let ([min (eval-seq min context)]
-                                [max (eval-seq max context)]
-                                [seed (trunc-int (* seed (context-now context)))])
-                            (pseudo-rand min max seed))))]))
+       (seq-meta-ranged
+        (list min max)
+        (lambda (context)
+          (let ([min (eval-seq min context)]
+                [max (eval-seq max context)]
+                [seed (trunc-int (* seed (context-now context)))])
+            (pseudo-rand min max seed))))]))
 
   ;; Choose from a list randomly
   (define-syntax pick
@@ -49,7 +51,7 @@
       ((_ vals) (pick vals default-seed))
 
       ((_ vals seed)
-       (let* ([lst (pdef vals)]
+       (let* ([lst (sdef vals)]
               [len (length lst)]
               [rgen (rnd 0 len seed)])
          (seq-meta-ranged
@@ -65,7 +67,7 @@
 
       ((_ vals weights seed)
 
-       (let ([lst (pdef vals)] [wts (pdef weights)])
+       (let ([lst (sdef vals)] [wts (sdef weights)])
          (define (to-cumulative lst)
            (let loop ([count 0] [o '()] [lst lst])
              (match lst
@@ -100,7 +102,7 @@
   (define-syntax ?
     (syntax-rules ()
       ((_ a b seed)
-       (let ([ad (pdef a)] [bd (pdef b)])
+       (let ([ad (sdef a)] [bd (sdef b)])
          (unless (integer? seed)
            (error '? "3rd arg must be an integer seed" ad bd seed))
          (if (unsafe-list? ad)
@@ -121,10 +123,10 @@
       ((_ args ...)
        (error '? "invalid number of args" 'args ...))))
 
-  ;; Tag so pdef recognises as a macro
-  (tag-pdef-callable pick)
-  (tag-pdef-callable wpick)
-  (tag-pdef-callable ?)
+  ;; Tag so sdef recognises as a macro
+  (tag-sdef-callable pick)
+  (tag-sdef-callable wpick)
+  (tag-sdef-callable ?)
 
   ;;--------------------------------------------------------------------
   ;; Rhythmic & sequencing operations.
@@ -136,9 +138,5 @@
              [l (eval-seq lo context)]
              [h (eval-seq hi context)])
          (range-sine f l h (context-now context))))))
-
-  ;; Helper for `this`, `next` and `nearest`.
-  (define (get c key default)
-    (event-get (context-event c) key default))
 
   )

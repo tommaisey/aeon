@@ -33,15 +33,16 @@
         (event)
         (arc)
         (context)
-        (pdef)
-        (node-eval)
-        (nodes-continuous)
-        (nodes-subdivide)
-        (nodes-chains)
-        (nodes-ops)
-        (nodes-sugar)
-        (nodes-ops-time)
-        (nodes-ops-chords)
+        (context-render)
+        (seq-def)
+        (seq-continuous)
+        (seq-subdivide)
+        (seq-eval)
+        (ops-basic)
+        (ops-chains)
+        (ops-sugar)
+        (ops-time)
+        (ops-chords)
         (midinotes)
         (harmony)
         (rhythm)
@@ -57,7 +58,7 @@
 (for-each (lambda (f) (f docs-dict))
           (list rhythm-docs
                 harmony-docs
-                nodes-ops-docs
+                ops-basic-docs
                 subdivide-docs
                 chain-docs))
 

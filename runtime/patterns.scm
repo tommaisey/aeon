@@ -49,5 +49,5 @@
 
 ;;------------------------------------------------------------------
 ;; Tag these at the top level to disambiguate pattern syntax.
-(tag-pdef-callable quote)
-(tag-pdef-callable lambda)
+(tag-sdef-callable quote)
+(tag-sdef-callable lambda)

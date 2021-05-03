@@ -1,4 +1,4 @@
-(library (nodes-sugar)
+(library (ops-sugar)
   (export
     syn sam fx g->)
 
@@ -8,11 +8,11 @@
     (utilities)
     (samples)
     (synthesis)
-    (node-eval)
-    (nodes-ops)
-    (nodes-subdivide)
-    (nodes-chains)
-    (nodes-continuous))
+    (seq-eval)
+    (seq-subdivide)
+    (seq-continuous)
+    (ops-chains)
+    (ops-basic))
 
   (declare-keywords :inst)
 

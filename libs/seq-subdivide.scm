@@ -1,18 +1,18 @@
-#!chezscheme ;; Needed for extra symbols like »
+#!chezscheme ;; Needed for exporting symbols like $
 
 ;; Implements algorithms that slice a context up into chunks according
 ;; to several schemes, and either return a value or call an implementation
 ;; function for each chunk.
 ;; The implementation function will be retrieved from context-subdivide-fn
 ;; and must take a context (which will have the sliced arc) and a 'leaf'.
-;; See node-eval for information on leafs.
+;; See seq-eval for information on leafs.
 
-(library (nodes-subdivide)
+(library (seq-subdivide)
   (export ~ ! $
           over step
           is-rest? is-sustain?
           wrap-subdivide-fn
-          pdef
+          sdef
           subdivide-docs)
 
   (import (scheme)
@@ -21,13 +21,14 @@
           (event)
           (arc)
           (context)
-          (node-eval)
-          (for (pdef) expand))
+          (seq-eval)
+          (context-render)
+          (for (seq-def) expand))
 
   (declare-keywords ~ $)
   (define rest-sym ~)    ;; Denotes a musical rest in a list
   (define sustain-sym $) ;; Denotes a sustained value in a list
-  (tag-pdef-not-call ~ $)
+  (tag-sdef-not-call ~ $)
 
   ;;-------------------------------------------------------------------
   (define-syntax over
@@ -35,7 +36,7 @@
       ((_ values) (over 1 values))
 
       ((_ dur values)
-       (make-subdivider dur (pdef values)))))
+       (make-subdivider dur (sdef values)))))
 
   ;;-------------------------------------------------------------------
   (define-syntax step
@@ -43,7 +44,7 @@
       ((_ values) (step 1/4 values))
 
       ((_ slice-dur values)
-       (let* ([data (pdef values)]
+       (let* ([data (sdef values)]
               [len (if (list? data) (length data) 1)])
          (make-subdivider (* slice-dur len) data)))))
 
@@ -54,11 +55,11 @@
       ((_ values) (lerp 1 values))
 
       ((_ measures values)
-       (let ([data (pdef values)])
+       (let ([data (sdef values)])
          (error 'lerp "not implemented yet")))))
 
   ;;-------------------------------------------------------------------
-  (tag-pdef-callable over step lerp)
+  (tag-sdef-callable over step lerp)
 
   ;;-------------------------------------------------------------------
   (make-doc subdivide-docs
@@ -109,7 +110,7 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
   ;; subdivide-fn must return a transformed context with the same arc.
   (define (make-subdivider dur vals)
     (when (null? vals)
-      (error 'subdivide "empty subdividing pdef" vals))
+      (error 'subdivide "empty subdividing sdef" vals))
     (unless (unsafe-list? vals)
       (set! vals (list vals)))
 
@@ -186,7 +187,7 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
            [subctxt (eval-seq item subctxt)])
       (context-trim (rearc (context-map ev-shift subctxt) arc))))
 
-  ;; Used to unpack seq markers - see pdef.scm.
+  ;; Used to unpack seq markers - see seq-def.scm.
   (define (unpack-markers dur)
     (lambda (x)
       (if (not (seq-marker? x)) x
