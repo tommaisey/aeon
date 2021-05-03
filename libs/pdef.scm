@@ -7,8 +7,10 @@
 (library (pdef)
   (export pdef ^ !
           tag-pdef-callable
-          tag-pdef-not-call)
-
+          tag-pdef-not-call
+          seq-marker?
+          seq-marker-dur
+          seq-marker-val)
   (import (chezscheme) (utilities))
 
   ;;-------------------------------------------------------------------
@@ -35,7 +37,7 @@
   ;; (pdef [0 (pick [2 3 ~]) (rnd 0 3)]) => (0 <proc> <proc>)
   (define-syntax pdef
     (lambda (x)
-      (syntax-case x (^ * !)
+      (syntax-case x (^ * / !)
 
         ;; * - Subdividing repeats.
         ;; TODO: how to do division? Also, tidal
@@ -44,12 +46,22 @@
         ;; object representing the speed/slow?
         ((_ (^ v [* n] . rest))
          (syntax
-          (let ((v2 (pdef v)))
-            (pdef (^ (repeat n v2) . rest)))))
+          (let ([vs (pdef v)])
+            (pdef [(make-seq-marker vs n) . rest]))))
         ((_ (^ v [*] . rest))
          (syntax (pdef (^ v [* 2] . rest))))
         ((_ (^ v * . rest))
          (syntax (pdef (^ v [* 2] . rest))))
+
+        ;; / - Subdividing repeats
+        ((_ (^ v [/ n] . rest))
+         (syntax
+          (let ([vs (pdef v)])
+            (pdef [(make-seq-marker vs (/ 1 n)) . rest]))))
+        ((_ (^ v [/] . rest))
+         (syntax (pdef (^ v [/ 2] . rest))))
+        ((_ (^ v * . rest))
+         (syntax (pdef (^ v [/ 2] . rest))))
 
         ;; ! - Spliced repeats.
         ((_ (^ v [! n] . rest))
@@ -88,6 +100,15 @@
          (syntax (pdef (^ v ...))))
         ((_ v)
          (syntax v)))))
+
+  ;;-------------------------------------------------------------------
+  ;; When a pdef encounters a value that needs to be transformed into
+  ;; a further subdivision (e.g. it's followed by (* 2)), it wraps it
+  ;; in this object. This can be interpreted by the outer subdividing
+  ;; seq.
+  (define-immutable-record seq-marker
+    [val 1]
+    [dur 1])
 
   ;;------------------------------------------------------------------
   ;; Used for compile-time tagging, see comment to pdef.

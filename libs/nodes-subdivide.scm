@@ -113,7 +113,8 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
     (unless (unsafe-list? vals)
       (set! vals (list vals)))
 
-    (let ([slice-len (/ dur (length vals))])
+    (let ([vals (map (unpack-markers dur) vals)]
+          [slice-len (/ dur (length vals))])
       (define (process ctxt)
         (let ([fn (context-subdivide-fn ctxt)]
               [loop-start (round-down (context-start ctxt) dur)])
@@ -185,6 +186,13 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
            [subctxt (eval-seq item subctxt)])
       (context-trim (rearc (context-map ev-shift subctxt) arc))))
 
+  ;; Used to unpack seq markers - see pdef.scm.
+  (define (unpack-markers dur)
+    (lambda (x)
+      (if (not (seq-marker? x)) x
+          (let ([v (seq-marker-val x)])
+            (over (* dur (seq-marker-dur x)) v)))))
+
   ;;-----------------------------------------------------------------------
   ;; General helpers for main time-chunking routine subdivider.
   (define (is-rest? item)
@@ -202,29 +210,4 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
                    (is-sustain? (car lst))))
           (loop (cdr lst) (add1 n))
           (values n lst))))
-
-  ;;-------------------------------------------------------------------
-  ;; Returns the previous value and the next value for a given time.
-  ;; The 'previous' value may in fact land exactly on 'time', in which
-  ;; case the 'next' value should be exactly (/ dur (length pdef)) away.
-  ;; => (values prev-val prev-time next-val next-time)
-  (define (lerp-values pdef dur time)
-    (when (not (unsafe-list? pdef))
-      (error 'values-at-time "non-list pdef" pdef))
-    (when (null? pdef)
-      (error 'values-at-time "empty pdef"))
-    (let ([start (* dur (floor (/ time dur)))])
-      (let loop ([p pdef]
-                 [t0 start]
-                 [t1 (- time start)]
-                 [step (/ dur (length pdef))]
-                 [1st (car pdef)])
-        (if (>= t1 step)
-            (loop (cdr p) (+ t0 step) (- t1 step) step 1st)
-            (let ([v0 (car p)] [v1 (if (null? (cdr p)) 1st (cadr p))])
-              (if (pair? v0)
-                  (loop v0 t0 t1 (/ step (length v0)) v1)
-                  (let ([v1 (if (pair? v1) (car v1) v1)])
-                    (values v0 t0 v1 (+ t0 step)))))))))
-
   )
