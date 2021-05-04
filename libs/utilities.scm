@@ -26,6 +26,7 @@
           derecord
           define-immutable-record
           println printfln
+          dbg-print
           make-safe-val
           safe-val?
           safe-val-apply
@@ -370,6 +371,13 @@
        (begin
          (define name1 'name1)
          (define name2 'name2) ...))))
+
+  (define-syntax dbg-print
+    (syntax-rules ()
+      [(_ form)
+       (let ([res form])
+         (printfln "~a ~a" res 'form)
+         res)]))
 
   ;;------------------------------------------------------------------------
   ;; Types
