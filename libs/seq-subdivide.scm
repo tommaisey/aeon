@@ -114,8 +114,8 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
     (unless (unsafe-list? vals)
       (set! vals (list vals)))
 
-    (let ([vals (map (unpack-markers dur) vals)]
-          [slice-len (/ dur (length vals))])
+    (let* ([slice-len (/ dur (length vals))]
+           [vals (map (unpack-markers slice-len) vals)])
       (define (process ctxt)
         (let ([fn (context-subdivide-fn ctxt)]
               [loop-start (round-down (context-start ctxt) dur)])
@@ -137,18 +137,23 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
                    [[arc] (make-arc t next-t)]
                    [[subctxt] (rearc ctxt arc)])
                 (cond
-                 [fn (let* ([s (if (seq-subdivider? item)
-                                   (eval-sub-seq item fn ctxt subctxt dur)
-                                   (eval-slice item fn ctxt subctxt))])
+                 [fn (let ([s (eval-slice item fn ctxt subctxt dur)])
                        (loop (contexts-merge s c) next-t next-vals))]
                  [(within-arc? arc (context-now ctxt)) item]
                  [else (loop subctxt next-t next-vals)]))]))))
       (seq-meta-ranged #t vals process)))
 
+  ;; Takes a value in a subdivider, an action function and
+  ;; the sub-slice of a context that the two should be combined in.
+  (define (eval-slice item fn ctxt subctxt dur)
+    (if (seq-subdivider? item)
+        (eval-sub-seq item fn ctxt subctxt dur)
+        (eval-item item fn ctxt subctxt)))
+
   ;; Used within make-subdivider to apply subdivide-fn to item,
   ;; over a slice of time defined by subctxt. Returns subctxt filled
   ;; with new or modified values.
-  (define (eval-slice item subdivide-fn ctxt subctxt)
+  (define (eval-item item subdivide-fn ctxt subctxt)
     (lif (arc (context-arc subctxt))
          (arcs-overlap? (context-arc ctxt) arc)
          (let* ([subctxt (context-to-event-after subctxt (arc-start arc))]
@@ -161,6 +166,8 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
              (context-resolve subctxt-no-subdiv)]
             [(unsafe-list? early)
              (eval-seq (make-subdivider subdur early) subctxt)]
+            [(seq-marker? early)
+             (eval-seq (unpack-marker early subdur) subctxt)]
             [else
              (subdivide-fn subctxt-no-subdiv item)]))
          subctxt))
@@ -189,10 +196,12 @@ Sub-lists further subdivide the step they occupy, according to the rules of 'ove
 
   ;; Used to unpack seq markers - see seq-def.scm.
   (define (unpack-markers dur)
-    (lambda (x)
-      (if (not (seq-marker? x)) x
-          (let ([v (seq-marker-val x)])
-            (over (* dur (seq-marker-dur x)) v)))))
+    (lambda (m)
+      (if (seq-marker? m) (unpack-marker m dur) m)))
+
+  (define (unpack-marker seq-marker dur)
+    (make-subdivider (/ dur (seq-marker-dur seq-marker))
+                     (seq-marker-val seq-marker)))
 
   ;;-----------------------------------------------------------------------
   ;; General helpers for main time-chunking routine subdivider.

@@ -38,3 +38,13 @@
   (tt+ 1/4)
   (swing 1/16 0.08))
 
+
+;; A nice fluttery synth
+(pattern flutter
+  (in: :scd (over [[I III V IV] (/ 4)
+                   [III VI VIII X] (* 3)])
+       :pan (sine 1/2 0.3 0.7)
+       :inst "pulse-pluck"
+       :cutoff (sine 3/2 0.4 0.7)
+       :attack 0.01
+       :sustain (over [1 1/2])))

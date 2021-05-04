@@ -60,7 +60,7 @@
             (sdef [(make-seq-marker vs (/ 1 n)) . rest]))))
         ((_ (^ v [/] . rest))
          (syntax (sdef (^ v [/ 2] . rest))))
-        ((_ (^ v * . rest))
+        ((_ (^ v / . rest))
          (syntax (sdef (^ v [/ 2] . rest))))
 
         ;; ! - Spliced repeats.
