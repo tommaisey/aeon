@@ -28,14 +28,14 @@
   (test-eq "[sdef repeats (1 2) (! 3)]"
     '((1 2) (1 2) (1 2) 3) (sdef [[1 2] (! 3) 3]))
 
-  (test-eq "[sdef speed (*)]"
-    '(1 (2 2)) (sdef [1 2 *]))
-  (test-eq "[sdef speed (* 2)]"
-    '(1 (2 2)) (sdef [1 2 (* 2)]))
+  (test-assert "[sdef speed (*)]"
+    (seq-marker? (list-ref (sdef [1 2 *]) 1)))
+  (test-assert "[sdef speed (* 2)]"
+    (seq-marker? (list-ref (sdef [1 2 (* 2)]) 1)))
   (test-eq "[sdef speed (* 3)]"
-    '(1 (2 2 2)) (sdef [1 2 (* 3)]))
+    3 (seq-marker-dur (list-ref (sdef [1 2 (* 3)]) 1)))
   (test-eq "[sdef speed (* 3) !]"
-    '(1 (2 2 2) (2 2 2)) (sdef [1 2 (* 3) !]))
+    3 (seq-marker-dur (list-ref (sdef [1 2 (* 3) !]) 2)))
 
   (test-eq "[sdef-tag-not-callable]"
     '(~ 1) (sdef [~ 1]))

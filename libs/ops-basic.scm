@@ -27,26 +27,6 @@
     (ops-chains)
     (context-render))
 
-  ;; Adds blank events to the context using seq.
-  ;; A seq value of 1 gives one event.
-  ;; For values > 1, creates N subdivided values.
-  ;; The symbol ~ creates a rest.
-  ;; The remaining ops can be a mixed list of :key value
-  ;; pairs and individual transformer functions.
-  (define (in! seq . ops)
-    (define (impl context value)
-      (let* ([value (eval-seq-empty value (context-start context) context)]
-             [num (max 1 value)]
-             [dur (/ (context-length context) num)]
-             [start (context-start context)]
-             [make (lambda (i) (make-event-fast (+ start (* i dur)) (:sustain dur)))])
-        (fold-left (lambda (c i) (context-insert c (make i)))
-                   (context-resolve context)
-                   (reverse (iota num)))))
-    (lif (event-maker (wrap-subdivide-fn impl seq))
-         (null? ops) event-maker
-         (apply part event-maker (extract-kvs 'in! ops))))
-
   ;; Adds events to the context with property 'key' initialised using seq.
   ;; The remaining ops can be a mixed list of :key value
   ;; pairs and individual transformer functions.
@@ -57,38 +37,36 @@
                         (make-event-fast (context-start context)
                                          (:sustain (context-length context))
                                          (key value)))))
-    (unless (symbol? key) (error 'in: "expected :key" key))
+    (unless (symbol? key)
+      (error 'in: "expected :key" key))
     (lif (event-maker (wrap-subdivide-fn impl seq))
          (null? ops) event-maker
-         (apply part event-maker (extract-kvs 'in: ops))))
+         (part event-maker (to-generic 'in: ops))))
+
+  ;; Adds blank events to the context using seq.
+  ;; The symbol ~ creates a rest.
+  ;; The remaining ops can be a mixed list of :key value
+  ;; pairs and individual transformer functions.
+  (define (in! seq . ops)
+    (define (impl context value)
+      (let ([value (eval-seq-empty value (context-start context) context)])
+        (context-insert (context-resolve context)
+                        (make-event-fast (context-start context)
+                                         (:sustain (context-length context))))))
+    (lif (event-maker (wrap-subdivide-fn impl seq))
+         (null? ops) event-maker
+         (part event-maker (to-generic 'in! ops))))
 
   ;; A node that sets a property of events according to the pattern.
   ;; key value ... -> (context -> context)
-  (define (to: . kv-pairs)
-    (define (impl key)
-      (lambda (context value)
-        (context-map (lambda (c) (set-or-rest c value key identity))
-                     (context-resolve context))))
-    (build-kv kv-pairs 'to: impl))
+  (define (to: . ops)
+    (to-generic 'to: ops))
 
-  (define (to+ . kv-pairs) (to + kv-pairs))
-  (define (to- . kv-pairs) (to - kv-pairs))
-  (define (to* . kv-pairs) (to * kv-pairs))
-  (define (to/ . kv-pairs) (to / kv-pairs))
-
-  ;; A general 'to', taking a math op, and a flat list of :key value pairs.
-  ;; The math op is called with the current value for key and the value
-  ;; returned by each value-seq.
-  (define (to math-op kv-pairs)
-    (define (impl key)
-      (lambda (context value)
-        (context-map
-         (lambda (c)
-           (lif (current (event-get (context-event c) key #f)) current
-                (set-or-rest c value key (lambda (v) (math-op current v)))
-                (context-event c)))
-         (context-resolve context))))
-    (build-kv kv-pairs 'to-math impl))
+  ;; Mathematical versions of to that modify existing properties.
+  (define (to+ . ops) (to-math + 'to+ ops))
+  (define (to- . ops) (to-math - 'to- ops))
+  (define (to* . ops) (to-math * 'to* ops))
+  (define (to/ . ops) (to-math / 'to/ ops))
 
   ;; A node that replaces the input with the result of applying
   ;; it to a node or pattern of nodes.
@@ -101,7 +79,7 @@
           ((procedure? value) (value context))
           (else
             (begin
-              (warning 'seq "got raw value, wants procedure or ~" value)
+              (warning 'sq: "got raw value, wants procedure or ~" value)
               context)))))
     (wrap-subdivide-fn impl seq))
 
@@ -112,28 +90,30 @@
   ;; Confusing? People may expect this to replace only events
   ;; matching pred, and to let the others through.
   (define (tr? pred . nodes)
-    (lambda (context)
-      (context-filter pred ((apply with nodes) context))))
+    (let ([f (apply with nodes)])
+      (lambda (context)
+        (context-filter pred (f context)))))
 
   ;; Same as 'with' but returns both the copies and the originals.
   (define (cp: . nodes)
-    (lambda (context)
-      (contexts-merge ((apply with nodes) context)
-                      (context-resolve context))))
+    (let ([f (apply with nodes)])
+      (lambda (context)
+        (contexts-merge (f context) (context-resolve context)))))
 
   ;; Same as tr?, but returns both the filtered copies and the originals.
   (define (cp? pred . nodes)
-    (lambda (context)
-      (contexts-merge ((apply tr? pred nodes) context)
-                      (context-resolve context))))
+    (let ([f (apply tr? pred nodes)])
+      (lambda (context)
+        (contexts-merge (f context) (context-resolve context)))))
 
   ;; Like cp?, but merges via the predicate. Returns unaltered
   ;; those events which fail the predicate.
   (define (to? pred . nodes)
-    (lambda (context)
-      (let* ([resolved (context-resolve context)]
-             [unfiltered (context-filter (lambda (c) (not (pred c))) resolved)])
-        (contexts-merge unfiltered ((apply tr? pred nodes) context)))))
+    (let ([f (apply tr? pred nodes)])
+      (lambda (context)
+        (let* ([resolved (context-resolve context)]
+               [unfiltered (context-filter (lambda (c) (not (pred c))) resolved)])
+          (contexts-merge unfiltered (f context))))))
 
   ;;-------------------------------------------------------------------
   ;; Helper for 'to' forms above.
@@ -144,26 +124,11 @@
         ((is-rest? val)  (context-event ctxt))
         (else (event-set (context-event ctxt) key (val-transform val))))))
 
-  ;; Builds a list of transformers from a flat list of :key value pairs.
-  ;; Each value should be a value or value-producing context function.
-  ;; 'impl' is called on each key.
-  ;; wrap-subdivide-fn is given the result of that, along with the value.
-  (define (build-kv kv-pairs err-symbol impl)
-    (define (make-subdivider key-value)
-        (wrap-subdivide-fn (impl (car key-value)) (cdr key-value)))
-
-    (let ([pairs (pairwise kv-pairs)])
-      (unless pairs (error err-symbol "invalid key-value pairs" kv-pairs))
-
-      (if (= 1 (length pairs))
-          (make-subdivider (car pairs))
-          (apply with (map make-subdivider pairs)))))
-
   ;; Builds a list of transformers from a mixed flat list of key-value
   ;; pairs and non-key-value raw transformers. Abstractly:
   ;; (:key1 val1 non-kv-transformer :key3 val3)
   ;;   => ((to: key1 val1) non-kv-transformer (to: key3 val3))
-  (define (extract-kvs err-symbol ops)
+  (define (extract-kvs err-symbol ops make-impl)
     (let* ([test-ctxt (make-empty-context 0 1)]
            [value-seq? (lambda (seq) (not (context? (eval-seq seq test-ctxt))))])
       (let loop ([result '()] [src ops])
@@ -178,10 +143,30 @@
                ((null? tail)
                 (error err-symbol ":key followed by no seq" head))
                (else
-                (let ([seq (cadr src)] [rest (cddr src)])
+                (let* ([seq (car tail)]
+                       [impl (wrap-subdivide-fn (make-impl head) seq)])
                   (unless (value-seq? seq)
                     (error err-symbol "non-seq for :key" head))
-                  (loop (cons (to: head seq) result) rest)))))))))
+                  (loop (cons impl result) (cdr tail))))))))))
+
+  ;; Implementations used in several forms above
+  (define (to-generic err-sym ops)
+    (define (make-impl key)
+      (lambda (context value)
+        (context-map (lambda (c) (set-or-rest c value key identity))
+                     (context-resolve context))))
+    (apply with (extract-kvs err-sym ops make-impl)))
+
+  (define (to-math math-op op-sym ops)
+    (define (make-impl key)
+      (lambda (context value)
+        (context-map
+         (lambda (c)
+           (lest (current (event-get (context-event c) key #f))
+                 (set-or-rest c value key (lambda (v) (math-op current v)))
+                 (context-event c)))
+         (context-resolve context))))
+    (apply with (extract-kvs op-sym ops make-impl)))
 
   ;;-------------------------------------------------------------------
   (make-doc ops-basic-docs

@@ -3,7 +3,7 @@
   (import (chezscheme)
           (testing)
           (context)
-          (render-context))
+          (context-render))
 
   (testp  "[context-map]" (make-arc 3.3 4)
           (part
