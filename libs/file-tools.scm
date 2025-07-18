@@ -69,16 +69,20 @@
   ;; Returns a human-readable symbol for the os from Chez's cryptic machine-type.
   (define os-symbol
     (let* ([m-type-list (string->list (symbol->string (machine-type)))]
-           [chez-name (list->string (cdr (memp char-numeric? m-type-list)))])
-      (cdar (memp (lambda (x) (string=? (car x) chez-name))
-                  '(("fb"  . freebsd)
-                    ("le"  . linux)
-                    ("nb"  . netbsd)
-                    ("nt"  . windows)
-                    ("ob"  . openbsd)
-                    ("osx" . macos)
-                    ("qnx" . qnx)
-                    ("s2"  . solaris))))))
+           [chez-name (list->string (cdr (memp char-numeric? m-type-list)))]
+           [pair (memp (lambda (x) (string=? (car x) chez-name))
+                       '(("fb"  . freebsd)
+                         ("le"  . linux)
+                         ("nb"  . netbsd)
+                         ("nt"  . windows)
+                         ("ob"  . openbsd)
+                         ("osx" . macos)
+                         ("4osx" . macos)
+                         ("qnx" . qnx)
+                         ("s2"  . solaris)))])
+      (when (not pair)
+        (error 'os-symbol (format "Cannot determine OS. Got: \"~A\"" chez-name)))
+      (cdar pair)))
 
   ;; The user's home directory.
   (define home-dir
