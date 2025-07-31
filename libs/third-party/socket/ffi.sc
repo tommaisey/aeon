@@ -1,12 +1,12 @@
-(library (socket ffi) 
+(library (socket ffi)
   (export
     AF_UNSPEC
     AF_UNIX
     AF_INET
-    SOCK_STREAM     
-    SOCK_DGRAM      
-    SOCK_RAW      
-    SOCK_RDM        
+    SOCK_STREAM
+    SOCK_DGRAM
+    SOCK_RAW
+    SOCK_RDM
     SOCK_SEQPACKET
     SOCK_PACKET
     INADDR_ANY
@@ -27,7 +27,7 @@
     SOCKET_ERROR
 
     wsadata
-    
+
     c-read
     c-write
     c-recv
@@ -52,7 +52,7 @@
   (define lib-name
     (case (machine-type)
       ((i3nt ti3nt a6nt ta6nt) "ws2_32.dll")
-      ((a6osx i3osx ta6osx ti3osx)  "libc.dylib")
+      ((a6osx i3osx ta6osx tarm64osx ti3osx)  "libc.dylib")
       ((a6le i3le ta6le ti3le) "libc.so.6")
       (else "libc.so")))
 
@@ -67,7 +67,7 @@
             (lambda x (printf "error: ~a not found in ~a\n" sym lib-name)))))))
 
 
-  (define AF_UNSPEC       0)  
+  (define AF_UNSPEC       0)
   (define AF_UNIX         1)
   (define AF_INET         2)
 
@@ -90,7 +90,7 @@
   (define SO_RCVTIMEO	#x1006)
   (define SO_ERROR	#x1007)
   (define SO_TYPE	#x1008)
-  
+
   (define IPPROTO_IP 0)
   (define IPPROTO_TCP 6)
   (define IPPROTO_UDP 22)
@@ -111,7 +111,7 @@
 
   (def-function socket
     "socket" (int int int) int)
-  
+
   (def-function bind
     "bind" (int (* sockaddr-in) int) int)
 
@@ -138,7 +138,7 @@
 
   (def-function c-sendto
     "sendto" (int u8* int int (* sockaddr-in) int) int)
-    
+
   (def-function shutdown
     "shutdown" (int int) int)
 
@@ -147,7 +147,7 @@
 
   (def-function closesocket
     "closesocket" (int) int)
-  
+
   (def-function wsastartup
     "WSAStartup" (unsigned-short (* wsadata)) int)
 
@@ -157,10 +157,10 @@
   (define makeword
     (lambda (low high)
       (bitwise-ior low (bitwise-arithmetic-shift-left high 8))))
-  
+
   (define check
     (lambda (who x)
       (if (< x 0)
         (error who (format "return ~a" x))
-          x))) 
+          x)))
 )

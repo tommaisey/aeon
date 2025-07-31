@@ -1,5 +1,5 @@
 (library (libc libc)
-  (export 
+  (export
     c-a64l
     c-abort
     c-abs
@@ -173,13 +173,13 @@
     sockaddr-in
     socklen-t)
   (import (scheme))
-      
+
   (define lib-name
     (case (machine-type)
       ((arm32le) "libc.so")
       ((i3nt ti3nt) "crtdll.dll")
       ((a6nt ta6nt) "msvcrt.dll")
-      ((a6osx i3osx ta6osx ti3osx)  "libc.dylib")
+      ((a6osx i3osx ta6osx tarm64osx ti3osx)  "libc.dylib")
       ((a6le i3le ta6le ti3le) "libc.so.6")
       (else "libc.so")))
 
@@ -197,7 +197,7 @@
     (struct
       [quot int]
       [rem int]))
-  
+
   (define-ftype ldiv_t
     (struct
       [quot long]
@@ -871,18 +871,18 @@
     "inet_addr" (string) unsigned-long)
 
   (def-function c-htons
-    "htons" (unsigned-short) unsigned-short) 
-  
+    "htons" (unsigned-short) unsigned-short)
+
   (define-ftype in-addr
     (struct
       (s-addr unsigned-int)))
-  
+
   (define-ftype sockaddr-in
-    (struct 
+    (struct
       (sin-family short)
       (sin-port unsigned-short)
       (sin-addr in-addr)
       (sin-zero (array 8 unsigned-8))))
-  
+
   (define-ftype socklen-t unsigned-int)
 )
